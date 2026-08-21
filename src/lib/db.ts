@@ -1,0 +1,50 @@
+import Dexie, { type EntityTable } from 'dexie'
+import type {
+  Member,
+  Attendance,
+  Wallet,
+  Category,
+  Transaction,
+  Budget,
+  SavingsGoal,
+  Task,
+  Subtask,
+  SyncQueueRow,
+} from '@/types'
+
+// ─── Database Definition ──────────────────────────────────────────────────────
+
+class WorksphereDB extends Dexie {
+  members!: EntityTable<Member, 'id'>
+  attendance!: EntityTable<Attendance, 'id'>
+  wallets!: EntityTable<Wallet, 'id'>
+  categories!: EntityTable<Category, 'id'>
+  transactions!: EntityTable<Transaction, 'id'>
+  budgets!: EntityTable<Budget, 'id'>
+  savings_goals!: EntityTable<SavingsGoal, 'id'>
+  tasks!: EntityTable<Task, 'id'>
+  subtasks!: EntityTable<Subtask, 'id'>
+  sync_queue!: EntityTable<SyncQueueRow, 'id'>
+
+  constructor() {
+    super('worksphere')
+
+    // Version 2 — full schema
+    // Version 1 had only sync_queue
+    this.version(2).stores({
+      members: 'id, user_id, name, is_active',
+      attendance: 'id, user_id, member_id, attendance_date, [user_id+member_id+attendance_date]',
+      wallets: 'id, user_id, name, type, is_active',
+      categories: 'id, user_id, name, type, is_active',
+      transactions:
+        'id, user_id, wallet_id, type, category_id, transaction_date, transfer_group_id, deleted_at',
+      budgets: 'id, user_id, category_id, month, year',
+      savings_goals: 'id, user_id, name, deadline',
+      tasks: 'id, user_id, status, priority, category, due_date, deleted_at',
+      subtasks: 'id, task_id, user_id, is_completed',
+      sync_queue: 'id, user_id, operation, entity, entity_id, status, created_at',
+    })
+  }
+}
+
+export const db = new WorksphereDB()
