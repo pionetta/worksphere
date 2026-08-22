@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { Sun, Moon, Monitor, LogOut } from 'lucide-react'
+import { Sun, Moon, Monitor, LogOut, Download } from 'lucide-react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import type { Theme } from '@/hooks/useTheme'
 import type { User } from '@supabase/supabase-js'
+import { usePwaInstall } from '@/hooks/usePwaInstall'
 
 interface AppHeaderProps {
   title: string
@@ -60,6 +61,7 @@ export function AppHeader({
   actions,
   className,
 }: AppHeaderProps) {
+  const { canInstall, installPwa } = usePwaInstall()
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined
   const displayName =
     user?.user_metadata?.full_name || user?.user_metadata?.username || user?.email || 'U'
@@ -84,6 +86,24 @@ export function AppHeader({
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
           {actions}
+
+          {canInstall && (
+            <button
+              onClick={() => void installPwa()}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all duration-150',
+                'bg-primary-500 text-white hover:bg-primary-600 active:scale-95 shadow-sm hover:shadow cursor-pointer',
+                'animate-pulse-subtle'
+              )}
+              aria-label="Instal Aplikasi Worksphere"
+              title="Instal Worksphere sebagai aplikasi mandiri"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Instal App</span>
+              <span className="sm:hidden">Instal</span>
+            </button>
+          )}
+
           <ThemeToggle theme={theme} onThemeChange={onThemeChange} />
 
           {onOpenProfile && (

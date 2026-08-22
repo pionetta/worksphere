@@ -3,9 +3,10 @@ import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/hooks/useTheme'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { resizeImage } from '@/utils/image'
-import { User, Lock, Camera, Trash2, CheckCircle2, AlertCircle, Loader2, Sun, Moon, Monitor } from 'lucide-react'
+import { User, Lock, Camera, Trash2, CheckCircle2, AlertCircle, Loader2, Sun, Moon, Monitor, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
+import { usePwaInstall } from '@/hooks/usePwaInstall'
 
 interface ProfileModalProps {
   open: boolean
@@ -17,6 +18,7 @@ type TabType = 'profile' | 'password'
 export function ProfileModal({ open, onClose }: ProfileModalProps) {
   const { user, updateUserProfile, updateUserPassword } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { canInstall, installPwa } = usePwaInstall()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const currentName =
@@ -364,6 +366,22 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
                 </button>
               </div>
             </div>
+
+            {canInstall && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                  Aplikasi Mandiri
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void installPwa()}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary-50 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-800 text-primary-600 dark:text-primary-300 font-medium text-sm hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-all active:scale-95 cursor-pointer shadow-xs"
+                >
+                  <Download className="w-4 h-4 text-primary-500" />
+                  <span>📲 Pasang / Instal Aplikasi Worksphere</span>
+                </button>
+              </div>
+            )}
 
             <button
               type="submit"
