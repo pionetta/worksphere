@@ -119,7 +119,7 @@ export function LoginPage() {
 
         {/* Login/Register Card */}
         <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/50 p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {/* Success Message */}
             {successMsg && (
               <div className="p-3 rounded-lg bg-success-light dark:bg-success/20 border border-success/30">
