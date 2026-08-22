@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock Supabase client
 const mockSignInWithPassword = vi.fn()
+const mockSignInWithOAuth = vi.fn()
 const mockSignUp = vi.fn()
 const mockSignOut = vi.fn()
 const mockGetSession = vi.fn()
@@ -11,6 +12,7 @@ vi.mock('@/lib/supabase', () => ({
   supabase: {
     auth: {
       signInWithPassword: mockSignInWithPassword,
+      signInWithOAuth: mockSignInWithOAuth,
       signUp: mockSignUp,
       signOut: mockSignOut,
       getSession: mockGetSession,
@@ -49,6 +51,22 @@ describe('Auth', () => {
       const result = await signIn('wrong@example.com', 'wrongpassword')
 
       expect(result.error).toEqual(mockError)
+    })
+  })
+
+  describe('signInWithGoogle', () => {
+    it('should call signInWithOAuth with google provider', async () => {
+      const { signInWithGoogle } = await import('@/lib/auth')
+      mockSignInWithOAuth.mockResolvedValue({ error: null })
+
+      await signInWithGoogle()
+
+      expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+        provider: 'google',
+        options: {
+          redirectTo: expect.any(String),
+        },
+      })
     })
   })
 

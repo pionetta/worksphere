@@ -83,7 +83,7 @@ describe('App Routes', () => {
         <AppRoutes />
       </MemoryRouter>
     )
-    expect(screen.getByRole('button', { name: /masuk/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^masuk$/i })).toBeInTheDocument()
   })
 
   it('should show dashboard when authenticated', async () => {
@@ -132,7 +132,7 @@ describe('App Routes', () => {
         <AppRoutes />
       </MemoryRouter>
     )
-    expect(screen.getByRole('button', { name: /masuk/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^masuk$/i })).toBeInTheDocument()
   })
 
   it('should show loading screen while auth is loading', () => {

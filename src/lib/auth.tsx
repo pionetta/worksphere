@@ -36,6 +36,7 @@ interface AuthContextValue extends AuthState {
     password: string,
     options?: SignUpOptions
   ) => Promise<{ data: any | null; error: AuthError | null }>
+  signInWithGoogle: () => Promise<{ error: AuthError | null }>
   signInDemo: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -47,6 +48,21 @@ export async function signIn(
   password: string
 ): Promise<{ error: AuthError | null }> {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
+  return { error }
+}
+
+export async function signInWithGoogle(): Promise<{ error: AuthError | null }> {
+  const redirectUrl =
+    typeof window !== 'undefined' && window.location?.origin
+      ? `${window.location.origin}/app`
+      : undefined
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: redirectUrl,
+    },
+  })
   return { error }
 }
 
@@ -168,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!user,
     signIn,
     signUp,
+    signInWithGoogle,
     signInDemo,
     signOut: handleSignOut,
   }
