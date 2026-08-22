@@ -11,11 +11,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      manifestFilename: 'manifest.json',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
-        name: 'Worksphere',
-        short_name: 'Worksphere',
-        description: 'Aplikasi produktivitas pribadi — Absensi, Keuangan, dan To-Do',
+        name: 'WorkSphere - Absensi, Keuangan & To-Do',
+        short_name: 'WorkSphere',
+        description: 'Aplikasi All-in-One: Absensi Real-time, Catatan Keuangan, Manajemen Tugas.',
         lang: 'id',
         theme_color: '#6366f1',
         background_color: '#0f0f13',
@@ -25,20 +27,21 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'icons/icon-192.png',
+            src: '/icons/icon-192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'icons/icon-512.png',
+            src: '/icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
+            purpose: 'any',
           },
           {
-            src: 'icons/icon-512.png',
+            src: '/icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'maskable',
           },
         ],
       },
