@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import type { Theme } from '@/hooks/useTheme'
 import { useSyncStatus } from '@/hooks/useSyncStatus'
@@ -25,6 +25,7 @@ export function AppLayout({
   subtitle,
   headerActions,
 }: AppLayoutProps) {
+  const location = useLocation()
   const { user, signOut } = useAuth()
   const sync = useSyncStatus(user?.id ?? null)
   const network = useNetworkStatus()
@@ -72,8 +73,11 @@ export function AppLayout({
           }
         />
 
-        {/* Main content area — renders child route via Outlet */}
-        <main className="flex-1 overflow-y-auto px-4 py-4 pb-20 md:pb-4">
+        {/* Main content area — renders child route via Outlet with page fade-in animation */}
+        <main
+          key={location.pathname}
+          className="flex-1 overflow-y-auto px-4 py-4 pb-20 md:pb-4 animate-fade-in-up"
+        >
           <Outlet />
         </main>
 

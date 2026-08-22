@@ -91,7 +91,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-label={title ?? 'Dialog'}
@@ -99,16 +99,15 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
         if (e.target === overlayRef.current) onClose()
       }}
     >
-      <div className="absolute inset-0 bg-black/40 dark:bg-black/60" />
+      <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-xs" />
       <div
         ref={contentRef}
         tabIndex={-1}
         className={cn(
           'relative w-full max-w-lg max-h-[85vh] overflow-y-auto',
           'bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl',
-          'shadow-xl',
-          'outline-none',
-          'translate-y-0 transition-transform duration-200',
+          'shadow-xl outline-none',
+          'animate-slide-up sm:animate-scale-in',
           className
         )}
       >

@@ -88,25 +88,31 @@ export function DashboardPage() {
           <ErrorState message={error} onRetry={refresh} />
         ) : (
           <>
-            <AttendanceDashboardCard
-              present={data.attendance.present}
-              absent={data.attendance.absent}
-              holiday={data.attendance.holiday}
-              unrecorded={data.attendance.unrecorded}
-              totalMembers={data.attendance.totalMembers}
-            />
-            <FinanceDashboardCard
-              totalBalance={data.finance.totalBalance}
-              totalIncome={data.finance.totalIncome}
-              totalExpense={data.finance.totalExpense}
-              walletCount={data.finance.walletCount}
-            />
-            <TodoDashboardCard
-              total={data.todo.total}
-              inProgress={data.todo.inProgress}
-              completed={data.todo.completed}
-              overdue={data.todo.overdue}
-            />
+            <div className="animate-fade-in-up">
+              <AttendanceDashboardCard
+                present={data.attendance.present}
+                absent={data.attendance.absent}
+                holiday={data.attendance.holiday}
+                unrecorded={data.attendance.unrecorded}
+                totalMembers={data.attendance.totalMembers}
+              />
+            </div>
+            <div className="animate-fade-in-up animation-delay-100">
+              <FinanceDashboardCard
+                totalBalance={data.finance.totalBalance}
+                totalIncome={data.finance.totalIncome}
+                totalExpense={data.finance.totalExpense}
+                walletCount={data.finance.walletCount}
+              />
+            </div>
+            <div className="animate-fade-in-up animation-delay-200">
+              <TodoDashboardCard
+                total={data.todo.total}
+                inProgress={data.todo.inProgress}
+                completed={data.todo.completed}
+                overdue={data.todo.overdue}
+              />
+            </div>
           </>
         )}
       </div>

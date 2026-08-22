@@ -18,7 +18,7 @@ export function Card({ children, glass = false, padding = 'md', className, ...pr
   return (
     <div
       className={cn(
-        'rounded-xl border',
+        'rounded-xl border transition-all duration-200',
         glass ? 'glass' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700',
         paddingStyles[padding],
         className
