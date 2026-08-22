@@ -1,0 +1,71 @@
+{
+  "short_name": "WorkSphere",
+  "name": "WorkSphere - Absensi, Keuangan & To-Do",
+  "description": "Aplikasi produktivitas pribadi — Absensi Real-time, Catatan Keuangan, dan Manajemen Tugas.",
+  "shortcuts": [
+    {
+      "name": "Absensi",
+      "short_name": "Absensi",
+      "url": "/attendance",
+      "description": "Buka menu absensi cepat",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Keuangan",
+      "short_name": "Keuangan",
+      "url": "/finance",
+      "description": "Buka catatan keuangan",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "To-Do",
+      "short_name": "Tugas",
+      "url": "/todo",
+      "description": "Buka daftar tugas",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "background_color": "#0f0f13",
+  "theme_color": "#6366f1",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["productivity", "business", "finance"],
+  "lang": "id",
+  "dir": "ltr"
+}
