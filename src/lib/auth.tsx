@@ -24,9 +24,18 @@ export const DEMO_USER: User = {
   updated_at: '2026-08-22T00:00:00.000Z',
 }
 
+export interface SignUpOptions {
+  username?: string
+  redirectTo?: string
+}
+
 interface AuthContextValue extends AuthState {
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string) => Promise<{ data: any | null; error: AuthError | null }>
+  signUp: (
+    email: string,
+    password: string,
+    options?: SignUpOptions
+  ) => Promise<{ data: any | null; error: AuthError | null }>
   signInDemo: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -43,9 +52,37 @@ export async function signIn(
 
 export async function signUp(
   email: string,
-  password: string
+  password: string,
+  options?: SignUpOptions
 ): Promise<{ data: any | null; error: AuthError | null }> {
-  const { data, error } = await supabase.auth.signUp({ email, password })
+  const redirectUrl =
+    options?.redirectTo ??
+    (typeof window !== 'undefined' && window.location?.origin
+      ? `${window.location.origin}/app`
+      : undefined)
+
+  const signUpParams: {
+    email: string
+    password: string
+    options?: {
+      data?: { username?: string; full_name?: string }
+      emailRedirectTo?: string
+    }
+  } = {
+    email,
+    password,
+  }
+
+  if (options?.username || redirectUrl) {
+    signUpParams.options = {
+      ...(options?.username
+        ? { data: { username: options.username.trim(), full_name: options.username.trim() } }
+        : {}),
+      ...(redirectUrl ? { emailRedirectTo: redirectUrl } : {}),
+    }
+  }
+
+  const { data, error } = await supabase.auth.signUp(signUpParams)
   return { data, error }
 }
 

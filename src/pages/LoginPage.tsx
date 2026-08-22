@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '@/lib/auth'
-import { Mail, Lock, Loader2 } from 'lucide-react'
+import { Mail, Lock, User, Loader2 } from 'lucide-react'
 
 export function LoginPage() {
   const { signIn, signUp, signInDemo } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -29,7 +31,23 @@ export function LoginPage() {
         }
       }
     } else {
-      const { error, data } = await signUp(email, password)
+      if (!username.trim()) {
+        setError('Nama pengguna / username wajib diisi.')
+        setLoading(false)
+        return
+      }
+      if (password.length < 6) {
+        setError('Password minimal 6 karakter.')
+        setLoading(false)
+        return
+      }
+      if (password !== confirmPassword) {
+        setError('Konfirmasi password tidak cocok dengan password.')
+        setLoading(false)
+        return
+      }
+
+      const { error, data } = await signUp(email, password, { username })
       if (error) {
         if (error.message.includes('already registered')) {
           setError('Email sudah terdaftar.')
@@ -43,9 +61,10 @@ export function LoginPage() {
           // Auto login happened
         } else {
           // Requires email confirmation
-          setSuccessMsg('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi (jika diwajibkan oleh server).')
+          setSuccessMsg('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi.')
           setIsLogin(true) // Switch back to login
           setPassword('')
+          setConfirmPassword('')
         }
       }
     }
@@ -57,6 +76,8 @@ export function LoginPage() {
     setIsLogin(!isLogin)
     setError(null)
     setSuccessMsg(null)
+    setUsername('')
+    setConfirmPassword('')
   }
 
   return (
@@ -84,6 +105,33 @@ export function LoginPage() {
             {error && (
               <div className="p-3 rounded-lg bg-danger-light dark:bg-danger/20 border border-danger/30">
                 <p className="text-sm text-danger">{error}</p>
+              </div>
+            )}
+
+            {/* Username Field (Sign up only) */}
+            {!isLogin && (
+              <div>
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                >
+                  Nama Pengguna / Username
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    required
+                    autoComplete="username"
+                    className="block w-full pl-10 pr-3 py-2.5 bg-white/50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                    placeholder="Nama lengkap atau username"
+                  />
+                </div>
               </div>
             )}
 
@@ -130,12 +178,39 @@ export function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  autoComplete="current-password"
+                  autoComplete={isLogin ? 'current-password' : 'new-password'}
                   className="block w-full pl-10 pr-3 py-2.5 bg-white/50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                  placeholder="Masukkan password"
+                  placeholder={isLogin ? 'Masukkan password' : 'Min. 6 karakter'}
                 />
               </div>
             </div>
+
+            {/* Confirm Password Field (Sign up only) */}
+            {!isLogin && (
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                >
+                  Konfirmasi Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    className="block w-full pl-10 pr-3 py-2.5 bg-white/50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                    placeholder="Ulangi password"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button

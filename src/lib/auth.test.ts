@@ -53,15 +53,19 @@ describe('Auth', () => {
   })
 
   describe('signUp', () => {
-    it('should call signUp with correct data', async () => {
+    it('should call signUp with correct data and default redirectTo', async () => {
       const { signUp } = await import('@/lib/auth')
       mockSignUp.mockResolvedValue({ error: null })
 
-      await signUp('new@example.com', 'password123')
+      await signUp('new@example.com', 'password123', { username: 'testuser' })
 
       expect(mockSignUp).toHaveBeenCalledWith({
         email: 'new@example.com',
         password: 'password123',
+        options: {
+          data: { username: 'testuser', full_name: 'testuser' },
+          emailRedirectTo: expect.any(String),
+        },
       })
     })
   })
