@@ -124,7 +124,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
             </button>
           </div>
         )}
-        <div className="px-4 pb-6 pt-2">{children}</div>
+        <div className="px-4 pb-8 pt-2">{children}</div>
       </div>
     </div>
   )

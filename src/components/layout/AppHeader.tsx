@@ -20,7 +20,7 @@ function ThemeToggle({
   theme: Theme
   onThemeChange: (t: Theme) => void
 }) {
-  const next: Record<Theme, Theme> = { light: 'dark', dark: 'system', system: 'light' }
+  const next: Record<Theme, Theme> = { light: 'dark', dark: 'system', system: 'dark' }
   const icons: Record<Theme, ReactNode> = {
     light: <Sun className="w-5 h-5" />,
     dark: <Moon className="w-5 h-5" />,

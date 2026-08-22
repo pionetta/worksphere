@@ -8,12 +8,14 @@ interface AttendanceSummaryProps {
 
 export function AttendanceSummary({ attendance, members }: AttendanceSummaryProps) {
   const activeMembers = members.filter(m => m.is_active)
+  const activeMemberIds = new Set(activeMembers.map(m => m.id))
   const total = activeMembers.length
 
-  const present = attendance.filter(a => a.status === 'present').length
-  const absent = attendance.filter(a => a.status === 'absent').length
-  const holiday = attendance.filter(a => a.status === 'holiday').length
-  const unrecorded = total - attendance.length
+  const activeAttendance = attendance.filter(a => activeMemberIds.has(a.member_id))
+  const present = activeAttendance.filter(a => a.status === 'present').length
+  const absent = activeAttendance.filter(a => a.status === 'absent').length
+  const holiday = activeAttendance.filter(a => a.status === 'holiday').length
+  const unrecorded = Math.max(0, total - activeAttendance.length)
 
   if (total === 0) return null
 

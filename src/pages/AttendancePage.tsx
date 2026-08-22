@@ -147,12 +147,14 @@ export function AttendancePage() {
             <AttendanceDatePicker date={date} onChange={handleDateChange} />
           </Card>
 
-          <Card>
-            <AttendanceSummary
-              attendance={attendanceHook.attendance}
-              members={membersHook.members}
-            />
-          </Card>
+          {membersHook.members.some(m => m.is_active) && (
+            <Card>
+              <AttendanceSummary
+                attendance={attendanceHook.attendance}
+                members={membersHook.members}
+              />
+            </Card>
+          )}
 
           <Card padding="none">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700/50">

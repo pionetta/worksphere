@@ -135,7 +135,7 @@ export function QuickActionMenu({ open, onSelect, onClose }: QuickActionMenuProp
         aria-label="Aksi cepat"
         className={cn(
           'fixed z-40',
-          'bottom-36 right-4 sm:bottom-20 sm:right-6',
+          'bottom-40 right-4 sm:bottom-28 sm:right-6',
           'flex flex-col gap-2 items-end'
         )}
       >

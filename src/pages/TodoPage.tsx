@@ -245,7 +245,7 @@ export function TodoPage() {
         title="Detail Tugas"
       >
         {selectedTask && (
-          <div className="space-y-4">
+          <div className="space-y-4 pb-2">
             <div>
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Status</p>
               <TaskStatusSelector

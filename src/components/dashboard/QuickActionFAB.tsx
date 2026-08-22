@@ -27,7 +27,7 @@ export function QuickActionFAB({ onClick, open = false }: QuickActionFABProps) {
       aria-expanded={open}
     >
       <Plus
-        className={cn('w-6 h-6 transition-transform duration-200', open && 'rotate-[-45deg]')}
+        className="w-6 h-6 transition-transform duration-200"
       />
     </button>
   )
