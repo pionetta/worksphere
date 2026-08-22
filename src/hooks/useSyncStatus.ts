@@ -117,6 +117,17 @@ export function useSyncStatus(userId: string | null): SyncState {
     }
   }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-sync when online and new items are added to queue
+  useEffect(() => {
+    if (!userId || !isOnline() || pendingCount === 0 || syncInProgressRef.current) return
+
+    const timer = setTimeout(() => {
+      doSync()
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [userId, pendingCount, doSync])
+
   // Check pending count periodically (to update UI)
   useEffect(() => {
     if (!userId) return

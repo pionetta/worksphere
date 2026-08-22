@@ -266,6 +266,7 @@ export function FinancePage() {
           {showWalletForm && (
             <Card>
               <WalletForm
+                key={editingWalletId ?? 'new-wallet'}
                 initialName={
                   editingWalletId
                     ? walletsHook.wallets.find(w => w.id === editingWalletId)?.name
@@ -428,14 +429,13 @@ export function FinancePage() {
             <Card>
               <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
                 {editingTransaction
-                  ? transactionType === 'income'
-                    ? 'Edit Pemasukan'
-                    : 'Edit Pengeluaran'
+                  ? 'Edit Transaksi'
                   : transactionType === 'income'
                     ? 'Tambah Pemasukan'
                     : 'Tambah Pengeluaran'}
               </h3>
               <TransactionForm
+                key={editingTransaction?.id ?? `new-${transactionType}`}
                 wallets={walletsHook.wallets}
                 categories={categories}
                 type={transactionType}
@@ -583,6 +583,7 @@ export function FinancePage() {
                 {editingBudgetId ? 'Edit Anggaran' : 'Tambah Anggaran'}
               </h3>
               <BudgetForm
+                key={editingBudgetId ?? 'new-budget'}
                 categories={categories}
                 initialCategoryId={
                   editingBudgetId
@@ -642,7 +643,7 @@ export function FinancePage() {
                 key={budget.id}
                 budget={budget}
                 categoryName={categoryMap[budget.category_id]}
-                spent={spentByCategory[budget.category_id] ?? 0}
+                spent={spentByCategory[budget.category_id] || 0}
                 onEdit={() => {
                   setEditingBudgetId(budget.id)
                   setShowBudgetForm(true)
@@ -682,6 +683,7 @@ export function FinancePage() {
                 {editingSavingsId ? 'Edit Tujuan Tabungan' : 'Tambah Tujuan Tabungan'}
               </h3>
               <SavingsGoalForm
+                key={editingSavingsId ?? 'new-savings'}
                 initialName={
                   editingSavingsId
                     ? savingsHook.goals.find(g => g.id === editingSavingsId)?.name

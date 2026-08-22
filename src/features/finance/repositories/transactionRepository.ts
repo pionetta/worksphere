@@ -45,9 +45,11 @@ export async function listTransactionsByDateRange(
   return db.transactions
     .where('user_id')
     .equals(userId)
-    .and(
-      t => t.transaction_date >= startDate && t.transaction_date <= endDate && t.deleted_at === null
-    )
+    .and(t => {
+      if (t.deleted_at !== null) return false
+      const tDate = t.transaction_date.split('T')[0]
+      return tDate >= startDate && tDate <= endDate
+    })
     .toArray()
 }
 

@@ -56,11 +56,15 @@ export function useDashboard(userId: string | null) {
         taskStatsService.getTaskStats(userId),
       ])
 
-      const totalMembers = members.filter(m => m.is_active).length
-      const present = attendance.filter(a => a.status === 'present').length
-      const absent = attendance.filter(a => a.status === 'absent').length
-      const holiday = attendance.filter(a => a.status === 'holiday').length
-      const unrecorded = totalMembers - attendance.length
+      const activeMembers = members.filter(m => m.is_active)
+      const activeMemberIds = new Set(activeMembers.map(m => m.id))
+      const totalMembers = activeMembers.length
+
+      const activeAttendance = attendance.filter(a => activeMemberIds.has(a.member_id))
+      const present = activeAttendance.filter(a => a.status === 'present').length
+      const absent = activeAttendance.filter(a => a.status === 'absent').length
+      const holiday = activeAttendance.filter(a => a.status === 'holiday').length
+      const unrecorded = Math.max(0, totalMembers - activeAttendance.length)
 
       setData({
         finance: {

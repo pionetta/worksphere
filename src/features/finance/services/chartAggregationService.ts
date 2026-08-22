@@ -42,7 +42,9 @@ export function aggregateIncomeExpenseByDay(
     if (!t.transaction_date.startsWith(monthPrefix)) continue
     if (t.type !== 'income' && t.type !== 'expense') continue
 
-    const day = t.transaction_date.split('-')[2]
+    const datePart = t.transaction_date.split('T')[0]
+    const day = datePart.split('-')[2]
+    if (!day) continue
     if (t.type === 'income') {
       incomeMap.set(day, (incomeMap.get(day) ?? 0) + t.amount)
     } else {

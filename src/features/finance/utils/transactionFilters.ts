@@ -75,15 +75,17 @@ export function filterTransactions(
 
   // Date filter
   if (filters.dateRange === 'custom' && filters.startDate && filters.endDate) {
-    result = result.filter(
-      t => t.transaction_date >= filters.startDate! && t.transaction_date <= filters.endDate!
-    )
+    result = result.filter(t => {
+      const tDate = t.transaction_date.split('T')[0]
+      return tDate >= filters.startDate! && tDate <= filters.endDate!
+    })
   } else if (filters.dateRange !== 'all') {
     const range = getDateRange(filters.dateRange)
     if (range) {
-      result = result.filter(
-        t => t.transaction_date >= range.start && t.transaction_date <= range.end
-      )
+      result = result.filter(t => {
+        const tDate = t.transaction_date.split('T')[0]
+        return tDate >= range.start && tDate <= range.end
+      })
     }
   }
 

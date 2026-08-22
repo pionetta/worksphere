@@ -21,6 +21,7 @@ export function IncomeQuickAction({ userId, onSuccess, onCancel }: IncomeQuickAc
   useEffect(() => {
     async function load() {
       setLoading(true)
+      await categoryService.initializeDefaultCategories(userId)
       const [w, c] = await Promise.all([
         walletService.getWalletsWithBalance(userId),
         categoryService.getAllCategories(userId),

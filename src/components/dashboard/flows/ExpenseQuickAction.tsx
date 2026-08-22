@@ -21,6 +21,7 @@ export function ExpenseQuickAction({ userId, onSuccess, onCancel }: ExpenseQuick
   useEffect(() => {
     async function load() {
       setLoading(true)
+      await categoryService.initializeDefaultCategories(userId)
       const [w, c] = await Promise.all([
         walletService.getWalletsWithBalance(userId),
         categoryService.getAllCategories(userId),

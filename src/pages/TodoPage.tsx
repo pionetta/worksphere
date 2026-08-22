@@ -173,6 +173,7 @@ export function TodoPage() {
       {/* Create Form */}
       {showForm && (
         <TaskForm
+          key="create-task"
           onSubmit={handleCreateTask}
           onCancel={() => setShowForm(false)}
           categories={categories}
@@ -258,6 +259,7 @@ export function TodoPage() {
             </div>
 
             <TaskForm
+              key={selectedTask.id}
               initialTitle={selectedTask.title}
               initialDescription={selectedTask.description ?? ''}
               initialPriority={selectedTask.priority}
