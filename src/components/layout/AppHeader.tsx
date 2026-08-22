@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/utils/cn'
 import { Sun, Moon, Monitor, LogOut } from 'lucide-react'
 import type { Theme } from '@/hooks/useTheme'
+import type { User } from '@supabase/supabase-js'
 
 interface AppHeaderProps {
   title: string
@@ -9,6 +10,8 @@ interface AppHeaderProps {
   theme: Theme
   onThemeChange: (theme: Theme) => void
   onLogout?: () => void
+  onOpenProfile?: () => void
+  user?: User | null
   actions?: ReactNode
   className?: string
 }
@@ -50,9 +53,19 @@ export function AppHeader({
   theme,
   onThemeChange,
   onLogout,
+  onOpenProfile,
+  user,
   actions,
   className,
 }: AppHeaderProps) {
+  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.username ||
+    user?.email ||
+    'U'
+  const initial = displayName.charAt(0).toUpperCase()
+
   return (
     <header
       className={cn(
@@ -70,9 +83,32 @@ export function AppHeader({
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{subtitle}</p>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 sm:gap-2">
           {actions}
           <ThemeToggle theme={theme} onThemeChange={onThemeChange} />
+
+          {onOpenProfile && (
+            <button
+              onClick={onOpenProfile}
+              className={cn(
+                'flex items-center justify-center w-8 h-8 rounded-full overflow-hidden transition-transform active:scale-95 border border-gray-200 dark:border-gray-700 hover:ring-2 hover:ring-primary-500/50 flex-shrink-0',
+                'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-semibold text-xs'
+              )}
+              aria-label="Buka Profil"
+              title="Profil Pengguna"
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                initial
+              )}
+            </button>
+          )}
+
           {onLogout && (
             <button
               onClick={onLogout}

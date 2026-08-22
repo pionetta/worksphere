@@ -30,14 +30,18 @@ export function DashboardPage() {
   const network = useNetworkStatus()
   const { data, loading, error, refresh } = useDashboard(user?.id ?? null)
 
-  const emailPrefix = user?.email?.split('@')[0] ?? 'User'
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.username ||
+    user?.email?.split('@')[0] ||
+    'User'
 
   return (
     <div className="space-y-6">
       {/* Greeting */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          {getGreeting()}, {emailPrefix}
+          {getGreeting()}, {displayName}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{formatDate()}</p>
         {network === 'offline' && (

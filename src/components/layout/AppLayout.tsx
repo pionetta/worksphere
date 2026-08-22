@@ -8,6 +8,7 @@ import { AppHeader } from './AppHeader'
 import { BottomNavigation, SidebarNavigation } from './Navigation'
 import { SyncIndicator, OfflineBanner } from './SyncIndicator'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { ProfileModal } from '@/components/profile/ProfileModal'
 
 interface AppLayoutProps {
   theme: Theme
@@ -28,6 +29,7 @@ export function AppLayout({
   const sync = useSyncStatus(user?.id ?? null)
   const network = useNetworkStatus()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
 
   const handleLogout = async () => {
     await signOut()
@@ -37,7 +39,11 @@ export function AppLayout({
   return (
     <div className="flex h-dvh bg-background">
       {/* Desktop sidebar */}
-      <SidebarNavigation onLogout={() => setShowLogoutConfirm(true)} />
+      <SidebarNavigation
+        user={user}
+        onOpenProfile={() => setShowProfileModal(true)}
+        onLogout={() => setShowLogoutConfirm(true)}
+      />
 
       <div className="flex flex-col flex-1 min-w-0">
         {/* Offline banner */}
@@ -49,6 +55,8 @@ export function AppLayout({
           subtitle={subtitle}
           theme={theme}
           onThemeChange={onThemeChange}
+          user={user}
+          onOpenProfile={() => setShowProfileModal(true)}
           onLogout={() => setShowLogoutConfirm(true)}
           actions={
             <>
@@ -72,6 +80,11 @@ export function AppLayout({
         {/* Mobile bottom navigation */}
         <BottomNavigation />
       </div>
+
+      <ProfileModal
+        open={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
 
       <ConfirmDialog
         open={showLogoutConfirm}
