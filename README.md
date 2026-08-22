@@ -1,32 +1,33 @@
-# React + TypeScript + Vite
+# Worksphere 🚀
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Worksphere adalah aplikasi produktivitas pribadi berbasis **Progressive Web App (PWA)** offline-first yang menggabungkan tiga pilar utama:
+1. **Presensi & Absensi Anggota** (Kelola kehadiran harian & rekap mingguan).
+2. **Catatan & Manajemen Keuangan** (Multi-dompet, transaksi pemasukan/pengeluaran, transfer saldo, grafik kategori).
+3. **To-Do List & Manajemen Tugas** (Prioritas, tenggat waktu, subtask progress realtime).
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠️ Tech Stack
+- **Framework:** React 19 + TypeScript + Vite
+- **Styling:** Tailwind CSS + Lucide Icons
+- **Local Storage / Offline:** Dexie.js (IndexedDB)
+- **Backend & Auth:** Supabase Cloud (PostgreSQL + RLS)
+- **Testing:** Vitest + Playwright E2E Automation
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 💻 Cara Menjalankan Lokal
 
-## Expanding the Oxlint configuration
+```bash
+# 1. Install dependencies
+npm install
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+# 2. Jalankan development server
+npm run dev
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+# 3. Jalankan unit test
+npm run test
+
+# 4. Build untuk produksi
+npm run build
 ```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
