@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import type { Subtask } from '@/types'
 import { Plus } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface SubtaskListProps {
   subtasks: Subtask[]
@@ -32,7 +33,10 @@ export function SubtaskList({
     setLoading(true)
     try {
       await onAdd(userId, newTitle.trim())
+      toast.success('Subtask berhasil ditambahkan')
       setNewTitle('')
+    } catch {
+      toast.error('Gagal menambahkan subtask')
     } finally {
       setLoading(false)
     }
@@ -52,9 +56,14 @@ export function SubtaskList({
 
   const handleSaveEdit = async () => {
     if (!editingId || !editingTitle.trim() || !onEdit) return
-    await onEdit(editingId, { title: editingTitle.trim() })
-    setEditingId(null)
-    setEditingTitle('')
+    try {
+      await onEdit(editingId, { title: editingTitle.trim() })
+      toast.success('Subtask berhasil diperbarui')
+      setEditingId(null)
+      setEditingTitle('')
+    } catch {
+      toast.error('Gagal memperbarui subtask')
+    }
   }
 
   const handleCancelEdit = () => {

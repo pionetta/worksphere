@@ -16,8 +16,9 @@ import { Card } from '@/components/ui/Card'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { cn } from '@/utils/cn'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, ListTodo } from 'lucide-react'
+import { toast } from 'sonner'
 import type { Task, TaskStatus, TaskPriority, Subtask } from '@/types'
 
 export function TodoPage() {
@@ -87,17 +88,22 @@ export function TodoPage() {
     dueDate?: string
     reminderAt?: string
   }) => {
-    if (data.reminderAt) {
-      await checkAndRequestPermission()
+    try {
+      if (data.reminderAt) {
+        await checkAndRequestPermission()
+      }
+      await addTask(data.title, {
+        description: data.description,
+        priority: data.priority,
+        category: data.category,
+        dueDate: data.dueDate,
+        reminderAt: data.reminderAt,
+      })
+      toast.success(`Tugas "${data.title}" berhasil dibuat!`)
+      setShowForm(false)
+    } catch {
+      toast.error('Gagal membuat tugas')
     }
-    await addTask(data.title, {
-      description: data.description,
-      priority: data.priority,
-      category: data.category,
-      dueDate: data.dueDate,
-      reminderAt: data.reminderAt,
-    })
-    setShowForm(false)
   }
 
   const handleTaskClick = (task: Task) => {
@@ -111,14 +117,24 @@ export function TodoPage() {
   }
 
   const handleStatusChange = async (taskId: string, status: TaskStatus) => {
-    await changeStatus(taskId, status)
+    try {
+      await changeStatus(taskId, status)
+      toast.info('Status tugas diperbarui')
+    } catch {
+      toast.error('Gagal mengubah status tugas')
+    }
   }
 
   const handleDeleteTask = async () => {
     if (!selectedTask) return
-    await removeTask(selectedTask.id)
-    setShowDeleteConfirm(false)
-    handleCloseDetail()
+    try {
+      await removeTask(selectedTask.id)
+      toast.success('Tugas berhasil dihapus')
+      setShowDeleteConfirm(false)
+      handleCloseDetail()
+    } catch {
+      toast.error('Gagal menghapus tugas')
+    }
   }
 
   const handleUpdateTask = async (data: {
@@ -130,24 +146,29 @@ export function TodoPage() {
     reminderAt?: string
   }) => {
     if (!selectedTask) return
-    await editTask(selectedTask.id, {
-      title: data.title,
-      description: data.description ?? null,
-      status: selectedTask.status,
-      priority: data.priority,
-      category: data.category ?? null,
-      dueDate: data.dueDate ?? null,
-      reminderAt: data.reminderAt ?? null,
-    })
-    setSelectedTask({
-      ...selectedTask,
-      title: data.title,
-      description: data.description ?? null,
-      priority: data.priority,
-      category: data.category ?? null,
-      due_date: data.dueDate ?? null,
-      reminder_at: data.reminderAt ?? null,
-    })
+    try {
+      await editTask(selectedTask.id, {
+        title: data.title,
+        description: data.description ?? null,
+        status: selectedTask.status,
+        priority: data.priority,
+        category: data.category ?? null,
+        dueDate: data.dueDate ?? null,
+        reminderAt: data.reminderAt ?? null,
+      })
+      setSelectedTask({
+        ...selectedTask,
+        title: data.title,
+        description: data.description ?? null,
+        priority: data.priority,
+        category: data.category ?? null,
+        due_date: data.dueDate ?? null,
+        reminder_at: data.reminderAt ?? null,
+      })
+      toast.success('Tugas berhasil diperbarui!')
+    } catch {
+      toast.error('Gagal memperbarui tugas')
+    }
   }
 
   const statusTabs: Array<{ value: TaskStatus | 'all'; label: string }> = [
@@ -185,22 +206,21 @@ export function TodoPage() {
       <div className="space-y-2">
         <TaskSearch value={filters.search} onChange={setSearch} />
 
-        <div className="flex gap-1 overflow-x-auto pb-1">
-          {statusTabs.map(tab => (
-            <button
-              key={tab.value}
-              onClick={() => setStatus(tab.value)}
-              className={cn(
-                'px-3 py-1.5 text-sm font-medium rounded-lg whitespace-nowrap transition-colors',
-                'focus:outline-none focus:ring-2 focus:ring-primary-500',
-                filters.status === tab.value
-                  ? 'bg-primary-500 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="overflow-x-auto pb-1">
+          <Tabs value={filters.status} onValueChange={val => setStatus(val as TaskStatus | 'all')}>
+            <TabsList className="min-w-max w-full">
+              {statusTabs.map(tab => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  role="button"
+                  className="flex-1 text-xs"
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
 
         <TaskFiltersComponent
@@ -264,7 +284,7 @@ export function TodoPage() {
               initialDescription={selectedTask.description ?? ''}
               initialPriority={selectedTask.priority}
               initialCategory={selectedTask.category ?? ''}
-              initialDueDate={selectedTask.due_date?.split('T')[0] ?? ''}
+              initialDueDate={selectedTask.due_date?.slice(0, 16) ?? ''}
               initialReminderAt={selectedTask.reminder_at?.slice(0, 16) ?? ''}
               categories={categories}
               onSubmit={handleUpdateTask}

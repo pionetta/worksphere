@@ -49,6 +49,14 @@ export const addToSavingsSchema = z.object({
     .min(1, 'Nominal harus lebih dari 0.'),
 })
 
+export const withdrawFromSavingsSchema = z.object({
+  amount: z
+    .number()
+    .int('Nominal harus berupa bilangan bulat.')
+    .min(1, 'Nominal harus lebih dari 0.'),
+})
+
 export type CreateSavingsGoalInput = z.infer<typeof createSavingsGoalSchema>
 export type UpdateSavingsGoalInput = z.infer<typeof updateSavingsGoalSchema>
 export type AddToSavingsInput = z.infer<typeof addToSavingsSchema>
+export type WithdrawFromSavingsInput = z.infer<typeof withdrawFromSavingsSchema>

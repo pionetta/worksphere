@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '@/lib/auth'
 import { Mail, Lock, User, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function LoginPage() {
   const { signIn, signUp, signInWithGoogle, signInDemo } = useAuth()
@@ -20,7 +21,10 @@ export function LoginPage() {
     try {
       const { error } = await signInWithGoogle()
       if (error) {
-        setError(error.message || 'Gagal terhubung ke Google. Pastikan Google Auth sudah aktif di Dashboard Supabase.')
+        setError(
+          error.message ||
+            'Gagal terhubung ke Google. Pastikan Google Auth sudah aktif di Dashboard Supabase.'
+        )
       }
     } catch (err: any) {
       setError(err?.message || 'Terjadi kesalahan saat menghubungkan ke Google.')
@@ -70,21 +74,24 @@ export function LoginPage() {
         const { error, data } = await signUp(email, password, { username })
         if (error) {
           const msg = error.message?.toLowerCase() || ''
+          let errText = error.message || 'Gagal mendaftar. Silakan coba lagi.'
           if (msg.includes('rate limit')) {
-            setError('Batas pengiriman email Supabase tercapai (rate limit). Tunggu beberapa menit atau matikan "Confirm email" di Dashboard Supabase.')
+            errText =
+              'Batas pengiriman email Supabase tercapai (rate limit). Tunggu beberapa menit atau matikan "Confirm email" di Dashboard Supabase.'
           } else if (msg.includes('already registered')) {
-            setError('Email sudah terdaftar. Silakan langsung masuk.')
+            errText = 'Email sudah terdaftar. Silakan langsung masuk.'
           } else if (msg.includes('password should be at least')) {
-            setError('Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka.')
-          } else {
-            setError(error.message || 'Gagal mendaftar. Silakan coba lagi.')
+            errText = 'Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka.'
           }
+          setError(errText)
+          toast.error(errText)
         } else {
           if (data?.session) {
-            // Auto login happened
+            toast.success('Pendaftaran berhasil! Selamat datang.')
           } else {
             // Requires email confirmation
             setSuccessMsg('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi.')
+            toast.success('Pendaftaran berhasil! Silakan periksa email untuk verifikasi.')
             setIsLogin(true) // Switch back to login
             setPassword('')
             setConfirmPassword('')
@@ -93,6 +100,21 @@ export function LoginPage() {
       }
     } catch (err: any) {
       setError(err?.message || 'Terjadi kesalahan sistem. Silakan coba lagi.')
+      toast.error(err?.message || 'Terjadi kesalahan sistem. Silakan coba lagi.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDemoSignIn = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      await signInDemo()
+      toast.success('Masuk sebagai Akun Demo (Offline-First)')
+    } catch (err: any) {
+      setError('Gagal masuk mode demo.')
+      toast.error('Gagal masuk mode demo.')
     } finally {
       setLoading(false)
     }
@@ -299,7 +321,7 @@ export function LoginPage() {
             {/* Demo Login Button */}
             <button
               type="button"
-              onClick={() => signInDemo()}
+              onClick={handleDemoSignIn}
               disabled={loading}
               className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-colors border border-gray-200 dark:border-gray-600"
             >

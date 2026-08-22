@@ -19,6 +19,10 @@ export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'cancelled'
 
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low'
 
+export type DebtType = 'debt' | 'receivable'
+
+export type DebtStatus = 'unpaid' | 'partially_paid' | 'paid'
+
 export type SyncOperationType = 'create' | 'update' | 'delete'
 
 export type SyncStatusType = 'pending' | 'processing' | 'failed' | 'completed'
@@ -116,6 +120,20 @@ export interface SavingsGoal {
   updated_at: string
 }
 
+export interface Debt {
+  id: string
+  user_id: string
+  type: DebtType
+  person_name: string
+  amount: number // BIGINT
+  paid_amount: number // BIGINT
+  due_date: string | null // DATE
+  status: DebtStatus
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Task {
   id: string
   user_id: string
@@ -205,6 +223,11 @@ export interface Database {
         Insert: Partial<SavingsGoal> & Pick<SavingsGoal, 'user_id' | 'name' | 'target_amount'>
         Update: Partial<SavingsGoal>
       }
+      debts: {
+        Row: Debt
+        Insert: Partial<Debt> & Pick<Debt, 'user_id' | 'type' | 'person_name' | 'amount'>
+        Update: Partial<Debt>
+      }
       tasks: {
         Row: Task
         Insert: Partial<Task> & Pick<Task, 'user_id' | 'title'>
@@ -229,6 +252,8 @@ export interface Database {
       transaction_type: TransactionType
       task_status: TaskStatus
       task_priority: TaskPriority
+      debt_type: DebtType
+      debt_status: DebtStatus
       sync_operation: SyncOperationType
       sync_status: SyncStatusType
     }

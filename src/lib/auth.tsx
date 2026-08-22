@@ -131,7 +131,9 @@ export async function updateUserProfile(data: {
         ...parsed,
         user_metadata: {
           ...parsed.user_metadata,
-          ...(data.username !== undefined ? { full_name: data.username, username: data.username } : {}),
+          ...(data.username !== undefined
+            ? { full_name: data.username, username: data.username }
+            : {}),
           ...(data.avatarUrl !== undefined ? { avatar_url: data.avatarUrl } : {}),
         },
       }
@@ -147,7 +149,9 @@ export async function updateUserProfile(data: {
       }
     } = {
       data: {
-        ...(data.username !== undefined ? { full_name: data.username, username: data.username } : {}),
+        ...(data.username !== undefined
+          ? { full_name: data.username, username: data.username }
+          : {}),
         ...(data.avatarUrl !== undefined ? { avatar_url: data.avatarUrl } : {}),
       },
     }
@@ -238,10 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const handleUpdateProfile = async (data: {
-    username?: string
-    avatarUrl?: string | null
-  }) => {
+  const handleUpdateProfile = async (data: { username?: string; avatarUrl?: string | null }) => {
     const res = await updateUserProfile(data)
     if (!res.error && res.data?.user) {
       setUser(res.data.user)

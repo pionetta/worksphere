@@ -6,6 +6,7 @@ import {
   type SyncResult,
 } from '@/lib/sync/syncEngine'
 import { isOnline, onNetworkChange } from '@/lib/sync/networkDetector'
+import { toast } from 'sonner'
 
 // ─── Sync Status ──────────────────────────────────────────────────────────────
 
@@ -48,8 +49,12 @@ export function useSyncStatus(userId: string | null): SyncState {
 
       if (result.failed > 0) {
         setStatus('error')
+        toast.error('Gagal menyinkronkan beberapa data ke cloud')
       } else if (result.succeeded > 0 || result.processed === 0) {
         setStatus('synced')
+        if (result.succeeded > 0) {
+          toast.success(`${result.succeeded} data berhasil disinkronkan ke cloud`)
+        }
         const now = new Date()
         setLastSyncTime(now)
         localStorage.setItem('worksphere-last-sync', now.toISOString())

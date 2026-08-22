@@ -11,6 +11,8 @@ export type {
   TransactionType,
   TaskStatus,
   TaskPriority,
+  DebtType,
+  DebtStatus,
   SyncOperationType,
   SyncStatusType,
   // Row types
@@ -22,6 +24,7 @@ export type {
   Transaction,
   Budget,
   SavingsGoal,
+  Debt,
   Task,
   Subtask,
   SyncQueueRow,

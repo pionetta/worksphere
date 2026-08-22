@@ -3,6 +3,7 @@ import {
   createSavingsGoalSchema,
   updateSavingsGoalSchema,
   addToSavingsSchema,
+  withdrawFromSavingsSchema,
 } from '@/features/finance/schemas/savingsSchema'
 import { validate } from '@/lib/validation'
 import type { SavingsGoal } from '@/types'
@@ -73,6 +74,20 @@ export async function addToSavings(id: string, amount: number): Promise<void> {
 
   return savingsRepo.updateSavingsGoal(id, {
     current_amount: goal.current_amount + data.amount,
+  })
+}
+
+export async function withdrawFromSavings(id: string, amount: number): Promise<void> {
+  const data = validate(withdrawFromSavingsSchema, { amount })
+  const goal = await savingsRepo.getSavingsGoalById(id)
+  if (!goal) throw new Error('Tujuan tabungan tidak ditemukan.')
+
+  if (data.amount > goal.current_amount) {
+    throw new Error('Nominal penarikan melebihi saldo tabungan saat ini.')
+  }
+
+  return savingsRepo.updateSavingsGoal(id, {
+    current_amount: goal.current_amount - data.amount,
   })
 }
 

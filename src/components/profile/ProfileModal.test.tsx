@@ -80,7 +80,9 @@ describe('ProfileModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ubah Password' }))
 
     expect(
-      screen.getByText(/Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka/i)
+      screen.getByText(
+        /Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka/i
+      )
     ).toBeInTheDocument()
     expect(mockUpdateUserPassword).not.toHaveBeenCalled()
   })

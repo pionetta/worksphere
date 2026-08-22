@@ -81,10 +81,7 @@ export function AppLayout({
         <BottomNavigation />
       </div>
 
-      <ProfileModal
-        open={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-      />
+      <ProfileModal open={showProfileModal} onClose={() => setShowProfileModal(false)} />
 
       <ConfirmDialog
         open={showLogoutConfirm}

@@ -64,11 +64,12 @@ export function SyncIndicator({
           <span className="text-gray-500 dark:text-gray-400">{pendingCount} antrian</span>
         </>
       ) : syncStatus === 'synced' && networkStatus === 'online' ? (
-        <div className="flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity" title={timeAgo ? `Tersinkronisasi ${timeAgo}` : 'Tersinkronisasi'}>
+        <div
+          className="flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity"
+          title={timeAgo ? `Tersinkronisasi ${timeAgo}` : 'Tersinkronisasi'}
+        >
           <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-          <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">
-            Tersinkron
-          </span>
+          <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">Tersinkron</span>
         </div>
       ) : null}
     </div>

@@ -1,4 +1,5 @@
 import { Card } from '@/components/ui/Card'
+import { Progress } from '@/components/ui/progress'
 import { calculateProgress } from '@/features/finance/services/savingsService'
 import { formatCurrency } from '@/utils/currency'
 import type { SavingsGoal } from '@/types'
@@ -36,6 +37,7 @@ export function SavingsSummary({ savings, onViewAll }: SavingsSummaryProps) {
       <div className="space-y-4">
         {displaySavings.map(goal => {
           const progress = calculateProgress(goal.current_amount, goal.target_amount)
+          const isCompleted = goal.current_amount >= goal.target_amount
 
           return (
             <div key={goal.id} className="space-y-1.5">
@@ -43,16 +45,15 @@ export function SavingsSummary({ savings, onViewAll }: SavingsSummaryProps) {
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate pr-2">
                   {goal.name}
                 </span>
-                <span className="text-xs font-medium text-primary-600 dark:text-primary-400 shrink-0">
+                <span className="text-xs font-semibold text-primary-600 dark:text-primary-400 shrink-0">
                   {progress}%
                 </span>
               </div>
-              <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary-500 rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+              <Progress
+                value={Math.min(progress, 100)}
+                variant={isCompleted ? 'success' : 'default'}
+                className="h-2"
+              />
               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                 <span>{formatCurrency(goal.current_amount)}</span>
                 <span>{formatCurrency(goal.target_amount)}</span>

@@ -1,6 +1,7 @@
 import { formatCurrency } from '@/utils/currency'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { Progress } from '@/components/ui/progress'
 import { Pencil, Trash2 } from 'lucide-react'
 import type { Budget } from '@/types'
 
@@ -45,13 +46,13 @@ export function BudgetCard({ budget, categoryName, spent = 0, onEdit, onDelete }
   const statusConfig = STATUS_CONFIG[status]
 
   return (
-    <Card>
-      <div className="flex items-start justify-between mb-2">
+    <Card className="hover:border-primary-200 dark:hover:border-primary-800 transition-all duration-200 shadow-sm hover:shadow-md">
+      <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             {categoryName || 'Tanpa kategori'}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             Anggaran: {formatCurrency(budget.amount)}
           </p>
         </div>
@@ -77,49 +78,37 @@ export function BudgetCard({ budget, categoryName, spent = 0, onEdit, onDelete }
         </div>
       </div>
 
-      <Progress
-        value={Math.min(percent, 100)}
-        variant={isOver ? 'danger' : status === 'warning' ? 'warning' : 'primary'}
-      />
+      <div className="space-y-2">
+        <Progress
+          value={Math.min(percent, 100)}
+          variant={isOver ? 'danger' : status === 'warning' ? 'warning' : 'success'}
+          className="h-2.5"
+        />
 
-      <div className="flex justify-between items-center mt-2 text-xs text-gray-500 dark:text-gray-400">
-        <span>Terkonsumsi: {formatCurrency(spent)}</span>
-        <span>
-          {isOver
-            ? `Melebihi ${formatCurrency(Math.abs(remaining))}`
-            : `Sisa: ${formatCurrency(remaining)}`}
-        </span>
-      </div>
+        <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+          <span>Terkonsumsi: {formatCurrency(spent)}</span>
+          <span className={isOver ? 'text-danger font-medium' : ''}>
+            {isOver
+              ? `Melebihi ${formatCurrency(Math.abs(remaining))}`
+              : `Sisa: ${formatCurrency(remaining)}`}
+          </span>
+        </div>
 
-      <div className="mt-2 flex items-center justify-between">
-        <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-        <span className="text-xs text-gray-400 dark:text-gray-500">{percent}%</span>
+        <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-800">
+          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+          <span
+            className={`text-xs font-semibold ${
+              isOver
+                ? 'text-danger'
+                : status === 'warning'
+                  ? 'text-warning'
+                  : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            {percent}%
+          </span>
+        </div>
       </div>
     </Card>
-  )
-}
-
-// ─── Progress Bar ─────────────────────────────────────────────────────────────
-
-function Progress({
-  value,
-  variant = 'primary',
-}: {
-  value: number
-  variant?: 'primary' | 'warning' | 'danger'
-}) {
-  const colorMap = {
-    primary: 'bg-primary-500',
-    warning: 'bg-warning',
-    danger: 'bg-danger',
-  }
-
-  return (
-    <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-all ${colorMap[variant]}`}
-        style={{ width: `${value}%` }}
-      />
-    </div>
   )
 }

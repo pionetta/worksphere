@@ -8,6 +8,7 @@ import type { Attendance, AttendanceStatus, Member } from '@/types'
 interface AttendanceListProps {
   members: Member[]
   attendance: Attendance[]
+  pendingStatuses?: Map<string, AttendanceStatus>
   onStatusChange: (memberId: string, status: AttendanceStatus) => void
   onSave: () => void
   loading?: boolean
@@ -18,6 +19,7 @@ interface AttendanceListProps {
 export function AttendanceList({
   members,
   attendance,
+  pendingStatuses,
   onStatusChange,
   onSave,
   loading,
@@ -42,23 +44,31 @@ export function AttendanceList({
 
   return (
     <div>
-      <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">
         {activeMembers.map(member => {
           const record = attendance.find(a => a.member_id === member.id)
+          const currentStatus = pendingStatuses?.get(member.id) ?? record?.status ?? 'present'
           return (
             <AttendanceRow
               key={member.id}
               member={member}
               attendance={record}
+              status={currentStatus}
               onStatusChange={status => onStatusChange(member.id, status)}
             />
           )
         })}
       </div>
       {hasChanges && (
-        <div className="mt-4 flex justify-end">
-          <Button onClick={onSave} loading={saving} icon={<Save className="w-4 h-4" />}>
-            Simpan
+        <div className="mt-4 pt-3.5 pb-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+              Perubahan belum disimpan
+            </p>
+          </div>
+          <Button onClick={onSave} loading={saving} icon={<Save className="w-4 h-4" />} size="sm">
+            Simpan Absensi
           </Button>
         </div>
       )}

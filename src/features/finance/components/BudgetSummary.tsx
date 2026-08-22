@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { Progress } from '@/components/ui/progress'
 import { getBudgetStatus, STATUS_CONFIG } from '@/features/finance/components/BudgetCard'
 import { formatCurrency } from '@/utils/currency'
 import type { Budget } from '@/types'
@@ -48,6 +49,7 @@ export function BudgetSummary({
           const spent = spentByCategory[budget.category_id] || 0
           const percent =
             budget.amount > 0 ? Math.min(Math.round((spent / budget.amount) * 100), 100) : 0
+          const isOver = spent > budget.amount
           const status = getBudgetStatus(spent, budget.amount)
           const config = STATUS_CONFIG[status]
 
@@ -59,18 +61,11 @@ export function BudgetSummary({
                 </span>
                 <Badge variant={config.variant}>{config.label}</Badge>
               </div>
-              <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    status === 'exceeded'
-                      ? 'bg-danger'
-                      : status === 'warning'
-                        ? 'bg-warning'
-                        : 'bg-success'
-                  }`}
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
+              <Progress
+                value={percent}
+                variant={isOver ? 'danger' : status === 'warning' ? 'warning' : 'success'}
+                className="h-2"
+              />
               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                 <span>{formatCurrency(spent)}</span>
                 <span>{formatCurrency(budget.amount)}</span>

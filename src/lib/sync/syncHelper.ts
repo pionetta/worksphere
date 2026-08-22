@@ -45,6 +45,7 @@ export const ENTITY_NAMES = {
   transaction: 'transaction',
   budget: 'budget',
   savings_goal: 'savings_goal',
+  debt: 'debt',
   task: 'task',
   subtask: 'subtask',
 } as const

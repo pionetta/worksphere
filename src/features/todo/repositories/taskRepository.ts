@@ -49,17 +49,20 @@ export async function listOverdueTasks(userId: string): Promise<Task[]> {
   return db.tasks
     .where('user_id')
     .equals(userId)
-    .and(
-      t => {
-        if (!t.due_date || t.status === 'completed' || t.status === 'cancelled' || t.deleted_at !== null) {
-          return false
-        }
-        if (!t.due_date.includes('T')) {
-          return t.due_date < todayDateStr
-        }
-        return t.due_date < nowIso
+    .and(t => {
+      if (
+        !t.due_date ||
+        t.status === 'completed' ||
+        t.status === 'cancelled' ||
+        t.deleted_at !== null
+      ) {
+        return false
       }
-    )
+      if (!t.due_date.includes('T')) {
+        return t.due_date < todayDateStr
+      }
+      return t.due_date < nowIso
+    })
     .toArray()
 }
 

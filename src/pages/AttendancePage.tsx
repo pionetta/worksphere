@@ -12,7 +12,9 @@ import { WeeklyAttendanceTable } from '@/features/attendance/components/WeeklyAt
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { FileDown } from 'lucide-react'
+import { toast } from 'sonner'
 import type { AttendanceStatus } from '@/types'
 import { isSameDay } from 'date-fns'
 import * as attendanceService from '@/features/attendance/services/attendanceService'
@@ -58,6 +60,9 @@ export function AttendancePage() {
       }))
       await attendanceHook.saveBulk(entries)
       setPendingStatuses(new Map())
+      toast.success('Data absensi berhasil disimpan!')
+    } catch {
+      toast.error('Gagal menyimpan data absensi.')
     } finally {
       setSaving(false)
     }
@@ -77,8 +82,10 @@ export function AttendancePage() {
         ),
       ])
       exportAttendancePdf(membersHook.members, allAttendance, recap.startDate, recap.endDate)
+      toast.success('Laporan absensi PDF berhasil dibuat!')
     } catch {
       setExportError('Gagal export PDF. Silakan coba lagi.')
+      toast.error('Gagal export PDF. Silakan coba lagi.')
     } finally {
       setExportLoading(false)
     }
@@ -103,8 +110,10 @@ export function AttendancePage() {
         recap.startDate,
         recap.endDate
       )
+      toast.success('Laporan absensi Excel berhasil dibuat!')
     } catch {
       setExportError('Gagal export Excel. Silakan coba lagi.')
+      toast.error('Gagal export Excel. Silakan coba lagi.')
     } finally {
       setExportLoading(false)
     }
@@ -124,21 +133,15 @@ export function AttendancePage() {
   return (
     <div className="space-y-4">
       {/* Tab Navigation */}
-      <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800">
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-              tab === t.key
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={val => setTab(val as Tab)}>
+        <TabsList className="w-full">
+          {tabs.map(t => (
+            <TabsTrigger key={t.key} value={t.key} className="flex-1" role="button">
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {/* Daily Attendance Tab */}
       {tab === 'daily' && (
@@ -152,20 +155,22 @@ export function AttendancePage() {
               <AttendanceSummary
                 attendance={attendanceHook.attendance}
                 members={membersHook.members}
+                pendingStatuses={pendingStatuses}
               />
             </Card>
           )}
 
           <Card padding="none">
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700/50">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 Daftar Anggota
               </h3>
             </div>
-            <div className="px-4">
+            <div className="px-4 pb-4">
               <AttendanceList
                 members={membersHook.members}
                 attendance={attendanceHook.attendance}
+                pendingStatuses={pendingStatuses}
                 onStatusChange={handleStatusChange}
                 onSave={handleSave}
                 loading={membersHook.loading || attendanceHook.loading}
@@ -194,7 +199,8 @@ export function AttendancePage() {
                   isActive,
                 })
               } else {
-                membersHook.activateMember(id)
+                await membersHook.activateMember(id)
+                toast.success('Anggota berhasil diaktifkan kembali')
               }
             }}
           />
@@ -249,9 +255,10 @@ export function AttendancePage() {
       <ConfirmDialog
         open={memberToggleConfirm !== null}
         onClose={() => setMemberToggleConfirm(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (memberToggleConfirm) {
-            membersHook.deactivateMember(memberToggleConfirm.id)
+            await membersHook.deactivateMember(memberToggleConfirm.id)
+            toast.info(`Anggota "${memberToggleConfirm.name}" dinonaktifkan`)
             setMemberToggleConfirm(null)
           }
         }}

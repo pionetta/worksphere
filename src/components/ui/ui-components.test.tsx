@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Button } from './Button'
 import { Input } from './Input'
 import { Card } from './Card'
@@ -7,6 +8,18 @@ import { Badge } from './Badge'
 import { EmptyState } from './EmptyState'
 import { LoadingState } from './LoadingState'
 import { ErrorState } from './ErrorState'
+import { Progress } from './progress'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from './dropdown-menu'
+import { Avatar, AvatarFallback } from './avatar'
+import { Checkbox } from './checkbox'
+import { Skeleton } from './skeleton'
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './tooltip'
 
 describe('Button', () => {
   it('should render with text', () => {
@@ -156,5 +169,113 @@ describe('ErrorState', () => {
     render(<ErrorState onRetry={onRetry} />)
     const retryButton = screen.getByRole('button', { name: 'Coba Lagi' })
     expect(retryButton).toBeInTheDocument()
+  })
+})
+
+describe('Progress', () => {
+  it('should render progress bar with value', () => {
+    render(<Progress value={65} aria-label="Target progress" />)
+    const progress = screen.getByRole('progressbar')
+    expect(progress).toBeInTheDocument()
+    expect(progress).toHaveAttribute('aria-valuenow', '65')
+  })
+
+  it('should apply variant styles', () => {
+    const { container } = render(<Progress value={90} variant="danger" />)
+    const indicator = container.querySelector('.bg-danger')
+    expect(indicator).toBeInTheDocument()
+  })
+})
+
+describe('Tabs', () => {
+  it('should render tabs and switch content on click', async () => {
+    render(
+      <Tabs defaultValue="tab1">
+        <TabsList>
+          <TabsTrigger value="tab1">Tab 1</TabsTrigger>
+          <TabsTrigger value="tab2">Tab 2</TabsTrigger>
+        </TabsList>
+        <TabsContent value="tab1">Konten 1</TabsContent>
+        <TabsContent value="tab2">Konten 2</TabsContent>
+      </Tabs>
+    )
+
+    expect(screen.getByText('Konten 1')).toBeInTheDocument()
+    expect(screen.queryByText('Konten 2')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Tab 2' }))
+    expect(screen.getByText('Konten 2')).toBeInTheDocument()
+  })
+})
+
+describe('DropdownMenu', () => {
+  it('should open dropdown menu and trigger item action', async () => {
+    const onItemClick = vi.fn()
+    render(
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button>Opsi</button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={onItemClick}>Edit Item</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+
+    const trigger = screen.getByRole('button', { name: 'Opsi' })
+    await userEvent.click(trigger)
+
+    const item = await screen.findByText('Edit Item')
+    expect(item).toBeInTheDocument()
+
+    await userEvent.click(item)
+    expect(onItemClick).toHaveBeenCalled()
+  })
+})
+
+describe('Avatar', () => {
+  it('should render avatar fallback with initials', () => {
+    render(
+      <Avatar>
+        <AvatarFallback>JD</AvatarFallback>
+      </Avatar>
+    )
+    expect(screen.getByText('JD')).toBeInTheDocument()
+  })
+})
+
+describe('Checkbox', () => {
+  it('should render checkbox and toggle on click', async () => {
+    render(<Checkbox aria-label="Setujui syarat" />)
+    const checkbox = screen.getByRole('checkbox', { name: 'Setujui syarat' })
+    expect(checkbox).toBeInTheDocument()
+    expect(checkbox).not.toBeChecked()
+
+    await userEvent.click(checkbox)
+    expect(checkbox).toBeChecked()
+  })
+})
+
+describe('Skeleton', () => {
+  it('should render skeleton placeholder', () => {
+    const { container } = render(<Skeleton className="h-6 w-24" />)
+    const el = container.firstChild as HTMLElement
+    expect(el.className).toContain('animate-pulse')
+  })
+})
+
+describe('Tooltip', () => {
+  it('should render tooltip trigger and content', () => {
+    render(
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button>Bantuan</button>
+          </TooltipTrigger>
+          <TooltipContent>Info bantuan</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
+    expect(screen.getByRole('button', { name: 'Bantuan' })).toBeInTheDocument()
   })
 })

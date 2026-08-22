@@ -4,9 +4,7 @@ import { SyncIndicator, OfflineBanner } from './SyncIndicator'
 
 describe('SyncIndicator', () => {
   it('should render synced status when synced and online', () => {
-    render(
-      <SyncIndicator syncStatus="synced" networkStatus="online" pendingCount={0} />
-    )
+    render(<SyncIndicator syncStatus="synced" networkStatus="online" pendingCount={0} />)
     expect(screen.getByText('Tersinkron')).toBeInTheDocument()
   })
 

@@ -97,9 +97,7 @@ export function WeeklyAttendanceTable({
                     <span
                       className={cn(
                         'inline-block w-2 h-2 rounded-full',
-                        record
-                          ? STATUS_STYLES[record.status]
-                          : 'bg-gray-300 dark:bg-gray-600'
+                        record ? STATUS_STYLES[record.status] : 'bg-gray-300 dark:bg-gray-600'
                       )}
                       title={
                         record

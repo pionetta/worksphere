@@ -11,6 +11,7 @@ const ENTITY_TABLE_MAP: Record<string, keyof Database['public']['Tables']> = {
   transaction: 'transactions',
   budget: 'budgets',
   savings_goal: 'savings_goals',
+  debt: 'debts',
   task: 'tasks',
   subtask: 'subtasks',
 }
@@ -27,6 +28,7 @@ const DEPENDENCY_ORDER = [
   'transaction',
   'budget',
   'savings_goal',
+  'debt',
   'subtask',
 ]
 

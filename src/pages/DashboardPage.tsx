@@ -2,6 +2,7 @@ import { useAuth } from '@/lib/auth'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useDashboard } from '@/hooks/useDashboard'
 import { Card } from '@/components/ui/Card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { AttendanceDashboardCard } from '@/components/dashboard/AttendanceDashboardCard'
 import { FinanceDashboardCard } from '@/components/dashboard/FinanceDashboardCard'
@@ -40,12 +41,12 @@ export function DashboardPage() {
     <div className="space-y-6">
       {/* Greeting */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
           {getGreeting()}, {displayName}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{formatDate()}</p>
         {network === 'offline' && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-medium">
             Offline — perubahan akan disinkronkan saat online.
           </p>
         )}
@@ -55,14 +56,32 @@ export function DashboardPage() {
       <div className="space-y-3">
         {loading ? (
           <>
-            <Card glass className="animate-pulse">
-              <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            <Card glass className="animate-pulse p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+              </div>
             </Card>
-            <Card glass className="animate-pulse">
-              <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            <Card glass className="animate-pulse p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+              </div>
             </Card>
-            <Card glass className="animate-pulse">
-              <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            <Card glass className="animate-pulse p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-36" />
+                </div>
+              </div>
             </Card>
           </>
         ) : error ? (

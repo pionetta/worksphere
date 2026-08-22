@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoginPage } from '@/pages/LoginPage'
 import { Loader2 } from 'lucide-react'
+import { Toaster } from '@/components/ui/sonner'
 
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage }))
@@ -99,6 +100,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppRoutes />
+        <Toaster />
       </AuthProvider>
     </BrowserRouter>
   )

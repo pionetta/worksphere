@@ -1,8 +1,10 @@
 import { useState, useRef, type FormEvent } from 'react'
 import { useAuth } from '@/lib/auth'
+import { useTheme } from '@/hooks/useTheme'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { resizeImage } from '@/utils/image'
-import { User, Lock, Camera, Trash2, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { User, Lock, Camera, Trash2, CheckCircle2, AlertCircle, Loader2, Sun, Moon, Monitor } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
 
 interface ProfileModalProps {
@@ -14,6 +16,7 @@ type TabType = 'profile' | 'password'
 
 export function ProfileModal({ open, onClose }: ProfileModalProps) {
   const { user, updateUserProfile, updateUserPassword } = useAuth()
+  const { theme, setTheme } = useTheme()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const currentName =
@@ -48,12 +51,15 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
       const { error } = await updateUserProfile({ avatarUrl: dataUrl })
       if (error) {
         setErrorMsg(error.message || 'Gagal menyimpan foto profil.')
+        toast.error(error.message || 'Gagal menyimpan foto profil.')
       } else {
         setSuccessMsg('Foto profil berhasil diperbarui!')
+        toast.success('Foto profil berhasil diperbarui!')
         setTimeout(() => setSuccessMsg(null), 3000)
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Gagal memproses gambar.')
+      toast.error(err?.message || 'Gagal memproses gambar.')
     } finally {
       setLoading(false)
       if (fileInputRef.current) {
@@ -70,12 +76,15 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
       const { error } = await updateUserProfile({ avatarUrl: null })
       if (error) {
         setErrorMsg(error.message || 'Gagal menghapus foto profil.')
+        toast.error(error.message || 'Gagal menghapus foto profil.')
       } else {
         setSuccessMsg('Foto profil berhasil dihapus!')
+        toast.info('Foto profil berhasil dihapus')
         setTimeout(() => setSuccessMsg(null), 3000)
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Gagal menghapus foto profil.')
+      toast.error(err?.message || 'Gagal menghapus foto profil.')
     } finally {
       setLoading(false)
     }
@@ -99,12 +108,15 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
       })
       if (error) {
         setErrorMsg(error.message || 'Gagal memperbarui profil.')
+        toast.error(error.message || 'Gagal memperbarui profil.')
       } else {
         setSuccessMsg('Profil berhasil diperbarui!')
+        toast.success('Profil berhasil diperbarui!')
         setTimeout(() => setSuccessMsg(null), 3000)
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Terjadi kesalahan sistem.')
+      toast.error(err?.message || 'Terjadi kesalahan sistem.')
     } finally {
       setLoading(false)
     }
@@ -133,14 +145,17 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
       const { error } = await updateUserPassword(newPassword)
       if (error) {
         setErrorMsg(error.message || 'Gagal memperbarui password.')
+        toast.error(error.message || 'Gagal memperbarui password.')
       } else {
         setSuccessMsg('Password berhasil diubah!')
+        toast.success('Password berhasil diubah!')
         setNewPassword('')
         setConfirmPassword('')
         setTimeout(() => setSuccessMsg(null), 3000)
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Terjadi kesalahan sistem.')
+      toast.error(err?.message || 'Terjadi kesalahan sistem.')
     } finally {
       setLoading(false)
     }
@@ -156,11 +171,7 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
           <div className="relative group">
             <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-primary-500/40 dark:border-primary-400/40 bg-gray-100 dark:bg-gray-800 flex items-center justify-center shadow-md">
               {avatarPreview ? (
-                <img
-                  src={avatarPreview}
-                  alt={username}
-                  className="w-full h-full object-cover"
-                />
+                <img src={avatarPreview} alt={username} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-3xl font-bold text-primary-600 dark:text-primary-400">
                   {initials}
@@ -307,10 +318,57 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Tema Tampilan
+              </label>
+              <div className="grid grid-cols-3 gap-2 p-1 rounded-xl bg-gray-100 dark:bg-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  className={cn(
+                    'flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer',
+                    theme === 'light'
+                      ? 'bg-white text-amber-600 shadow-xs dark:bg-gray-700 dark:text-amber-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  )}
+                >
+                  <Sun className="w-4 h-4 text-amber-500" />
+                  <span>Terang</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  className={cn(
+                    'flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer',
+                    theme === 'dark'
+                      ? 'bg-white text-indigo-600 shadow-xs dark:bg-gray-700 dark:text-indigo-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  )}
+                >
+                  <Moon className="w-4 h-4 text-indigo-400" />
+                  <span>Gelap</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('system')}
+                  className={cn(
+                    'flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer',
+                    theme === 'system'
+                      ? 'bg-white text-primary-600 shadow-xs dark:bg-gray-700 dark:text-primary-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  )}
+                >
+                  <Monitor className="w-4 h-4 text-primary-500" />
+                  <span>Sistem</span>
+                </button>
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-primary-500 text-white font-medium text-sm hover:bg-primary-600 disabled:opacity-50 transition-colors shadow-sm"
+              className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-primary-500 text-white font-medium text-sm hover:bg-primary-600 disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
             >
               {loading ? (
                 <>

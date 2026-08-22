@@ -1,23 +1,45 @@
-import type { Attendance } from '@/types'
-import type { Member } from '@/types'
+import type { Attendance, AttendanceStatus, Member } from '@/types'
 
 interface AttendanceSummaryProps {
   attendance: Attendance[]
   members: Member[]
+  pendingStatuses?: Map<string, AttendanceStatus>
 }
 
-export function AttendanceSummary({ attendance, members }: AttendanceSummaryProps) {
+export function AttendanceSummary({
+  attendance,
+  members,
+  pendingStatuses,
+}: AttendanceSummaryProps) {
   const activeMembers = members.filter(m => m.is_active)
-  const activeMemberIds = new Set(activeMembers.map(m => m.id))
   const total = activeMembers.length
 
-  const activeAttendance = attendance.filter(a => activeMemberIds.has(a.member_id))
-  const present = activeAttendance.filter(a => a.status === 'present').length
-  const absent = activeAttendance.filter(a => a.status === 'absent').length
-  const holiday = activeAttendance.filter(a => a.status === 'holiday').length
-  const unrecorded = Math.max(0, total - activeAttendance.length)
-
   if (total === 0) return null
+
+  let present = 0
+  let absent = 0
+  let holiday = 0
+  let unrecorded = 0
+
+  activeMembers.forEach(m => {
+    const pending = pendingStatuses?.get(m.id)
+    if (pending) {
+      if (pending === 'present') present++
+      else if (pending === 'absent') absent++
+      else if (pending === 'holiday') holiday++
+    } else {
+      const record = attendance.find(a => a.member_id === m.id)
+      if (!record) {
+        unrecorded++
+      } else if (record.status === 'present') {
+        present++
+      } else if (record.status === 'absent') {
+        absent++
+      } else if (record.status === 'holiday') {
+        holiday++
+      }
+    }
+  })
 
   return (
     <div className="grid grid-cols-4 gap-2">

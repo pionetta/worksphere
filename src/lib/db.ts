@@ -7,6 +7,7 @@ import type {
   Transaction,
   Budget,
   SavingsGoal,
+  Debt,
   Task,
   Subtask,
   SyncQueueRow,
@@ -22,6 +23,7 @@ class WorksphereDB extends Dexie {
   transactions!: EntityTable<Transaction, 'id'>
   budgets!: EntityTable<Budget, 'id'>
   savings_goals!: EntityTable<SavingsGoal, 'id'>
+  debts!: EntityTable<Debt, 'id'>
   tasks!: EntityTable<Task, 'id'>
   subtasks!: EntityTable<Subtask, 'id'>
   sync_queue!: EntityTable<SyncQueueRow, 'id'>
@@ -40,6 +42,7 @@ class WorksphereDB extends Dexie {
         'id, user_id, wallet_id, type, category_id, transaction_date, transfer_group_id, deleted_at',
       budgets: 'id, user_id, category_id, month, year',
       savings_goals: 'id, user_id, name, deadline',
+      debts: 'id, user_id, type, person_name, status, due_date',
       tasks: 'id, user_id, status, priority, category, due_date, deleted_at',
       subtasks: 'id, task_id, user_id, is_completed',
       sync_queue: 'id, user_id, operation, entity, entity_id, status, created_at',

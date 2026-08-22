@@ -26,9 +26,7 @@ export function QuickActionFAB({ onClick, open = false }: QuickActionFABProps) {
       aria-label={open ? 'Tutup menu aksi cepat' : 'Buka menu aksi cepat'}
       aria-expanded={open}
     >
-      <Plus
-        className="w-6 h-6 transition-transform duration-200"
-      />
+      <Plus className="w-6 h-6 transition-transform duration-200" />
     </button>
   )
 }

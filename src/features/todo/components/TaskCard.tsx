@@ -1,10 +1,12 @@
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { cn } from '@/utils/cn'
+import { Progress } from '@/components/ui/progress'
+import { PriorityBadge } from '@/features/todo/components/PriorityBadge'
+import { cn } from '@/lib/utils'
 import { formatDeadline, formatOverdue } from '@/utils/date'
 import { isOverdue } from '@/features/todo/services/taskService'
 import { getSubtaskProgress } from '@/features/todo/services/subtaskService'
-import type { Task, TaskStatus, TaskPriority, Subtask } from '@/types'
+import type { Task, TaskStatus, Subtask } from '@/types'
 import {
   AlertTriangle,
   Clock,
@@ -43,20 +45,6 @@ const statusBadge: Record<TaskStatus, 'default' | 'info' | 'success' | 'warning'
   cancelled: 'warning',
 }
 
-const priorityLabels: Record<TaskPriority, string> = {
-  urgent: 'Mendesak',
-  high: 'Tinggi',
-  medium: 'Sedang',
-  low: 'Rendah',
-}
-
-const priorityBadge: Record<TaskPriority, 'danger' | 'warning' | 'info' | 'default'> = {
-  urgent: 'danger',
-  high: 'warning',
-  medium: 'info',
-  low: 'default',
-}
-
 export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskCardProps) {
   const StatusIcon = statusIcons[task.status]
   const overdue = isOverdue(task)
@@ -79,7 +67,7 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
   return (
     <Card
       className={cn(
-        'cursor-pointer transition-all hover:shadow-md',
+        'cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800/80',
         overdue && 'border-l-4 border-l-danger',
         task.status === 'completed' && 'opacity-60'
       )}
@@ -88,16 +76,16 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
       <div className="flex items-start gap-3">
         <button
           onClick={handleStatusToggle}
-          className="mt-0.5 shrink-0 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
+          className="mt-0.5 shrink-0 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded p-0.5 cursor-pointer"
           aria-label={`Ubah status: ${statusLabels[task.status]}`}
         >
           <StatusIcon
             className={cn(
-              'w-5 h-5',
+              'w-5 h-5 transition-transform active:scale-90',
               task.status === 'completed'
-                ? 'text-success'
+                ? 'text-emerald-500 fill-emerald-100 dark:fill-emerald-950'
                 : task.status === 'in_progress'
-                  ? 'text-blue-500'
+                  ? 'text-blue-500 fill-blue-100 dark:fill-blue-950'
                   : 'text-gray-400 dark:text-gray-500'
             )}
           />
@@ -107,13 +95,13 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
           <div className="flex items-center gap-2 flex-wrap">
             <h3
               className={cn(
-                'text-sm font-medium text-gray-900 dark:text-gray-100',
+                'text-sm font-semibold text-gray-900 dark:text-gray-100',
                 task.status === 'completed' && 'line-through text-gray-500 dark:text-gray-400'
               )}
             >
               {task.title}
             </h3>
-            <Badge variant={priorityBadge[task.priority]}>{priorityLabels[task.priority]}</Badge>
+            <PriorityBadge priority={task.priority} />
             <Badge variant={statusBadge[task.status]}>{statusLabels[task.status]}</Badge>
           </div>
 
@@ -123,9 +111,26 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
             </p>
           )}
 
-          <div className="mt-2 flex items-center gap-3 flex-wrap">
+          {/* Subtask Progress Bar */}
+          {progress.total > 0 && (
+            <div className="mt-2.5 space-y-1">
+              <div className="flex justify-between text-[11px] text-gray-500 dark:text-gray-400">
+                <span>
+                  {progress.completed} dari {progress.total} subtask
+                </span>
+                <span className="font-medium">{progress.percentage}%</span>
+              </div>
+              <Progress
+                value={progress.percentage}
+                variant={progress.percentage === 100 ? 'success' : 'default'}
+                className="h-1.5"
+              />
+            </div>
+          )}
+
+          <div className="mt-2.5 flex items-center gap-3 flex-wrap">
             {task.category && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+              <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/80 px-2 py-0.5 rounded-full font-medium">
                 {task.category}
               </span>
             )}
@@ -138,7 +143,9 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
                 )}
               >
                 <CalendarDays className="w-3 h-3" />
-                {overdue ? formatOverdue(task.due_date) : formatDeadline(task.due_date)}
+                {overdue
+                  ? formatOverdue(task.due_date)
+                  : formatDeadline(task.due_date, task.due_date.includes('T'))}
               </span>
             )}
 
@@ -146,12 +153,6 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
               <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                 <Clock className="w-3 h-3" />
                 Pengingat aktif
-              </span>
-            )}
-
-            {progress.total > 0 && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {progress.completed}/{progress.total} selesai
               </span>
             )}
           </div>

@@ -8,6 +8,8 @@ import { ExpenseQuickAction } from './flows/ExpenseQuickAction'
 import { TransferQuickAction } from './flows/TransferQuickAction'
 import { TaskQuickAction } from './flows/TaskQuickAction'
 
+import { toast } from 'sonner'
+
 interface QuickActionsProps {
   userId: string
   onActionComplete: () => void
@@ -32,9 +34,14 @@ export function QuickActions({ userId, onActionComplete }: QuickActionsProps) {
   }, [])
 
   const handleSuccess = useCallback(() => {
+    if (activeAction === 'attendance') toast.success('Absensi hari ini berhasil dicatat!')
+    if (activeAction === 'income') toast.success('Pemasukan berhasil dicatat!')
+    if (activeAction === 'expense') toast.success('Pengeluaran berhasil dicatat!')
+    if (activeAction === 'transfer') toast.success('Transfer antar dompet berhasil!')
+    if (activeAction === 'task') toast.success('Tugas baru berhasil ditambahkan!')
     setActiveAction(null)
     onActionComplete()
-  }, [onActionComplete])
+  }, [activeAction, onActionComplete])
 
   const actionTitles: Record<QuickActionType, string> = {
     attendance: 'Catat Absensi Hari Ini',

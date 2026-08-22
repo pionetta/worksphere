@@ -65,6 +65,30 @@ describe('savingsService', () => {
     })
   })
 
+  describe('withdrawFromSavings', () => {
+    it('should decrease current amount when amount is valid', async () => {
+      const id = await savingsService.createSavingsGoal(userId, 'Goal', 10000000)
+      await savingsService.addToSavings(id, 1000000)
+      await savingsService.withdrawFromSavings(id, 400000)
+      const goal = await db.savings_goals.get(id)
+      expect(goal!.current_amount).toBe(600000)
+    })
+
+    it('should reject withdrawal exceeding current amount', async () => {
+      const id = await savingsService.createSavingsGoal(userId, 'Goal', 10000000)
+      await savingsService.addToSavings(id, 500000)
+      await expect(savingsService.withdrawFromSavings(id, 600000)).rejects.toThrow(
+        'Nominal penarikan melebihi saldo tabungan saat ini.'
+      )
+    })
+
+    it('should reject amount <= 0', async () => {
+      const id = await savingsService.createSavingsGoal(userId, 'Goal', 10000000)
+      await savingsService.addToSavings(id, 500000)
+      await expect(savingsService.withdrawFromSavings(id, 0)).rejects.toThrow()
+    })
+  })
+
   describe('calculateProgress', () => {
     it('should calculate progress percentage', () => {
       expect(savingsService.calculateProgress(500000, 1000000)).toBe(50)

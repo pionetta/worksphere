@@ -55,6 +55,14 @@ export function useSavingsGoals(userId: string | null) {
     [refresh]
   )
 
+  const withdrawSavings = useCallback(
+    async (id: string, amount: number) => {
+      await savingsService.withdrawFromSavings(id, amount)
+      await refresh()
+    },
+    [refresh]
+  )
+
   const removeGoal = useCallback(
     async (id: string) => {
       await savingsService.removeSavingsGoal(id)
@@ -71,6 +79,7 @@ export function useSavingsGoals(userId: string | null) {
     addGoal,
     editGoal,
     addToSavings,
+    withdrawSavings,
     removeGoal,
   }
 }

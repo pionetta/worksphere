@@ -21,6 +21,11 @@ import { SavingsGoalForm } from '@/features/finance/components/SavingsGoalForm'
 import { FinanceSummary } from '@/features/finance/components/FinanceSummary'
 import { BudgetSummary } from '@/features/finance/components/BudgetSummary'
 import { SavingsSummary } from '@/features/finance/components/SavingsSummary'
+import { DebtSummary } from '@/features/finance/components/DebtSummary'
+import { DebtCard } from '@/features/finance/components/DebtCard'
+import { DebtForm } from '@/features/finance/components/DebtForm'
+import { DebtPaymentModal } from '@/features/finance/components/DebtPaymentModal'
+import { useDebts } from '@/features/finance/hooks/useDebts'
 import { IncomeExpenseChart } from '@/features/finance/components/IncomeExpenseChart'
 import { ExpenseByCategoryChart } from '@/features/finance/components/ExpenseByCategoryChart'
 import { Card } from '@/components/ui/Card'
@@ -29,8 +34,19 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Plus, ArrowLeftRight, Settings2, Wallet, Receipt, PiggyBank } from 'lucide-react'
-import type { Category, Transaction } from '@/types'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Plus,
+  ArrowLeftRight,
+  Settings2,
+  Wallet,
+  Receipt,
+  PiggyBank,
+  HandCoins,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { formatCurrency } from '@/utils/currency'
+import type { Category, Transaction, Debt } from '@/types'
 import type { TransactionFilters } from '@/features/finance/utils/transactionFilters'
 import {
   DEFAULT_FILTERS,
@@ -38,7 +54,7 @@ import {
 } from '@/features/finance/utils/transactionFilters'
 import { TransactionFilter } from '@/features/finance/components/TransactionFilter'
 
-type Tab = 'summary' | 'wallets' | 'transactions' | 'categories' | 'budgets' | 'savings'
+type Tab = 'summary' | 'wallets' | 'transactions' | 'categories' | 'budgets' | 'savings' | 'debts'
 
 export function FinancePage() {
   const { user } = useAuth()
@@ -52,6 +68,7 @@ export function FinancePage() {
   const transactionsHook = useTransactions(userId || null)
   const budgetsHook = useBudgets(userId || null, currentMonth, currentYear)
   const savingsHook = useSavingsGoals(userId || null)
+  const debtsHook = useDebts(userId || null)
   const summaryHook = useFinanceSummary(userId || null, currentMonth, currentYear)
 
   const [categories, setCategories] = useState<Category[]>([])
@@ -118,6 +135,15 @@ export function FinancePage() {
   const [addSavingsToId, setAddSavingsToId] = useState<string | null>(null)
   const [addAmount, setAddAmount] = useState('')
 
+  const [withdrawSavingsFromId, setWithdrawSavingsFromId] = useState<string | null>(null)
+  const [withdrawAmount, setWithdrawAmount] = useState('')
+
+  const [showDebtForm, setShowDebtForm] = useState(false)
+  const [editingDebtId, setEditingDebtId] = useState<string | null>(null)
+  const [payingDebt, setPayingDebt] = useState<Debt | null>(null)
+  const [debtFilterType, setDebtFilterType] = useState<'all' | 'debt' | 'receivable'>('all')
+  const [debtFilterStatus, setDebtFilterStatus] = useState<'all' | 'unpaid' | 'paid'>('all')
+
   const [pendingDelete, setPendingDelete] = useState<{
     message: string
     label: string
@@ -149,6 +175,15 @@ export function FinancePage() {
     return map
   }, [transactionsHook.transactions, currentMonth, currentYear])
 
+  const filteredDebts = useMemo(() => {
+    return debtsHook.debts.filter(d => {
+      if (debtFilterType !== 'all' && d.type !== debtFilterType) return false
+      if (debtFilterStatus === 'unpaid' && d.status === 'paid') return false
+      if (debtFilterStatus === 'paid' && d.status !== 'paid') return false
+      return true
+    })
+  }, [debtsHook.debts, debtFilterType, debtFilterStatus])
+
   const tabs: Array<{ key: Tab; label: string }> = [
     { key: 'summary', label: 'Ringkasan' },
     { key: 'wallets', label: 'Dompet' },
@@ -156,6 +191,7 @@ export function FinancePage() {
     { key: 'categories', label: 'Kategori' },
     { key: 'budgets', label: 'Anggaran' },
     { key: 'savings', label: 'Tabungan' },
+    { key: 'debts', label: 'Utang' },
   ]
 
   const handleAddSavings = async () => {
@@ -168,25 +204,34 @@ export function FinancePage() {
     await summaryHook.refresh()
   }
 
+  const handleWithdrawSavings = async () => {
+    if (!withdrawSavingsFromId) return
+    const amount = parseInt(withdrawAmount.replace(/[^\d]/g, ''), 10)
+    if (!amount || amount <= 0) return
+    try {
+      await savingsHook.withdrawSavings(withdrawSavingsFromId, amount)
+      toast.success('Penarikan tabungan berhasil dicatat!')
+      setWithdrawSavingsFromId(null)
+      setWithdrawAmount('')
+      await summaryHook.refresh()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Gagal menarik tabungan')
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Tab Navigation */}
       <div className="overflow-x-auto -mx-1 px-1">
-        <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 min-w-max">
-          {tabs.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                tab === t.key
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <Tabs value={tab} onValueChange={val => setTab(val as Tab)}>
+          <TabsList className="min-w-max">
+            {tabs.map(t => (
+              <TabsTrigger key={t.key} value={t.key} role="button">
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Summary Tab */}
@@ -288,19 +333,24 @@ export function FinancePage() {
                     : ''
                 }
                 onSubmit={async (name, type, balance, note) => {
-                  if (editingWalletId) {
-                    await walletsHook.editWallet(editingWalletId, {
-                      name,
-                      type,
-                      initial_balance: balance,
-                      note,
-                    })
-                    setEditingWalletId(null)
-                  } else {
-                    await walletsHook.createWallet(name, type, balance, note ?? undefined)
+                  try {
+                    if (editingWalletId) {
+                      await walletsHook.editWallet(editingWalletId, {
+                        name,
+                        type,
+                        note: note ?? null,
+                      })
+                      toast.success(`Dompet "${name}" berhasil diperbarui`)
+                      setEditingWalletId(null)
+                    } else {
+                      await walletsHook.createWallet(name, type, balance, note ?? undefined)
+                      toast.success(`Dompet "${name}" berhasil dibuat`)
+                    }
+                    setShowWalletForm(false)
+                    await summaryHook.refresh()
+                  } catch {
+                    toast.error('Gagal menyimpan dompet')
                   }
-                  setShowWalletForm(false)
-                  await summaryHook.refresh()
                 }}
                 onCancel={() => {
                   setShowWalletForm(false)
@@ -319,16 +369,21 @@ export function FinancePage() {
               <TransferForm
                 wallets={walletsHook.wallets}
                 onSubmit={async (sourceId, targetId, amount, date, note) => {
-                  await transactionsHook.addTransfer(
-                    sourceId,
-                    targetId,
-                    amount,
-                    date,
-                    note ?? undefined
-                  )
-                  setShowTransferForm(false)
-                  await walletsHook.refresh()
-                  await summaryHook.refresh()
+                  try {
+                    await transactionsHook.addTransfer(
+                      sourceId,
+                      targetId,
+                      amount,
+                      date,
+                      note ?? undefined
+                    )
+                    toast.success('Transfer antar dompet berhasil!')
+                    setShowTransferForm(false)
+                    await walletsHook.refresh()
+                    await summaryHook.refresh()
+                  } catch {
+                    toast.error('Gagal melakukan transfer')
+                  }
                 }}
                 onCancel={() => setShowTransferForm(false)}
               />
@@ -343,10 +398,15 @@ export function FinancePage() {
               <AdjustmentForm
                 wallets={walletsHook.wallets}
                 onSubmit={async (walletId, amount, date, note) => {
-                  await transactionsHook.addAdjustment(walletId, amount, date, note ?? undefined)
-                  setShowAdjustmentForm(false)
-                  await walletsHook.refresh()
-                  await summaryHook.refresh()
+                  try {
+                    await transactionsHook.addAdjustment(walletId, amount, date, note ?? undefined)
+                    toast.success('Penyesuaian saldo berhasil!')
+                    setShowAdjustmentForm(false)
+                    await walletsHook.refresh()
+                    await summaryHook.refresh()
+                  } catch {
+                    toast.error('Gagal menyesuaikan saldo')
+                  }
                 }}
                 onCancel={() => setShowAdjustmentForm(false)}
               />
@@ -441,37 +501,44 @@ export function FinancePage() {
                 type={transactionType}
                 initialData={editingTransaction ?? undefined}
                 onSubmit={async (walletId, amount, categoryId, date, note) => {
-                  if (editingTransaction) {
-                    await transactionsHook.editTransaction(
-                      editingTransaction.id,
-                      transactionType,
-                      walletId,
-                      amount,
-                      categoryId,
-                      date,
-                      note ?? undefined
-                    )
-                  } else if (transactionType === 'income') {
-                    await transactionsHook.addIncome(
-                      walletId,
-                      amount,
-                      categoryId,
-                      date,
-                      note ?? undefined
-                    )
-                  } else {
-                    await transactionsHook.addExpense(
-                      walletId,
-                      amount,
-                      categoryId,
-                      date,
-                      note ?? undefined
-                    )
+                  try {
+                    if (editingTransaction) {
+                      await transactionsHook.editTransaction(
+                        editingTransaction.id,
+                        transactionType,
+                        walletId,
+                        amount,
+                        categoryId,
+                        date,
+                        note ?? undefined
+                      )
+                      toast.success('Transaksi berhasil diperbarui!')
+                    } else if (transactionType === 'income') {
+                      await transactionsHook.addIncome(
+                        walletId,
+                        amount,
+                        categoryId,
+                        date,
+                        note ?? undefined
+                      )
+                      toast.success('Pemasukan berhasil dicatat!')
+                    } else {
+                      await transactionsHook.addExpense(
+                        walletId,
+                        amount,
+                        categoryId,
+                        date,
+                        note ?? undefined
+                      )
+                      toast.success('Pengeluaran berhasil dicatat!')
+                    }
+                    setShowTransactionForm(false)
+                    setEditingTransaction(null)
+                    await walletsHook.refresh()
+                    await summaryHook.refresh()
+                  } catch {
+                    toast.error('Gagal menyimpan transaksi')
                   }
-                  setShowTransactionForm(false)
-                  setEditingTransaction(null)
-                  await walletsHook.refresh()
-                  await summaryHook.refresh()
                 }}
                 onCancel={() => {
                   setShowTransactionForm(false)
@@ -516,13 +583,19 @@ export function FinancePage() {
                       : 'Apakah Anda yakin ingin menghapus transaksi ini?',
                     label: 'Hapus',
                     onConfirm: async () => {
-                      if (targetTx?.transfer_group_id) {
-                        await transactionsHook.removeTransfer(targetTx.transfer_group_id)
-                      } else {
-                        await transactionsHook.removeTransaction(id)
+                      try {
+                        if (targetTx?.transfer_group_id) {
+                          await transactionsHook.removeTransfer(targetTx.transfer_group_id)
+                          toast.success('Transfer berhasil dihapus')
+                        } else {
+                          await transactionsHook.removeTransaction(id)
+                          toast.success('Transaksi berhasil dihapus')
+                        }
+                        await walletsHook.refresh()
+                        await summaryHook.refresh()
+                      } catch {
+                        toast.error('Gagal menghapus transaksi')
                       }
-                      await walletsHook.refresh()
-                      await summaryHook.refresh()
                     },
                   })
                 }}
@@ -542,12 +615,22 @@ export function FinancePage() {
             loading={categoriesLoading}
             onAdd={async (name, type, icon) => {
               if (!userId) return
-              await categoryService.createCategory(userId, name, type, icon ?? undefined)
-              await refreshCategories()
+              try {
+                await categoryService.createCategory(userId, name, type, icon ?? undefined)
+                toast.success(`Kategori "${name}" berhasil ditambahkan`)
+                await refreshCategories()
+              } catch {
+                toast.error('Gagal menambahkan kategori')
+              }
             }}
             onEdit={async (id, data) => {
-              await categoryService.updateCategory(id, data)
-              await refreshCategories()
+              try {
+                await categoryService.updateCategory(id, data)
+                toast.success('Kategori berhasil diperbarui')
+                await refreshCategories()
+              } catch {
+                toast.error('Gagal memperbarui kategori')
+              }
             }}
             onRemove={async id => {
               const name = categories.find(c => c.id === id)?.name ?? 'ini'
@@ -555,8 +638,13 @@ export function FinancePage() {
                 message: `Apakah Anda yakin ingin menghapus kategori "${name}"?`,
                 label: 'Hapus',
                 onConfirm: async () => {
-                  await categoryService.removeCategory(id)
-                  await refreshCategories()
+                  try {
+                    await categoryService.removeCategory(id)
+                    toast.success(`Kategori "${name}" berhasil dihapus`)
+                    await refreshCategories()
+                  } catch {
+                    toast.error('Gagal menghapus kategori')
+                  }
                 },
               })
             }}
@@ -601,13 +689,19 @@ export function FinancePage() {
                     : ''
                 }
                 onSubmit={async (categoryId, amount, note) => {
-                  if (editingBudgetId) {
-                    await budgetsHook.editBudget(editingBudgetId, { amount, note })
-                    setEditingBudgetId(null)
-                  } else {
-                    await budgetsHook.addBudget(categoryId, amount, note ?? undefined)
+                  try {
+                    if (editingBudgetId) {
+                      await budgetsHook.editBudget(editingBudgetId, { amount, note })
+                      toast.success('Anggaran berhasil diperbarui')
+                      setEditingBudgetId(null)
+                    } else {
+                      await budgetsHook.addBudget(categoryId, amount, note ?? undefined)
+                      toast.success('Anggaran baru berhasil disimpan')
+                    }
+                    setShowBudgetForm(false)
+                  } catch {
+                    toast.error('Gagal menyimpan anggaran')
                   }
-                  setShowBudgetForm(false)
                 }}
                 onCancel={() => {
                   setShowBudgetForm(false)
@@ -654,7 +748,12 @@ export function FinancePage() {
                     message: `Apakah Anda yakin ingin menghapus anggaran "${name}"?`,
                     label: 'Hapus',
                     onConfirm: async () => {
-                      await budgetsHook.removeBudget(id)
+                      try {
+                        await budgetsHook.removeBudget(id)
+                        toast.success(`Anggaran "${name}" berhasil dihapus`)
+                      } catch {
+                        toast.error('Gagal menghapus anggaran')
+                      }
                     },
                   })
                 }}
@@ -705,23 +804,29 @@ export function FinancePage() {
                     : ''
                 }
                 onSubmit={async (name, target, deadline, note) => {
-                  if (editingSavingsId) {
-                    await savingsHook.editGoal(editingSavingsId, {
-                      name,
-                      target_amount: target,
-                      deadline,
-                      note,
-                    })
-                    setEditingSavingsId(null)
-                  } else {
-                    await savingsHook.addGoal(
-                      name,
-                      target,
-                      deadline ?? undefined,
-                      note ?? undefined
-                    )
+                  try {
+                    if (editingSavingsId) {
+                      await savingsHook.editGoal(editingSavingsId, {
+                        name,
+                        target_amount: target,
+                        deadline,
+                        note,
+                      })
+                      toast.success(`Target tabungan "${name}" diperbarui`)
+                      setEditingSavingsId(null)
+                    } else {
+                      await savingsHook.addGoal(
+                        name,
+                        target,
+                        deadline ?? undefined,
+                        note ?? undefined
+                      )
+                      toast.success(`Target tabungan "${name}" berhasil dibuat`)
+                    }
+                    setShowSavingsForm(false)
+                  } catch {
+                    toast.error('Gagal menyimpan target tabungan')
                   }
-                  setShowSavingsForm(false)
                 }}
                 onCancel={() => {
                   setShowSavingsForm(false)
@@ -735,19 +840,21 @@ export function FinancePage() {
           {addSavingsToId && (
             <Card>
               <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                Tambah Tabungan
+                Setor / Tambah Saldo Tabungan (
+                {savingsHook.goals.find(g => g.id === addSavingsToId)?.name})
               </h3>
               <div className="space-y-3">
                 <input
                   type="number"
                   value={addAmount}
                   onChange={e => setAddAmount(e.target.value)}
-                  placeholder="Nominal"
+                  placeholder="Nominal setoran"
                   className="block w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setAddSavingsToId(null)
                       setAddAmount('')
@@ -755,7 +862,67 @@ export function FinancePage() {
                   >
                     Batal
                   </Button>
-                  <Button onClick={handleAddSavings}>Tambah</Button>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      await handleAddSavings()
+                      toast.success('Setoran tabungan berhasil dicatat!')
+                    }}
+                    disabled={!addAmount || parseInt(addAmount, 10) <= 0}
+                  >
+                    Simpan Setoran
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {withdrawSavingsFromId && (
+            <Card>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+                Tarik / Kurangi Saldo Tabungan (
+                {savingsHook.goals.find(g => g.id === withdrawSavingsFromId)?.name})
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Maksimal penarikan:{' '}
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  {formatCurrency(
+                    savingsHook.goals.find(g => g.id === withdrawSavingsFromId)?.current_amount ?? 0
+                  )}
+                </span>
+              </p>
+              <div className="space-y-3">
+                <input
+                  type="number"
+                  value={withdrawAmount}
+                  onChange={e => setWithdrawAmount(e.target.value)}
+                  placeholder="Nominal penarikan"
+                  className="block w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setWithdrawSavingsFromId(null)
+                      setWithdrawAmount('')
+                    }}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleWithdrawSavings}
+                    disabled={
+                      !withdrawAmount ||
+                      parseInt(withdrawAmount, 10) <= 0 ||
+                      parseInt(withdrawAmount, 10) >
+                        (savingsHook.goals.find(g => g.id === withdrawSavingsFromId)
+                          ?.current_amount ?? 0)
+                    }
+                  >
+                    Tarik Saldo
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -792,6 +959,12 @@ export function FinancePage() {
                 onAdd={id => {
                   setAddSavingsToId(id)
                   setAddAmount('')
+                  setWithdrawSavingsFromId(null)
+                }}
+                onWithdraw={id => {
+                  setWithdrawSavingsFromId(id)
+                  setWithdrawAmount('')
+                  setAddSavingsToId(null)
                 }}
                 onDelete={id => {
                   setPendingDelete({
@@ -805,6 +978,202 @@ export function FinancePage() {
               />
             ))
           )}
+        </div>
+      )}
+
+      {/* Debts Tab */}
+      {tab === 'debts' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              Utang & Piutang
+            </h2>
+            {!showDebtForm && (
+              <Button
+                size="sm"
+                onClick={() => setShowDebtForm(true)}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                Catat Utang / Piutang
+              </Button>
+            )}
+          </div>
+
+          <DebtSummary summary={debtsHook.summary} />
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs">
+              <button
+                onClick={() => setDebtFilterType('all')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                  debtFilterType === 'all'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-xs'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Semua
+              </button>
+              <button
+                onClick={() => setDebtFilterType('debt')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                  debtFilterType === 'debt'
+                    ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Saya Berutang
+              </button>
+              <button
+                onClick={() => setDebtFilterType('receivable')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                  debtFilterType === 'receivable'
+                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Piutang (Orang)
+              </button>
+            </div>
+
+            <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs">
+              <button
+                onClick={() => setDebtFilterStatus('all')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                  debtFilterStatus === 'all'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-xs'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Semua Status
+              </button>
+              <button
+                onClick={() => setDebtFilterStatus('unpaid')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                  debtFilterStatus === 'unpaid'
+                    ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-xs'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Belum Lunas
+              </button>
+              <button
+                onClick={() => setDebtFilterStatus('paid')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                  debtFilterStatus === 'paid'
+                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Lunas
+              </button>
+            </div>
+          </div>
+
+          {showDebtForm && (
+            <Card>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                {editingDebtId ? 'Edit Utang / Piutang' : 'Tambah Utang / Piutang Baru'}
+              </h3>
+              <DebtForm
+                initialType={
+                  editingDebtId ? debtsHook.debts.find(d => d.id === editingDebtId)?.type : 'debt'
+                }
+                initialPersonName={
+                  editingDebtId
+                    ? debtsHook.debts.find(d => d.id === editingDebtId)?.person_name
+                    : ''
+                }
+                initialAmount={
+                  editingDebtId
+                    ? debtsHook.debts.find(d => d.id === editingDebtId)?.amount
+                    : undefined
+                }
+                initialDueDate={
+                  editingDebtId
+                    ? (debtsHook.debts.find(d => d.id === editingDebtId)?.due_date ?? '')
+                    : ''
+                }
+                initialNote={
+                  editingDebtId
+                    ? (debtsHook.debts.find(d => d.id === editingDebtId)?.note ?? '')
+                    : ''
+                }
+                onSubmit={async data => {
+                  try {
+                    if (editingDebtId) {
+                      await debtsHook.editDebt(editingDebtId, data)
+                      toast.success('Data utang/piutang berhasil diperbarui')
+                      setEditingDebtId(null)
+                    } else {
+                      await debtsHook.addDebt(data)
+                      toast.success('Utang/piutang berhasil dicatat')
+                    }
+                    setShowDebtForm(false)
+                  } catch {
+                    toast.error('Gagal menyimpan data utang/piutang')
+                  }
+                }}
+                onCancel={() => {
+                  setShowDebtForm(false)
+                  setEditingDebtId(null)
+                }}
+                submitLabel={editingDebtId ? 'Update' : 'Simpan'}
+              />
+            </Card>
+          )}
+
+          {debtsHook.loading ? (
+            <LoadingState text="Memuat utang & piutang..." />
+          ) : debtsHook.error ? (
+            <ErrorState message={debtsHook.error} onRetry={debtsHook.refresh} />
+          ) : filteredDebts.length === 0 && !showDebtForm ? (
+            <EmptyState
+              icon={<HandCoins className="w-6 h-6 text-gray-400" />}
+              title="Belum ada catatan utang / piutang"
+              description="Catat utang atau pinjaman uang untuk memudahkan pemantauan pelunasan."
+              action={
+                <Button
+                  size="sm"
+                  onClick={() => setShowDebtForm(true)}
+                  icon={<Plus className="w-4 h-4" />}
+                >
+                  Catat Utang / Piutang
+                </Button>
+              }
+            />
+          ) : (
+            filteredDebts.map(debt => (
+              <DebtCard
+                key={debt.id}
+                debt={debt}
+                onPay={() => setPayingDebt(debt)}
+                onEdit={() => {
+                  setEditingDebtId(debt.id)
+                  setShowDebtForm(true)
+                }}
+                onDelete={() => {
+                  setPendingDelete({
+                    message: `Apakah Anda yakin ingin menghapus catatan utang/piutang dengan "${debt.person_name}"?`,
+                    label: 'Hapus',
+                    onConfirm: async () => {
+                      await debtsHook.removeDebt(debt.id)
+                    },
+                  })
+                }}
+              />
+            ))
+          )}
+
+          {/* Payment Modal */}
+          <DebtPaymentModal
+            debt={payingDebt}
+            open={payingDebt !== null}
+            onClose={() => setPayingDebt(null)}
+            onPayment={async (debtId, amount) => {
+              await debtsHook.makePayment(debtId, amount)
+            }}
+          />
         </div>
       )}
       {/* Delete Confirmation */}

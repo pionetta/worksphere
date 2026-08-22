@@ -1,4 +1,4 @@
-import { cn } from '@/utils/cn'
+import { cn } from '@/lib/utils'
 
 type Status = 'present' | 'absent' | 'holiday'
 
@@ -8,21 +8,18 @@ interface AttendanceStatusSelectorProps {
   disabled?: boolean
 }
 
-const statusConfig: Record<Status, { label: string; color: string; activeColor: string }> = {
+const statusConfig: Record<Status, { label: string; activeColor: string }> = {
   present: {
     label: 'Hadir',
-    color: 'text-gray-400 dark:text-gray-500',
-    activeColor: 'bg-success text-white',
+    activeColor: 'bg-emerald-500 dark:bg-emerald-600 text-white shadow-xs font-semibold',
   },
   absent: {
     label: 'Absen',
-    color: 'text-gray-400 dark:text-gray-500',
-    activeColor: 'bg-danger text-white',
+    activeColor: 'bg-rose-500 dark:bg-rose-600 text-white shadow-xs font-semibold',
   },
   holiday: {
     label: 'Libur',
-    color: 'text-gray-400 dark:text-gray-500',
-    activeColor: 'bg-warning text-white',
+    activeColor: 'bg-amber-500 dark:bg-amber-600 text-white shadow-xs font-semibold',
   },
 }
 
@@ -32,7 +29,7 @@ export function AttendanceStatusSelector({
   disabled,
 }: AttendanceStatusSelectorProps) {
   return (
-    <div className="flex gap-1.5">
+    <div className="inline-flex items-center p-0.5 rounded-full bg-gray-100 dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80">
       {(Object.keys(statusConfig) as Status[]).map(status => {
         const config = statusConfig[status]
         const isActive = value === status
@@ -42,14 +39,10 @@ export function AttendanceStatusSelector({
             onClick={() => onChange(status)}
             disabled={disabled}
             className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+              'px-3 py-1 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer select-none leading-none',
               isActive
                 ? config.activeColor
-                : cn(
-                    'bg-gray-100 dark:bg-gray-700',
-                    config.color,
-                    'hover:bg-gray-200 dark:hover:bg-gray-600'
-                  ),
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5',
               disabled && 'opacity-50 cursor-not-allowed'
             )}
             aria-label={`Status: ${config.label}`}
