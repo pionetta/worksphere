@@ -3,8 +3,6 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useDashboard } from '@/hooks/useDashboard'
 import { Card } from '@/components/ui/Card'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { Users, Wallet, ListTodo } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import { AttendanceDashboardCard } from '@/components/dashboard/AttendanceDashboardCard'
 import { FinanceDashboardCard } from '@/components/dashboard/FinanceDashboardCard'
 import { TodoDashboardCard } from '@/components/dashboard/TodoDashboardCard'
@@ -27,37 +25,9 @@ function formatDate(): string {
   })
 }
 
-const navCards = [
-  {
-    to: '/app/attendance',
-    label: 'Absensi',
-    description: 'Kelola kehadiran anggota',
-    icon: Users,
-    color: 'text-success',
-    bg: 'bg-success-light dark:bg-green-900/30',
-  },
-  {
-    to: '/app/finance',
-    label: 'Keuangan',
-    description: 'Pantau saldo & transaksi',
-    icon: Wallet,
-    color: 'text-primary-500',
-    bg: 'bg-primary-50 dark:bg-primary-900/30',
-  },
-  {
-    to: '/app/todo',
-    label: 'To-Do',
-    description: 'Atur tugas & deadline',
-    icon: ListTodo,
-    color: 'text-warning',
-    bg: 'bg-warning-light dark:bg-amber-900/30',
-  },
-]
-
 export function DashboardPage() {
   const { user } = useAuth()
   const network = useNetworkStatus()
-  const navigate = useNavigate()
   const { data, loading, error, refresh } = useDashboard(user?.id ?? null)
 
   const emailPrefix = user?.email?.split('@')[0] ?? 'User'
@@ -116,40 +86,6 @@ export function DashboardPage() {
             />
           </>
         )}
-      </div>
-
-      {/* Navigation cards */}
-      <div className="grid gap-3 sm:grid-cols-3" role="list">
-        {navCards.map(card => (
-          <Card
-            key={card.to}
-            glass
-            role="listitem"
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => navigate(card.to)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                navigate(card.to)
-              }
-            }}
-            tabIndex={0}
-          >
-            <div className="flex items-start gap-3">
-              <div className={`p-2 rounded-xl ${card.bg}`}>
-                <card.icon className={`w-5 h-5 ${card.color}`} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {card.label}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {card.description}
-                </p>
-              </div>
-            </div>
-          </Card>
-        ))}
       </div>
 
       {/* Quick Actions FAB */}

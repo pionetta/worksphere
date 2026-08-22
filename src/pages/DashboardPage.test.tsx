@@ -54,26 +54,15 @@ describe('DashboardPage', () => {
     expect(screen.getByText(today)).toBeInTheDocument()
   })
 
-  it('should render navigation cards', () => {
+  it('should render feature summary cards', () => {
     render(
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>
     )
-    expect(screen.getAllByText('Absensi').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText('Keuangan').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('To-Do').length).toBeGreaterThanOrEqual(2)
-  })
-
-  it('should render card descriptions', () => {
-    render(
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('Kelola kehadiran anggota')).toBeInTheDocument()
-    expect(screen.getByText('Pantau saldo & transaksi')).toBeInTheDocument()
-    expect(screen.getByText('Atur tugas & deadline')).toBeInTheDocument()
+    expect(screen.getByText('Absensi Hari Ini')).toBeInTheDocument()
+    expect(screen.getByText('Keuangan')).toBeInTheDocument()
+    expect(screen.getByText('To-Do')).toBeInTheDocument()
   })
 
   it('should show offline message when offline', async () => {
@@ -118,7 +107,7 @@ describe('DashboardPage', () => {
         <DashboardPage />
       </MemoryRouter>
     )
-    expect(screen.getAllByText('Keuangan').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('Keuangan')).toBeInTheDocument()
   })
 
   it('should render todo summary card with stats', () => {
@@ -127,7 +116,7 @@ describe('DashboardPage', () => {
         <DashboardPage />
       </MemoryRouter>
     )
-    expect(screen.getAllByText('To-Do').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('To-Do')).toBeInTheDocument()
   })
 
   it('should show overdue indicator when tasks are overdue', () => {
