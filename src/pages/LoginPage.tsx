@@ -36,11 +36,16 @@ export function LoginPage() {
         setLoading(false)
         return
       }
-      if (password.length < 6) {
-        setError('Password minimal 6 karakter.')
+
+      const hasLetter = /[a-zA-Z]/.test(password)
+      const hasNumber = /[0-9]/.test(password)
+
+      if (password.length < 6 || !hasLetter || !hasNumber) {
+        setError('Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka.')
         setLoading(false)
         return
       }
+
       if (password !== confirmPassword) {
         setError('Konfirmasi password tidak cocok dengan password.')
         setLoading(false)
@@ -49,10 +54,13 @@ export function LoginPage() {
 
       const { error, data } = await signUp(email, password, { username })
       if (error) {
-        if (error.message.includes('already registered')) {
-          setError('Email sudah terdaftar.')
-        } else if (error.message.includes('Password should be at least')) {
-          setError('Password minimal 6 karakter.')
+        const msg = error.message?.toLowerCase() || ''
+        if (msg.includes('rate limit')) {
+          setError('Batas pengiriman email Supabase tercapai (rate limit). Tunggu beberapa menit atau matikan "Confirm email" di Dashboard Supabase.')
+        } else if (msg.includes('already registered')) {
+          setError('Email sudah terdaftar. Silakan langsung masuk.')
+        } else if (msg.includes('password should be at least')) {
+          setError('Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka.')
         } else {
           setError(error.message || 'Gagal mendaftar. Silakan coba lagi.')
         }
@@ -180,7 +188,7 @@ export function LoginPage() {
                   required
                   autoComplete={isLogin ? 'current-password' : 'new-password'}
                   className="block w-full pl-10 pr-3 py-2.5 bg-white/50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                  placeholder={isLogin ? 'Masukkan password' : 'Min. 6 karakter'}
+                  placeholder={isLogin ? 'Masukkan password' : 'Min. 6 karakter (huruf & angka)'}
                 />
               </div>
             </div>
