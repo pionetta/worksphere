@@ -1,7 +1,7 @@
 {
   "short_name": "WorkSphere",
   "name": "WorkSphere - Absensi, Keuangan & To-Do",
-  "description": "Aplikasi produktivitas pribadi — Absensi Real-time, Catatan Keuangan, dan Manajemen Tugas.",
+  "description": "Aplikasi All-in-One: Absensi Real-time, Catatan Keuangan, Manajemen Tugas.",
   "shortcuts": [
     {
       "name": "Absensi",
@@ -10,8 +10,8 @@
       "description": "Buka menu absensi cepat",
       "icons": [
         {
-          "src": "/icons/icon-192.png",
-          "sizes": "192x192"
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96"
         }
       ]
     },
@@ -22,8 +22,8 @@
       "description": "Buka catatan keuangan",
       "icons": [
         {
-          "src": "/icons/icon-192.png",
-          "sizes": "192x192"
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96"
         }
       ]
     },
@@ -34,26 +34,62 @@
       "description": "Buka daftar tugas",
       "icons": [
         {
-          "src": "/icons/icon-192.png",
-          "sizes": "192x192"
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96"
         }
       ]
     }
   ],
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icons/icon-72x72.png",
+      "type": "image/png",
+      "sizes": "72x72"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "type": "image/png",
+      "sizes": "96x96"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "type": "image/png",
+      "sizes": "128x128"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "type": "image/png",
+      "sizes": "144x144"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "type": "image/png",
+      "sizes": "152x152"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icons/icon-384x384.png",
+      "type": "image/png",
+      "sizes": "384x384"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icons/maskable-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/maskable-512x512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
@@ -62,7 +98,7 @@
   "start_url": "/",
   "scope": "/",
   "background_color": "#0f0f13",
-  "theme_color": "#6366f1",
+  "theme_color": "#4f46e5",
   "display": "standalone",
   "orientation": "portrait",
   "categories": ["productivity", "business", "finance"],
