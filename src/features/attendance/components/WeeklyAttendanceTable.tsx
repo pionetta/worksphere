@@ -92,13 +92,23 @@ export function WeeklyAttendanceTable({
                 const record = attendance.find(
                   a => a.member_id === r.memberId && a.attendance_date === day
                 )
-                const status = record?.status ?? 'absent'
                 return (
                   <td key={day} className="text-center py-2 px-1">
                     <span
-                      className={cn('inline-block w-2 h-2 rounded-full', STATUS_STYLES[status])}
+                      className={cn(
+                        'inline-block w-2 h-2 rounded-full',
+                        record
+                          ? STATUS_STYLES[record.status]
+                          : 'bg-gray-300 dark:bg-gray-600'
+                      )}
                       title={
-                        status === 'present' ? 'Hadir' : status === 'holiday' ? 'Libur' : 'Absen'
+                        record
+                          ? record.status === 'present'
+                            ? 'Hadir'
+                            : record.status === 'holiday'
+                              ? 'Libur'
+                              : 'Absen'
+                          : 'Belum diisi'
                       }
                     />
                   </td>

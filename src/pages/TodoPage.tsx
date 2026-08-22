@@ -276,19 +276,23 @@ export function TodoPage() {
                 userId={userId}
                 onAdd={async (uid, title) => {
                   await addSubtask(uid, title)
-                  refreshSubtasks()
+                  await refreshSubtasks()
+                  await loadSubtasksMap()
                 }}
                 onToggle={async id => {
                   await toggleSubtask(id)
-                  refreshSubtasks()
+                  await refreshSubtasks()
+                  await loadSubtasksMap()
                 }}
                 onDelete={async id => {
                   await removeSubtask(id)
-                  refreshSubtasks()
+                  await refreshSubtasks()
+                  await loadSubtasksMap()
                 }}
                 onEdit={async (id, data) => {
                   await editSubtask(id, data)
-                  refreshSubtasks()
+                  await refreshSubtasks()
+                  await loadSubtasksMap()
                 }}
               />
             </Card>

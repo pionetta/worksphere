@@ -10,6 +10,7 @@ import {
   endOfWeek,
   startOfMonth,
   endOfMonth,
+  endOfDay,
 } from 'date-fns'
 import { id } from 'date-fns/locale'
 
@@ -85,10 +86,11 @@ export function formatOverdue(date: string | Date): string {
   return `Terlambat ${formatDistanceToNow(d, { locale: id })}`
 }
 
-/**
- * Cek apakah tanggal sudah lewat.
- */
 export function isOverdueDate(date: string | Date): boolean {
+  if (typeof date === 'string' && !date.includes('T')) {
+    const d = parseISO(date)
+    return isPast(endOfDay(d))
+  }
   const d = typeof date === 'string' ? parseISO(date) : date
   return isPast(d)
 }

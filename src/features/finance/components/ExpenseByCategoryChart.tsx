@@ -73,32 +73,34 @@ export function ExpenseByCategoryChart({ transactions, categoryMap }: ExpenseByC
           Belum ada data pengeluaran
         </p>
       ) : (
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={categories}
-                dataKey="amount"
-                nameKey="categoryName"
-                cx="50%"
-                cy="45%"
-                outerRadius={75}
-                innerRadius={35}
-                paddingAngle={2}
-                strokeWidth={0}
-              >
-                {categories.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<ChartTooltip />} />
-              <Legend content={<ChartLegend />} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="mt-2 space-y-1">
+        <div className="space-y-3">
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categories}
+                  dataKey="amount"
+                  nameKey="categoryName"
+                  cx="50%"
+                  cy="45%"
+                  outerRadius={75}
+                  innerRadius={35}
+                  paddingAngle={2}
+                  strokeWidth={0}
+                >
+                  {categories.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<ChartTooltip />} />
+                <Legend content={<ChartLegend />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700/50 space-y-1.5">
             {categories.slice(0, 5).map((cat, i) => (
               <div key={cat.categoryId} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: COLORS[i % COLORS.length] }}
@@ -107,7 +109,7 @@ export function ExpenseByCategoryChart({ transactions, categoryMap }: ExpenseByC
                     {cat.categoryName}
                   </span>
                 </div>
-                <span className="text-gray-900 dark:text-gray-100 font-medium ml-2">
+                <span className="text-gray-900 dark:text-gray-100 font-medium ml-2 shrink-0">
                   {cat.percentage}%
                 </span>
               </div>

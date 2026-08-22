@@ -138,7 +138,16 @@ export async function changeStatus(id: string, status: TaskStatus): Promise<void
 export function isOverdue(task: Task): boolean {
   if (!task.due_date) return false
   if (task.status === 'completed' || task.status === 'cancelled') return false
-  return new Date(task.due_date) < new Date()
+  const dueStr = task.due_date
+  // If date-only string (e.g. "YYYY-MM-DD"), task is only overdue after the end of that day
+  if (!dueStr.includes('T')) {
+    const parts = dueStr.split('-').map(Number)
+    if (parts.length === 3) {
+      const endOfDay = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999)
+      return endOfDay.getTime() < Date.now()
+    }
+  }
+  return new Date(dueStr).getTime() < Date.now()
 }
 
 export function searchTasks(tasks: Task[], query: string): Task[] {

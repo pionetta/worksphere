@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 import type { Theme } from '@/hooks/useTheme'
@@ -7,6 +7,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { AppHeader } from './AppHeader'
 import { BottomNavigation, SidebarNavigation } from './Navigation'
 import { SyncIndicator, OfflineBanner } from './SyncIndicator'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface AppLayoutProps {
   theme: Theme
@@ -23,14 +24,20 @@ export function AppLayout({
   subtitle,
   headerActions,
 }: AppLayoutProps) {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const sync = useSyncStatus(user?.id ?? null)
   const network = useNetworkStatus()
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  const handleLogout = async () => {
+    await signOut()
+    setShowLogoutConfirm(false)
+  }
 
   return (
     <div className="flex h-dvh bg-background">
       {/* Desktop sidebar */}
-      <SidebarNavigation />
+      <SidebarNavigation onLogout={() => setShowLogoutConfirm(true)} />
 
       <div className="flex flex-col flex-1 min-w-0">
         {/* Offline banner */}
@@ -42,6 +49,7 @@ export function AppLayout({
           subtitle={subtitle}
           theme={theme}
           onThemeChange={onThemeChange}
+          onLogout={() => setShowLogoutConfirm(true)}
           actions={
             <>
               <SyncIndicator
@@ -64,6 +72,16 @@ export function AppLayout({
         {/* Mobile bottom navigation */}
         <BottomNavigation />
       </div>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Keluar dari Akun"
+        message="Apakah Anda yakin ingin keluar dari akun Worksphere?"
+        confirmLabel="Keluar"
+        variant="danger"
+      />
     </div>
   )
 }

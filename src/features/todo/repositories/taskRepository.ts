@@ -43,17 +43,22 @@ export async function listTasksByCategory(userId: string, category: string): Pro
 }
 
 export async function listOverdueTasks(userId: string): Promise<Task[]> {
-  const now = new Date().toISOString()
+  const now = new Date()
+  const todayDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const nowIso = now.toISOString()
   return db.tasks
     .where('user_id')
     .equals(userId)
     .and(
-      t =>
-        t.due_date !== null &&
-        t.due_date < now &&
-        t.status !== 'completed' &&
-        t.status !== 'cancelled' &&
-        t.deleted_at === null
+      t => {
+        if (!t.due_date || t.status === 'completed' || t.status === 'cancelled' || t.deleted_at !== null) {
+          return false
+        }
+        if (!t.due_date.includes('T')) {
+          return t.due_date < todayDateStr
+        }
+        return t.due_date < nowIso
+      }
     )
     .toArray()
 }

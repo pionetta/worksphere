@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/utils/cn'
-import { Sun, Moon, Monitor } from 'lucide-react'
+import { Sun, Moon, Monitor, LogOut } from 'lucide-react'
 import type { Theme } from '@/hooks/useTheme'
 
 interface AppHeaderProps {
@@ -8,6 +8,7 @@ interface AppHeaderProps {
   subtitle?: string
   theme: Theme
   onThemeChange: (theme: Theme) => void
+  onLogout?: () => void
   actions?: ReactNode
   className?: string
 }
@@ -48,6 +49,7 @@ export function AppHeader({
   subtitle,
   theme,
   onThemeChange,
+  onLogout,
   actions,
   className,
 }: AppHeaderProps) {
@@ -71,6 +73,20 @@ export function AppHeader({
         <div className="flex items-center gap-1">
           {actions}
           <ThemeToggle theme={theme} onThemeChange={onThemeChange} />
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                'text-gray-500 hover:text-danger hover:bg-danger-light/30',
+                'dark:text-gray-400 dark:hover:text-red-400 dark:hover:bg-red-900/30'
+              )}
+              aria-label="Keluar / Logout"
+              title="Keluar"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
     </header>

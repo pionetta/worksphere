@@ -292,8 +292,9 @@ export async function processSyncQueue(userId: string): Promise<SyncResult> {
         result.succeeded++
       } else {
         result.failed++
-        if (current.last_error) {
-          result.errors.push(current.last_error)
+        const updated = await db.sync_queue.get(item.id)
+        if (updated?.last_error) {
+          result.errors.push(updated.last_error)
         }
       }
     }

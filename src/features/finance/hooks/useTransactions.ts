@@ -117,6 +117,14 @@ export function useTransactions(userId: string | null) {
     [refresh]
   )
 
+  const removeTransfer = useCallback(
+    async (groupId: string) => {
+      await transferService.removeTransfer(groupId)
+      await refresh()
+    },
+    [refresh]
+  )
+
   const editTransaction = useCallback(
     async (
       id: string,
@@ -163,6 +171,7 @@ export function useTransactions(userId: string | null) {
     addAdjustment,
     addTransfer,
     removeTransaction,
+    removeTransfer,
     editTransaction,
   }
 }

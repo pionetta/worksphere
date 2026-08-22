@@ -110,6 +110,11 @@ export function AttendancePage() {
     }
   }, [userId, weeklyHook.recap, membersHook.members])
 
+  const handleDateChange = useCallback((newDate: Date) => {
+    setDate(newDate)
+    setPendingStatuses(new Map())
+  }, [])
+
   const tabs: Array<{ key: Tab; label: string }> = [
     { key: 'daily', label: 'Absensi' },
     { key: 'members', label: 'Anggota' },
@@ -139,7 +144,7 @@ export function AttendancePage() {
       {tab === 'daily' && (
         <div className="space-y-4">
           <Card>
-            <AttendanceDatePicker date={date} onChange={setDate} />
+            <AttendanceDatePicker date={date} onChange={handleDateChange} />
           </Card>
 
           <Card>

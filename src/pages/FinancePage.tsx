@@ -326,6 +326,7 @@ export function FinancePage() {
                     note ?? undefined
                   )
                   setShowTransferForm(false)
+                  await walletsHook.refresh()
                   await summaryHook.refresh()
                 }}
                 onCancel={() => setShowTransferForm(false)}
@@ -343,6 +344,7 @@ export function FinancePage() {
                 onSubmit={async (walletId, amount, date, note) => {
                   await transactionsHook.addAdjustment(walletId, amount, date, note ?? undefined)
                   setShowAdjustmentForm(false)
+                  await walletsHook.refresh()
                   await summaryHook.refresh()
                 }}
                 onCancel={() => setShowAdjustmentForm(false)}
@@ -468,6 +470,7 @@ export function FinancePage() {
                   }
                   setShowTransactionForm(false)
                   setEditingTransaction(null)
+                  await walletsHook.refresh()
                   await summaryHook.refresh()
                 }}
                 onCancel={() => {
@@ -505,11 +508,20 @@ export function FinancePage() {
                   }
                 }}
                 onDelete={id => {
+                  const targetTx = transactionsHook.transactions.find(t => t.id === id)
+                  const isTransfer = !!targetTx?.transfer_group_id
                   setPendingDelete({
-                    message: 'Apakah Anda yakin ingin menghapus transaksi ini?',
+                    message: isTransfer
+                      ? 'Apakah Anda yakin ingin menghapus transfer ini? Kedua sisi transaksi (keluar dan masuk) akan dibatalkan.'
+                      : 'Apakah Anda yakin ingin menghapus transaksi ini?',
                     label: 'Hapus',
                     onConfirm: async () => {
-                      await transactionsHook.removeTransaction(id)
+                      if (targetTx?.transfer_group_id) {
+                        await transactionsHook.removeTransfer(targetTx.transfer_group_id)
+                      } else {
+                        await transactionsHook.removeTransaction(id)
+                      }
+                      await walletsHook.refresh()
                       await summaryHook.refresh()
                     },
                   })
@@ -839,11 +851,24 @@ export function FinancePage() {
           }
         }}
         onDelete={id => {
+          const targetTx =
+            selectedTransaction?.id === id
+              ? selectedTransaction
+              : transactionsHook.transactions.find(t => t.id === id)
+          const isTransfer = !!targetTx?.transfer_group_id
           setPendingDelete({
-            message: 'Apakah Anda yakin ingin menghapus transaksi ini?',
+            message: isTransfer
+              ? 'Apakah Anda yakin ingin menghapus transfer ini? Kedua sisi transaksi (keluar dan masuk) akan dibatalkan.'
+              : 'Apakah Anda yakin ingin menghapus transaksi ini?',
             label: 'Hapus',
             onConfirm: async () => {
-              await transactionsHook.removeTransaction(id)
+              if (targetTx?.transfer_group_id) {
+                await transactionsHook.removeTransfer(targetTx.transfer_group_id)
+              } else {
+                await transactionsHook.removeTransaction(id)
+              }
+              setSelectedTransaction(null)
+              await walletsHook.refresh()
               await summaryHook.refresh()
             },
           })

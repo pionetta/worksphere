@@ -32,3 +32,5 @@ dist-ssr
 
 .vercel
 .env*
+screenshots/
+__pycache__/

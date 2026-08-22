@@ -3,7 +3,7 @@ import { useAuth } from '@/lib/auth'
 import { Mail, Lock, Loader2 } from 'lucide-react'
 
 export function LoginPage() {
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, signInDemo } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -153,6 +153,16 @@ export function LoginPage() {
               ) : (
                 'Daftar'
               )}
+            </button>
+
+            {/* Demo Login Button */}
+            <button
+              type="button"
+              onClick={() => signInDemo()}
+              disabled={loading}
+              className="w-full flex items-center justify-center py-2.5 px-4 rounded-xl bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-colors border border-gray-200 dark:border-gray-600"
+            >
+              Coba Mode Demo (Offline)
             </button>
           </form>
         </div>

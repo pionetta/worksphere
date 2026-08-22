@@ -95,7 +95,7 @@ CREATE TABLE transactions (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   wallet_id UUID NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
   type transaction_type NOT NULL,
-  amount BIGINT NOT NULL CHECK (amount > 0),
+  amount BIGINT NOT NULL CHECK ((type = 'adjustment' AND amount != 0) OR amount > 0),
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
   transaction_date DATE NOT NULL,
   note TEXT,
