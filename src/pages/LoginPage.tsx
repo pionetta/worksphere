@@ -17,9 +17,14 @@ export function LoginPage() {
     setError(null)
     setSuccessMsg(null)
     setLoading(true)
-    const { error } = await signInWithGoogle()
-    if (error) {
-      setError(error.message || 'Gagal terhubung ke Google. Pastikan Google Auth sudah aktif di Dashboard Supabase.')
+    try {
+      const { error } = await signInWithGoogle()
+      if (error) {
+        setError(error.message || 'Gagal terhubung ke Google. Pastikan Google Auth sudah aktif di Dashboard Supabase.')
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Terjadi kesalahan saat menghubungkan ke Google.')
+    } finally {
       setLoading(false)
     }
   }
@@ -30,65 +35,67 @@ export function LoginPage() {
     setSuccessMsg(null)
     setLoading(true)
 
-    if (isLogin) {
-      const { error } = await signIn(email, password)
-      if (error) {
-        if (error.message.includes('Invalid login')) {
-          setError('Email atau password salah.')
-        } else if (error.message.includes('network')) {
-          setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.')
-        } else {
-          setError('Terjadi kesalahan. Silakan coba lagi.')
-        }
-      }
-    } else {
-      if (!username.trim()) {
-        setError('Nama pengguna / username wajib diisi.')
-        setLoading(false)
-        return
-      }
-
-      const hasLetter = /[a-zA-Z]/.test(password)
-      const hasNumber = /[0-9]/.test(password)
-
-      if (password.length < 6 || !hasLetter || !hasNumber) {
-        setError('Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka.')
-        setLoading(false)
-        return
-      }
-
-      if (password !== confirmPassword) {
-        setError('Konfirmasi password tidak cocok dengan password.')
-        setLoading(false)
-        return
-      }
-
-      const { error, data } = await signUp(email, password, { username })
-      if (error) {
-        const msg = error.message?.toLowerCase() || ''
-        if (msg.includes('rate limit')) {
-          setError('Batas pengiriman email Supabase tercapai (rate limit). Tunggu beberapa menit atau matikan "Confirm email" di Dashboard Supabase.')
-        } else if (msg.includes('already registered')) {
-          setError('Email sudah terdaftar. Silakan langsung masuk.')
-        } else if (msg.includes('password should be at least')) {
-          setError('Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka.')
-        } else {
-          setError(error.message || 'Gagal mendaftar. Silakan coba lagi.')
+    try {
+      if (isLogin) {
+        const { error } = await signIn(email, password)
+        if (error) {
+          const msg = error.message || ''
+          if (msg.includes('Invalid login')) {
+            setError('Email atau password salah.')
+          } else if (msg.includes('network') || msg.includes('fetch')) {
+            setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.')
+          } else {
+            setError(error.message || 'Terjadi kesalahan saat masuk.')
+          }
         }
       } else {
-        if (data?.session) {
-          // Auto login happened
+        if (!username.trim()) {
+          setError('Nama pengguna / username wajib diisi.')
+          return
+        }
+
+        const hasLetter = /[a-zA-Z]/.test(password)
+        const hasNumber = /[0-9]/.test(password)
+
+        if (password.length < 6 || !hasLetter || !hasNumber) {
+          setError('Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka.')
+          return
+        }
+
+        if (password !== confirmPassword) {
+          setError('Konfirmasi password tidak cocok dengan password.')
+          return
+        }
+
+        const { error, data } = await signUp(email, password, { username })
+        if (error) {
+          const msg = error.message?.toLowerCase() || ''
+          if (msg.includes('rate limit')) {
+            setError('Batas pengiriman email Supabase tercapai (rate limit). Tunggu beberapa menit atau matikan "Confirm email" di Dashboard Supabase.')
+          } else if (msg.includes('already registered')) {
+            setError('Email sudah terdaftar. Silakan langsung masuk.')
+          } else if (msg.includes('password should be at least')) {
+            setError('Password minimal 6 karakter dan wajib mengandung kombinasi huruf dan angka.')
+          } else {
+            setError(error.message || 'Gagal mendaftar. Silakan coba lagi.')
+          }
         } else {
-          // Requires email confirmation
-          setSuccessMsg('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi.')
-          setIsLogin(true) // Switch back to login
-          setPassword('')
-          setConfirmPassword('')
+          if (data?.session) {
+            // Auto login happened
+          } else {
+            // Requires email confirmation
+            setSuccessMsg('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi.')
+            setIsLogin(true) // Switch back to login
+            setPassword('')
+            setConfirmPassword('')
+          }
         }
       }
+    } catch (err: any) {
+      setError(err?.message || 'Terjadi kesalahan sistem. Silakan coba lagi.')
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const toggleMode = () => {

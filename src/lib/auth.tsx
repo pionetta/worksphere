@@ -47,23 +47,31 @@ export async function signIn(
   email: string,
   password: string
 ): Promise<{ error: AuthError | null }> {
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-  return { error }
+  try {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return { error }
+  } catch (err: any) {
+    return { error: err as AuthError }
+  }
 }
 
 export async function signInWithGoogle(): Promise<{ error: AuthError | null }> {
-  const redirectUrl =
-    typeof window !== 'undefined' && window.location?.origin
-      ? `${window.location.origin}/app`
-      : undefined
+  try {
+    const redirectUrl =
+      typeof window !== 'undefined' && window.location?.origin
+        ? `${window.location.origin}/app`
+        : undefined
 
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: redirectUrl,
-    },
-  })
-  return { error }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+      },
+    })
+    return { error }
+  } catch (err: any) {
+    return { error: err as AuthError }
+  }
 }
 
 export async function signUp(
@@ -71,35 +79,39 @@ export async function signUp(
   password: string,
   options?: SignUpOptions
 ): Promise<{ data: any | null; error: AuthError | null }> {
-  const redirectUrl =
-    options?.redirectTo ??
-    (typeof window !== 'undefined' && window.location?.origin
-      ? `${window.location.origin}/app`
-      : undefined)
+  try {
+    const redirectUrl =
+      options?.redirectTo ??
+      (typeof window !== 'undefined' && window.location?.origin
+        ? `${window.location.origin}/app`
+        : undefined)
 
-  const signUpParams: {
-    email: string
-    password: string
-    options?: {
-      data?: { username?: string; full_name?: string }
-      emailRedirectTo?: string
+    const signUpParams: {
+      email: string
+      password: string
+      options?: {
+        data?: { username?: string; full_name?: string }
+        emailRedirectTo?: string
+      }
+    } = {
+      email,
+      password,
     }
-  } = {
-    email,
-    password,
-  }
 
-  if (options?.username || redirectUrl) {
-    signUpParams.options = {
-      ...(options?.username
-        ? { data: { username: options.username.trim(), full_name: options.username.trim() } }
-        : {}),
-      ...(redirectUrl ? { emailRedirectTo: redirectUrl } : {}),
+    if (options?.username || redirectUrl) {
+      signUpParams.options = {
+        ...(options?.username
+          ? { data: { username: options.username.trim(), full_name: options.username.trim() } }
+          : {}),
+        ...(redirectUrl ? { emailRedirectTo: redirectUrl } : {}),
+      }
     }
-  }
 
-  const { data, error } = await supabase.auth.signUp(signUpParams)
-  return { data, error }
+    const { data, error } = await supabase.auth.signUp(signUpParams)
+    return { data, error }
+  } catch (err: any) {
+    return { data: null, error: err as AuthError }
+  }
 }
 
 export async function signOut(): Promise<void> {
