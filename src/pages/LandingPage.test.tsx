@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { LandingPage } from '@/pages/LandingPage'
 
@@ -72,7 +72,8 @@ describe('LandingPage Component', () => {
     expect(screen.getByText('Manajemen Tugas (To-Do)')).toBeInTheDocument()
   })
 
-  it('triggers demo mode when demo button is clicked', () => {
+  it('triggers demo mode when demo button is clicked', async () => {
+    mockSignInDemo.mockResolvedValue(undefined)
     render(
       <MemoryRouter>
         <LandingPage />
@@ -83,8 +84,10 @@ describe('LandingPage Component', () => {
     expect(demoButtons.length).toBeGreaterThan(0)
     fireEvent.click(demoButtons[0])
 
-    expect(mockSignInDemo).toHaveBeenCalledTimes(1)
-    expect(mockNavigate).toHaveBeenCalledWith('/app')
+    await waitFor(() => {
+      expect(mockSignInDemo).toHaveBeenCalledTimes(1)
+      expect(mockNavigate).toHaveBeenCalledWith('/app')
+    })
   })
 
   it('toggles theme when theme button is clicked', () => {

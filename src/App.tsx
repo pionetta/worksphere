@@ -100,8 +100,8 @@ export function AppRoutes() {
         />
       </Route>
 
-      {/* Default redirect */}
-      <Route path="*" element={<Navigate to={isAuthenticated ? '/app' : '/login'} replace />} />
+      {/* Default fallback redirect to Landing Page */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

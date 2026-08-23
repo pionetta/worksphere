@@ -92,6 +92,40 @@ describe('App Routes', () => {
     })
   })
 
+  it('should render LandingPage on root / even when authenticated', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1', email: 'test@example.com' },
+      loading: false,
+      isAuthenticated: true,
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppRoutes />
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(screen.getByText('Halaman Utama Worksphere')).toBeInTheDocument()
+    })
+  })
+
+  it('should redirect unknown routes to LandingPage on /', async () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      loading: false,
+      isAuthenticated: false,
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/some-random-unknown-path']}>
+        <AppRoutes />
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(screen.getByText('Halaman Utama Worksphere')).toBeInTheDocument()
+    })
+  })
+
   it('should redirect to /login when not authenticated', () => {
     mockUseAuth.mockReturnValue({
       user: null,
