@@ -8,6 +8,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { Loader2 } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 
+const LandingPage = lazy(() => import('@/pages/LandingPage').then(m => ({ default: m.LandingPage })))
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage }))
 )
@@ -40,6 +41,16 @@ export function AppRoutes() {
 
   return (
     <Routes>
+      {/* Root Landing / Welcome Page */}
+      <Route
+        path="/"
+        element={
+          <Suspense fallback={<LoadingScreen />}>
+            <LandingPage />
+          </Suspense>
+        }
+      />
+
       {/* Public Routes */}
       <Route
         path="/login"

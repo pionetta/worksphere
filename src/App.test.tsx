@@ -32,6 +32,10 @@ vi.mock('@/hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => 'online',
 }))
 
+vi.mock('@/pages/LandingPage', () => ({
+  LandingPage: () => <div>Halaman Utama Worksphere</div>,
+}))
+
 vi.mock('@/pages/DashboardPage', () => ({
   DashboardPage: () => <div>Selamat pagi</div>,
 }))
@@ -69,6 +73,23 @@ describe('App Routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+  })
+
+  it('should render LandingPage on root / when unauthenticated', async () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      loading: false,
+      isAuthenticated: false,
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppRoutes />
+      </MemoryRouter>
+    )
+    await waitFor(() => {
+      expect(screen.getByText('Halaman Utama Worksphere')).toBeInTheDocument()
+    })
   })
 
   it('should redirect to /login when not authenticated', () => {
