@@ -27,8 +27,19 @@ async function run() {
   const page = await browser.newPage()
 
   async function clickByText(text, timeout = 3000) {
-    const el = await page.waitForSelector(`button ::-p-text(${text})`, { timeout })
-    if (el) await el.click()
+    await page.waitForFunction(
+      (t) => {
+        const btns = Array.from(document.querySelectorAll('button, a, [role="button"], [role="tab"]'))
+        return btns.some((b) => b.textContent && b.textContent.includes(t))
+      },
+      { timeout },
+      text
+    )
+    await page.evaluate((t) => {
+      const btns = Array.from(document.querySelectorAll('button, a, [role="button"], [role="tab"]'))
+      const match = btns.find((b) => b.textContent && b.textContent.includes(t))
+      if (match) match.click()
+    }, text)
   }
 
   // 1. Login Light
@@ -113,12 +124,20 @@ async function run() {
   await new Promise((r) => setTimeout(r, 800))
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, '13_todo_daftar_tugas.png') })
 
-  // 15. Profile Modal
-  console.log('⚙️ 15. Modal Profil & Pengaturan...')
+  // 14b. To-Do (Papan Kanban)
+  console.log('📋 14b. To-Do (Papan Kanban)...')
+  await clickByText('Papan Kanban')
+  await new Promise((r) => setTimeout(r, 800))
+  await page.screenshot({ path: path.join(SCREENSHOT_DIR, '16_kanban_board_view.png') })
+  await page.screenshot({ path: path.resolve('C:/Users/hp/.gemini/antigravity-ide/brain/cfcf70c0-f737-42f4-80f7-40b8cb708eb8/screenshots/16_kanban_board_view.png') })
+
+  // 15. Profile Modal with Notifications
+  console.log('⚙️ 15. Modal Profil & Pengaturan (dengan Notifikasi Web)...')
   const avatar = await page.waitForSelector('header button[aria-label="Buka Profil"]')
   if (avatar) await avatar.click()
   await new Promise((r) => setTimeout(r, 800))
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, '14_modal_profil_pengaturan.png') })
+  await page.screenshot({ path: path.resolve('C:/Users/hp/.gemini/antigravity-ide/brain/cfcf70c0-f737-42f4-80f7-40b8cb708eb8/screenshots/17_profile_notification_settings.png') })
 
   // Close modal
   const closeBtn = await page.waitForSelector('[role="dialog"] button[aria-label="Tutup"]')
@@ -134,7 +153,7 @@ async function run() {
   await new Promise((r) => setTimeout(r, 800))
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, '15_menu_aksi_cepat_fab.png') })
 
-  console.log('\n🎉 SEMUA 15 SCREENSHOT LENGKAP & TEPAT BERHASIL DIAMBIL!')
+  console.log('\n🎉 SEMUA SCREENSHOT LENGKAP BERHASIL DIAMBIL!')
   await browser.close()
 }
 

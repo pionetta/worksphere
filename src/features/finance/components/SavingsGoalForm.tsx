@@ -1,6 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DurationPicker } from '@/features/finance/components/DurationPicker'
+import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalculator'
+import { formatCurrency } from '@/utils/currency'
+import { Calculator } from 'lucide-react'
 
 interface SavingsGoalFormProps {
   initialName?: string
@@ -33,6 +37,15 @@ export function SavingsGoalForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const parsedTarget = useMemo(() => {
+    const val = parseInt(target.replace(/[^\d]/g, ''), 10)
+    return isNaN(val) ? 0 : val
+  }, [target])
+
+  const breakdown = useMemo(() => {
+    return calculateTargetBreakdown(parsedTarget, deadline)
+  }, [parsedTarget, deadline])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -40,7 +53,6 @@ export function SavingsGoalForm({
       setError('Nama tujuan tabungan wajib diisi.')
       return
     }
-    const parsedTarget = parseInt(target.replace(/[^\d]/g, ''), 10)
     if (!parsedTarget || parsedTarget <= 0) {
       setError('Target tabungan harus lebih dari 0.')
       return
@@ -56,12 +68,12 @@ export function SavingsGoalForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-3.5">
       <Input
         label="Nama Tujuan"
         value={name}
         onChange={e => setName(e.target.value)}
-        placeholder="Contoh: Dana Darurat, Liburan"
+        placeholder="Contoh: Dana Darurat, Liburan, Beli Gadget"
         error={error}
         autoFocus
       />
@@ -72,12 +84,50 @@ export function SavingsGoalForm({
         onChange={e => setTarget(e.target.value)}
         placeholder="0"
       />
-      <Input
-        label="Deadline (opsional)"
-        type="date"
-        value={deadline}
-        onChange={e => setDeadline(e.target.value)}
+
+      {/* Target Duration Picker (Presets, Custom Days/Weeks/Months, or Calendar) */}
+      <DurationPicker
+        deadline={deadline}
+        onChangeDeadline={setDeadline}
+        label="Target Waktu / Deadline (Opsional)"
+        accentColor="blue"
       />
+
+      {/* Live Auto-Calculator Breakdown */}
+      {breakdown && !breakdown.isExpired && (
+        <div className="p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-900/50 space-y-2 animate-fade-in">
+          <div className="flex items-center justify-between text-xs text-blue-900 dark:text-blue-200 font-semibold">
+            <span className="flex items-center gap-1.5">
+              <Calculator className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              Target Menabung Otomatis
+            </span>
+            <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">
+              {breakdown.label}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 text-center">
+            <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-2xs border border-gray-100 dark:border-gray-700">
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">Per Hari</p>
+              <p className="text-xs font-bold text-gray-900 dark:text-gray-100 mt-0.5">
+                {formatCurrency(breakdown.perDay)}
+              </p>
+            </div>
+            <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-2xs border border-gray-100 dark:border-gray-700">
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">Per Minggu</p>
+              <p className="text-xs font-bold text-gray-900 dark:text-gray-100 mt-0.5">
+                {formatCurrency(breakdown.perWeek)}
+              </p>
+            </div>
+            <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-2xs border border-blue-200 dark:border-blue-800/60">
+              <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Per Bulan</p>
+              <p className="text-xs font-bold text-blue-700 dark:text-blue-300 mt-0.5">
+                {formatCurrency(breakdown.perMonth)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Input
         label="Catatan (opsional)"
         value={note}
@@ -95,3 +145,4 @@ export function SavingsGoalForm({
     </form>
   )
 }
+

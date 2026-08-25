@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createDebtSchema } from '@/features/finance/schemas/debtSchema'
+import { DurationPicker } from '@/features/finance/components/DurationPicker'
+import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalculator'
+import { formatCurrency } from '@/utils/currency'
+import { Calculator } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DebtType } from '@/types'
 
@@ -40,14 +44,22 @@ export function DebtForm({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
+  const parsedAmount = useMemo(() => {
+    const val = parseInt(amount, 10)
+    return isNaN(val) ? 0 : val
+  }, [amount])
+
+  const breakdown = useMemo(() => {
+    return calculateTargetBreakdown(parsedAmount, dueDate)
+  }, [parsedAmount, dueDate])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const parsedAmount = parseInt(amount, 10)
 
     const result = createDebtSchema.safeParse({
       type,
       person_name: personName,
-      amount: isNaN(parsedAmount) ? 0 : parsedAmount,
+      amount: parsedAmount,
       due_date: dueDate || null,
       note: note || undefined,
     })
@@ -135,12 +147,48 @@ export function DebtForm({
         placeholder="0"
       />
 
-      <Input
-        label="Tanggal Jatuh Tempo (Opsional)"
-        type="date"
-        value={dueDate}
-        onChange={e => setDueDate(e.target.value)}
+      {/* Target Duration Picker (Presets, Custom Days/Weeks/Months, or Calendar) */}
+      <DurationPicker
+        deadline={dueDate}
+        onChangeDeadline={setDueDate}
+        label="Target Waktu Jatuh Tempo (Opsional)"
+        accentColor="rose"
       />
+
+      {/* Live Auto-Calculator Breakdown */}
+      {breakdown && !breakdown.isExpired && (
+        <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/50 space-y-2 animate-fade-in">
+          <div className="flex items-center justify-between text-xs text-rose-900 dark:text-rose-200 font-semibold">
+            <span className="flex items-center gap-1.5">
+              <Calculator className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+              Target {type === 'debt' ? 'Cicilan Pelunasan' : 'Penagihan'} Otomatis
+            </span>
+            <span className="text-[11px] font-medium text-rose-700 dark:text-rose-300">
+              {breakdown.label}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 text-center">
+            <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-2xs border border-gray-100 dark:border-gray-700">
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">Per Hari</p>
+              <p className="text-xs font-bold text-gray-900 dark:text-gray-100 mt-0.5">
+                {formatCurrency(breakdown.perDay)}
+              </p>
+            </div>
+            <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-2xs border border-gray-100 dark:border-gray-700">
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">Per Minggu</p>
+              <p className="text-xs font-bold text-gray-900 dark:text-gray-100 mt-0.5">
+                {formatCurrency(breakdown.perWeek)}
+              </p>
+            </div>
+            <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-2xs border border-rose-200 dark:border-rose-800/60">
+              <p className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">Per Bulan</p>
+              <p className="text-xs font-bold text-rose-700 dark:text-rose-300 mt-0.5">
+                {formatCurrency(breakdown.perMonth)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">

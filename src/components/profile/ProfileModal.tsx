@@ -3,10 +3,15 @@ import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/hooks/useTheme'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { resizeImage } from '@/utils/image'
-import { User, Lock, Camera, Trash2, CheckCircle2, AlertCircle, Loader2, Sun, Moon, Monitor, Download } from 'lucide-react'
+import { User, Lock, Camera, Trash2, CheckCircle2, AlertCircle, Loader2, Sun, Moon, Monitor, Download, BellRing } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
 import { usePwaInstall } from '@/hooks/usePwaInstall'
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  sendTestNotification,
+} from '@/lib/notifications'
 
 interface ProfileModalProps {
   open: boolean
@@ -364,6 +369,68 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
                   <Monitor className="w-4 h-4 text-primary-500" />
                   <span>Sistem</span>
                 </button>
+              </div>
+            </div>
+
+            {/* Web Push Notifications Settings */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Notifikasi Web & Pengingat
+              </label>
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BellRing className="w-4 h-4 text-blue-500" />
+                    <div>
+                      <p className="text-xs font-bold text-gray-900 dark:text-gray-100">Notifikasi Peramban</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">Pengingat presensi, utang, dan tugas</p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    'text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider',
+                    getNotificationPermission() === 'granted'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      : getNotificationPermission() === 'denied'
+                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                      : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                  )}>
+                    {getNotificationPermission() === 'granted' ? 'Aktif' : getNotificationPermission() === 'denied' ? 'Diblokir' : 'Nonaktif'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  {getNotificationPermission() !== 'granted' && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const res = await requestNotificationPermission()
+                        if (res === 'granted') {
+                          toast.success('Izin notifikasi web berhasil diaktifkan!')
+                          await sendTestNotification()
+                        } else if (res === 'denied') {
+                          toast.error('Izin notifikasi diblokir di peramban Anda.')
+                        }
+                      }}
+                      className="flex-1 py-1.5 px-3 rounded-lg bg-[#2563EB] text-white text-xs font-bold hover:bg-blue-700 active:scale-95 transition-all cursor-pointer text-center"
+                    >
+                      Aktifkan Notifikasi
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const success = await sendTestNotification()
+                      if (success) {
+                        toast.success('Notifikasi uji coba terkirim!')
+                      } else {
+                        toast.error('Gagal mengirim notifikasi. Pastikan izin peramban aktif.')
+                      }
+                    }}
+                    className="flex-1 py-1.5 px-3 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-xs font-bold hover:bg-gray-50 active:scale-95 transition-all cursor-pointer text-center"
+                  >
+                    Kirim Notifikasi Tes
+                  </button>
+                </div>
               </div>
             </div>
 

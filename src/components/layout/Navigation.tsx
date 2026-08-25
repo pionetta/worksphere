@@ -18,10 +18,10 @@ const navItems: NavItem[] = [
 export function BottomNavigation() {
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-30 glass border-t border-white/10 dark:border-gray-700/50 safe-area-bottom md:hidden"
+      className="fixed bottom-3 inset-x-3 z-30 max-w-md mx-auto h-16 rounded-[26px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/80 dark:border-gray-700/60 shadow-xl shadow-blue-500/10 flex items-center justify-around px-2 safe-area-bottom md:hidden transition-all duration-200"
       aria-label="Navigasi utama"
     >
-      <div className="flex items-center justify-around h-16">
+      <div className="flex items-center justify-around w-full h-full">
         {navItems.map(item => (
           <NavLink
             key={item.to}
@@ -29,23 +29,22 @@ export function BottomNavigation() {
             end={item.to === '/app'}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center gap-0.5 w-full h-full',
-                'text-xs font-medium transition-colors',
+                'flex flex-col items-center justify-center gap-1 w-full h-full rounded-2xl cursor-pointer',
+                'text-xs transition-all duration-200 active:scale-90',
                 isActive
-                  ? 'text-primary-500'
+                  ? 'text-[#2563EB] dark:text-blue-400 font-bold'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               )
             }
           >
             {({ isActive }) => (
               <>
-                <span className="relative">
+                <span className={cn('relative transition-transform duration-200', isActive && 'scale-110 -translate-y-0.5')}>
                   {item.icon}
-                  {isActive && (
-                    <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary-500" />
-                  )}
                 </span>
-                <span>{item.label}</span>
+                <span className={cn('text-[11px] transition-all duration-200', isActive ? 'font-bold' : 'font-medium')}>
+                  {item.label}
+                </span>
               </>
             )}
           </NavLink>

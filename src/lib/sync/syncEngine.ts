@@ -264,12 +264,7 @@ export interface SyncResult {
   errors: string[]
 }
 
-export async function processSyncQueue(userId: string): Promise<SyncResult> {
-  // Concurrency guard
-  if (isSyncing) {
-    return { processed: 0, succeeded: 0, failed: 0, errors: [] }
-  }
-
+async function executeSyncQueue(userId: string): Promise<SyncResult> {
   isSyncing = true
   const result: SyncResult = { processed: 0, succeeded: 0, failed: 0, errors: [] }
 
@@ -310,6 +305,34 @@ export async function processSyncQueue(userId: string): Promise<SyncResult> {
   }
 
   return result
+}
+
+export async function processSyncQueue(userId: string): Promise<SyncResult> {
+  // In-memory concurrency guard
+  if (isSyncing) {
+    return { processed: 0, succeeded: 0, failed: 0, errors: [] }
+  }
+
+  // Cross-tab mutex guard via Web Locks API when available in browser
+  if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+    try {
+      return await navigator.locks.request(
+        `worksphere_sync_${userId}`,
+        { ifAvailable: true },
+        async lock => {
+          if (!lock) {
+            // Another tab is currently processing the sync queue
+            return { processed: 0, succeeded: 0, failed: 0, errors: [] }
+          }
+          return await executeSyncQueue(userId)
+        }
+      )
+    } catch {
+      return await executeSyncQueue(userId)
+    }
+  }
+
+  return await executeSyncQueue(userId)
 }
 
 // ─── Retry Failed Items ───────────────────────────────────────────────────────

@@ -22,11 +22,35 @@ const TodoPage = lazy(() => import('@/pages/TodoPage').then(m => ({ default: m.T
 
 function LoadingScreen() {
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
-        <p className="text-sm text-text-secondary">Memuat...</p>
+    <div
+      role="status"
+      aria-live="polite"
+      className="min-h-dvh flex flex-col bg-gradient-to-b from-[#E2EFFC] via-[#EDF5FD] to-[#DCEBFA] dark:from-[#0b1329] dark:via-[#0f172a] dark:to-[#0b1329] px-4 py-4 max-w-md mx-auto w-full space-y-4"
+    >
+      <span className="sr-only">Memuat...</span>
+      {/* Topbar Skeleton */}
+      <div className="flex items-center justify-between h-14 pb-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-white/80 dark:bg-gray-800/80 animate-pulse border border-white/60 dark:border-gray-700/50" />
+          <div className="w-32 h-5 rounded-full bg-white/80 dark:bg-gray-800/80 animate-pulse" />
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-white/80 dark:bg-gray-800/80 animate-pulse" />
+          <div className="w-8 h-8 rounded-xl bg-white/80 dark:bg-gray-800/80 animate-pulse" />
+        </div>
       </div>
+
+      {/* Main Card Skeleton */}
+      <div className="rounded-[24px] bg-white/80 dark:bg-gray-800/80 p-6 space-y-4 shadow-sm border border-white/80 dark:border-gray-700/50 animate-pulse h-48" />
+
+      {/* 2-Col Cards Skeleton */}
+      <div className="grid grid-cols-2 gap-3.5">
+        <div className="rounded-[22px] bg-white/80 dark:bg-gray-800/80 p-5 h-28 border border-white/80 dark:border-gray-700/50 animate-pulse" />
+        <div className="rounded-[22px] bg-white/80 dark:bg-gray-800/80 p-5 h-28 border border-white/80 dark:border-gray-700/50 animate-pulse" />
+      </div>
+
+      {/* Detail Container Skeleton */}
+      <div className="rounded-[26px] bg-white/80 dark:bg-gray-800/80 p-5 h-56 border border-white/80 dark:border-gray-700/50 animate-pulse" />
     </div>
   )
 }

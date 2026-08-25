@@ -104,7 +104,7 @@ export function AttendanceQuickAction({ userId, onSuccess, onCancel }: Attendanc
                 {member.name}
               </span>
               <AttendanceStatusSelector
-                value={currentStatus ?? 'present'}
+                value={currentStatus}
                 onChange={status => handleStatusChange(member.id, status)}
               />
             </div>

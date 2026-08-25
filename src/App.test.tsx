@@ -154,7 +154,7 @@ describe('App Routes', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText(/Selamat/)).toBeInTheDocument()
+      expect(screen.getAllByText(/Selamat/).length).toBeGreaterThanOrEqual(1)
     })
   })
 
@@ -171,7 +171,7 @@ describe('App Routes', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText(/Selamat/)).toBeInTheDocument()
+      expect(screen.getAllByText(/Selamat/).length).toBeGreaterThanOrEqual(1)
     })
   })
 

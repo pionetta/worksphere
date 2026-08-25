@@ -7,18 +7,20 @@ import { useTaskReminder } from '@/features/todo/hooks/useTaskReminder'
 import * as subtaskService from '@/features/todo/services/subtaskService'
 import { TaskForm } from '@/features/todo/components/TaskForm'
 import { TaskList } from '@/features/todo/components/TaskList'
+import { KanbanBoard } from '@/features/todo/components/KanbanBoard'
 import { TaskSearch } from '@/features/todo/components/TaskSearch'
 import { TaskFiltersComponent } from '@/features/todo/components/TaskFilters'
 import { TaskStatusSelector } from '@/features/todo/components/TaskStatusSelector'
 import { SubtaskList } from '@/features/todo/components/SubtaskList'
+import { TaskAnalyticsCard } from '@/features/todo/components/TaskAnalyticsCard'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, ListTodo } from 'lucide-react'
+import { Plus, ListTodo, Sparkles, LayoutGrid, List } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import type { Task, TaskStatus, TaskPriority, Subtask } from '@/types'
 
 export function TodoPage() {
@@ -44,6 +46,7 @@ export function TodoPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list')
 
   const {
     subtasks,
@@ -79,6 +82,11 @@ export function TodoPage() {
       scheduleAllReminders(tasks)
     }
   }, [tasks, scheduleAllReminders])
+
+  const totalTasks = tasks.length
+  const completedTasks = tasks.filter(t => t.status === 'completed').length
+  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+  const remainingTasks = totalTasks - completedTasks
 
   const handleCreateTask = async (data: {
     title: string
@@ -165,7 +173,8 @@ export function TodoPage() {
         due_date: data.dueDate ?? null,
         reminder_at: data.reminderAt ?? null,
       })
-      toast.success('Tugas berhasil diperbarui!')
+      toast.success('Tugas berhasil diperbarui')
+      handleCloseDetail()
     } catch {
       toast.error('Gagal memperbarui tugas')
     }
@@ -173,55 +182,126 @@ export function TodoPage() {
 
   const statusTabs: Array<{ value: TaskStatus | 'all'; label: string }> = [
     { value: 'all', label: 'Semua' },
-    { value: 'todo', label: 'Todo' },
+    { value: 'todo', label: 'Belum' },
     { value: 'in_progress', label: 'Dikerjakan' },
     { value: 'completed', label: 'Selesai' },
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-md mx-auto space-y-3.5 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <ListTodo className="w-5 h-5 text-primary-500" />
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tugas</h1>
+          <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-[#2563EB] dark:text-blue-400 flex items-center justify-center">
+            <ListTodo className="w-5 h-5" />
+          </div>
+          <h1 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100">
+            Daftar Tugas (To-Do)
+          </h1>
         </div>
         <Button size="sm" onClick={() => setShowForm(true)} icon={<Plus className="w-4 h-4" />}>
           Tambah
         </Button>
       </div>
 
+      {/* Progres Harian Card */}
+      <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-3">
+        <div className="flex items-center justify-between text-xs font-bold">
+          <div className="flex items-center gap-1.5 text-[#2563EB] dark:text-blue-400 uppercase tracking-wider">
+            <Sparkles className="w-4 h-4" />
+            <span>Progres Harian</span>
+          </div>
+          <span className="text-gray-500 dark:text-gray-400">
+            {completedTasks}/{totalTasks} Selesai
+          </span>
+        </div>
+
+        <div className="flex items-baseline justify-between">
+          <span className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+            {progressPercent}%
+          </span>
+          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+            {remainingTasks} tugas tersisa
+          </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full h-2.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#2563EB] transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Task Analytics & Priority Breakdown */}
+      <TaskAnalyticsCard tasks={tasks} />
+
       {/* Create Form */}
       {showForm && (
-        <TaskForm
-          key="create-task"
-          onSubmit={handleCreateTask}
-          onCancel={() => setShowForm(false)}
-          categories={categories}
-          submitLabel="Buat Tugas"
-        />
+        <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md">
+          <TaskForm
+            key="create-task"
+            onSubmit={handleCreateTask}
+            onCancel={() => setShowForm(false)}
+            categories={categories}
+            submitLabel="Buat Tugas"
+          />
+        </div>
       )}
+
+      {/* View Mode Toggle (Daftar / Papan Kanban) */}
+      <div className="flex items-center justify-between p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs">
+        <button
+          type="button"
+          onClick={() => setViewMode('list')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer',
+            viewMode === 'list'
+              ? 'bg-[#2563EB] text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+          )}
+        >
+          <List className="w-4 h-4" />
+          <span>Daftar</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('kanban')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer',
+            viewMode === 'kanban'
+              ? 'bg-[#2563EB] text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+          )}
+        >
+          <LayoutGrid className="w-4 h-4" />
+          <span>Papan Kanban</span>
+        </button>
+      </div>
 
       {/* Search & Filters */}
       <div className="space-y-2">
         <TaskSearch value={filters.search} onChange={setSearch} />
 
-        <div className="overflow-x-auto pb-1">
-          <Tabs value={filters.status} onValueChange={val => setStatus(val as TaskStatus | 'all')}>
-            <TabsList className="min-w-max w-full">
-              {statusTabs.map(tab => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  role="button"
-                  className="flex-1 text-xs"
-                >
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
+        {viewMode === 'list' && (
+          <div className="overflow-x-auto pb-1 no-scrollbar">
+            <Tabs value={filters.status} onValueChange={val => setStatus(val as TaskStatus | 'all')}>
+              <TabsList className="min-w-max w-full h-11 p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs">
+                {statusTabs.map(tab => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    role="button"
+                    className="flex-1 rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all px-3"
+                  >
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
 
         <TaskFiltersComponent
           filters={filters}
@@ -236,9 +316,17 @@ export function TodoPage() {
         />
       </div>
 
-      {/* Task List */}
+      {/* Task Content: List or Kanban */}
       {loading ? (
         <LoadingState text="Memuat tugas..." />
+      ) : viewMode === 'kanban' ? (
+        <KanbanBoard
+          tasks={filteredTasks}
+          subtasksMap={subtasksMap}
+          onSelectTask={handleTaskClick}
+          onChangeStatus={handleStatusChange}
+          onAddTask={() => setShowForm(true)}
+        />
       ) : (
         <TaskList
           tasks={filteredTasks}
@@ -291,8 +379,8 @@ export function TodoPage() {
               submitLabel="Simpan Perubahan"
             />
 
-            <Card>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subtask</p>
+            <div className="rounded-2xl p-4 bg-gray-50/70 dark:bg-gray-800/70 border border-gray-200/80 dark:border-gray-700/80">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Subtask</p>
               <SubtaskList
                 subtasks={subtasks}
                 userId={userId}
@@ -317,7 +405,7 @@ export function TodoPage() {
                   await loadSubtasksMap()
                 }}
               />
-            </Card>
+            </div>
 
             <Button variant="danger" className="w-full" onClick={() => setShowDeleteConfirm(true)}>
               Hapus Tugas

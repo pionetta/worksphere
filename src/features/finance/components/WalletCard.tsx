@@ -1,5 +1,4 @@
 import { formatCurrency } from '@/utils/currency'
-import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Wallet, Landmark, CreditCard, Banknote, HelpCircle, Trash2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -26,33 +25,67 @@ const walletTypeLabels: Record<WalletType, string> = {
   other: 'Lainnya',
 }
 
+const walletTypeColors: Record<WalletType, { bg: string; text: string }> = {
+  bank: { bg: 'bg-blue-500/10 dark:bg-blue-900/30', text: 'text-[#2563EB] dark:text-blue-400' },
+  e_wallet: { bg: 'bg-sky-500/10 dark:bg-sky-900/30', text: 'text-sky-600 dark:text-sky-400' },
+  cash: { bg: 'bg-emerald-500/10 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400' },
+  other: { bg: 'bg-amber-500/10 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400' },
+}
+
 export function WalletCard({ wallet, onSelect, onDeactivate, selected }: WalletCardProps) {
   const Icon = walletTypeIcons[wallet.type] || Wallet
+  const colors = walletTypeColors[wallet.type] || walletTypeColors.other
 
   return (
-    <Card
+    <div
+      role="button"
+      tabIndex={0}
       className={cn(
-        'cursor-pointer transition-all',
-        selected && 'ring-2 ring-primary-500 border-primary-500'
+        'rounded-[22px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 shadow-sm backdrop-blur-md cursor-pointer transition-all hover:shadow-md active:scale-[0.99]',
+        selected && 'ring-2 ring-[#2563EB] border-[#2563EB]'
       )}
       onClick={onSelect}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect?.()
+        }
+      }}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-primary-500" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className={cn('w-10 h-10 rounded-2xl flex items-center justify-center shrink-0', colors.bg, colors.text)}>
+            <Icon className="w-5 h-5" />
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{wallet.name}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {walletTypeLabels[wallet.type]}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+              {wallet.name}
             </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                {walletTypeLabels[wallet.type]}
+              </span>
+              {wallet.note && (
+                <>
+                  <span className="text-[11px] text-gray-300 dark:text-gray-600">•</span>
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">
+                    {wallet.note}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={wallet.is_active ? 'success' : 'default'}>
-            {wallet.is_active ? 'Aktif' : 'Nonaktif'}
-          </Badge>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="text-right">
+            <p className="text-xs sm:text-sm font-black text-gray-900 dark:text-white tracking-tight">
+              {formatCurrency(wallet.balance)}
+            </p>
+            <Badge variant={wallet.is_active ? 'success' : 'default'} className="mt-0.5 text-[10px]">
+              {wallet.is_active ? 'Aktif' : 'Nonaktif'}
+            </Badge>
+          </div>
           {onDeactivate && (
             <button
               type="button"
@@ -60,7 +93,7 @@ export function WalletCard({ wallet, onSelect, onDeactivate, selected }: WalletC
                 e.stopPropagation()
                 onDeactivate(wallet.id)
               }}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              className="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors cursor-pointer"
               aria-label={`Nonaktifkan dompet ${wallet.name}`}
             >
               <Trash2 className="w-4 h-4" />
@@ -68,14 +101,6 @@ export function WalletCard({ wallet, onSelect, onDeactivate, selected }: WalletC
           )}
         </div>
       </div>
-      <div className="mt-3">
-        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {formatCurrency(wallet.balance)}
-        </p>
-      </div>
-      {wallet.note && (
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{wallet.note}</p>
-      )}
-    </Card>
+    </div>
   )
 }

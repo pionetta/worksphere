@@ -65,13 +65,21 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
   }
 
   return (
-    <Card
+    <div
+      role="button"
+      tabIndex={0}
       className={cn(
-        'cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800/80',
-        overdue && 'border-l-4 border-l-danger',
+        'rounded-[22px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 shadow-sm backdrop-blur-md cursor-pointer transition-all duration-200 hover:shadow-md active:scale-[0.99]',
+        overdue && 'border-l-4 border-l-rose-500',
         task.status === 'completed' && 'opacity-60'
       )}
       onClick={onClick}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick?.()
+        }
+      }}
     >
       <div className="flex items-start gap-3">
         <button
@@ -162,6 +170,6 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
           <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-1" aria-label="Terlambat" />
         )}
       </div>
-    </Card>
+    </div>
   )
 }

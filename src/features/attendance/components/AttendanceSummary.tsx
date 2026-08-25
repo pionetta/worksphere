@@ -1,4 +1,5 @@
 import type { Attendance, AttendanceStatus, Member } from '@/types'
+import { CheckCircle, XCircle, Moon, Clock } from 'lucide-react'
 
 interface AttendanceSummaryProps {
   attendance: Attendance[]
@@ -42,50 +43,64 @@ export function AttendanceSummary({
   })
 
   return (
-    <div className="grid grid-cols-4 gap-2">
-      <SummaryCard
-        label="Hadir"
-        value={present}
-        color="text-success"
-        bg="bg-success-light dark:bg-green-900/30"
-      />
-      <SummaryCard
-        label="Absen"
-        value={absent}
-        color="text-danger"
-        bg="bg-danger-light dark:bg-red-900/30"
-      />
-      <SummaryCard
-        label="Libur"
-        value={holiday}
-        color="text-warning"
-        bg="bg-warning-light dark:bg-amber-900/30"
-      />
-      <SummaryCard
-        label="Belum"
-        value={unrecorded}
-        color="text-gray-500"
-        bg="bg-gray-100 dark:bg-gray-800"
-      />
-    </div>
-  )
-}
+    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+      <div className="rounded-2xl p-3.5 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center justify-between">
+        <div>
+          <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+            HADIR
+          </span>
+          <p className="text-lg sm:text-xl font-black text-emerald-700 dark:text-emerald-400 mt-0.5">
+            {present}<span className="text-xs font-semibold text-emerald-600/75">/{total}</span>
+          </p>
+        </div>
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs shrink-0">
+          <CheckCircle className="w-4 h-4" />
+        </div>
+      </div>
 
-function SummaryCard({
-  label,
-  value,
-  color,
-  bg,
-}: {
-  label: string
-  value: number
-  color: string
-  bg: string
-}) {
-  return (
-    <div className={`rounded-xl p-3 text-center ${bg}`}>
-      <p className={`text-lg font-semibold ${color}`}>{value}</p>
-      <p className="text-xs text-gray-600 dark:text-gray-400">{label}</p>
+      <div className="rounded-2xl p-3.5 bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/60 dark:border-rose-800/40 flex items-center justify-between">
+        <div>
+          <span className="text-[10px] font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wider">
+            ABSEN
+          </span>
+          <p className="text-lg sm:text-xl font-black text-rose-700 dark:text-rose-400 mt-0.5">
+            {absent}<span className="text-xs font-semibold text-rose-600/75">/{total}</span>
+          </p>
+        </div>
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs shrink-0">
+          <XCircle className="w-4 h-4" />
+        </div>
+      </div>
+
+      <div className="rounded-2xl p-3.5 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-between">
+        <div>
+          <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+            LIBUR
+          </span>
+          <p className="text-lg sm:text-xl font-black text-amber-700 dark:text-amber-400 mt-0.5">
+            {holiday}
+          </p>
+        </div>
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs shrink-0">
+          <Moon className="w-4 h-4" />
+        </div>
+      </div>
+
+      {unrecorded > 0 && (
+        <div className="col-span-3 sm:col-span-1 rounded-2xl p-3.5 bg-gray-100/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+              BELUM
+            </span>
+            <p className="text-lg sm:text-xl font-black text-gray-700 dark:text-gray-300 mt-0.5">
+              {unrecorded}
+            </p>
+          </div>
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gray-400 dark:bg-gray-600 text-white flex items-center justify-center shadow-xs shrink-0">
+            <Clock className="w-4 h-4" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

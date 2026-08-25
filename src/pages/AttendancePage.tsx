@@ -9,11 +9,11 @@ import { AttendanceSummary } from '@/features/attendance/components/AttendanceSu
 import { MemberList } from '@/features/attendance/components/MemberList'
 import { WeekNavigation } from '@/features/attendance/components/WeekNavigation'
 import { WeeklyAttendanceTable } from '@/features/attendance/components/WeeklyAttendanceTable'
+import { AttendanceTrendChart } from '@/features/attendance/components/AttendanceTrendChart'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { FileDown } from 'lucide-react'
+import { FileDown, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import type { AttendanceStatus } from '@/types'
 import { isSameDay } from 'date-fns'
@@ -131,12 +131,17 @@ export function AttendancePage() {
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-md mx-auto space-y-3.5 pb-8">
       {/* Tab Navigation */}
       <Tabs value={tab} onValueChange={val => setTab(val as Tab)}>
-        <TabsList className="w-full">
+        <TabsList className="w-full h-11 p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs">
           {tabs.map(t => (
-            <TabsTrigger key={t.key} value={t.key} className="flex-1" role="button">
+            <TabsTrigger
+              key={t.key}
+              value={t.key}
+              className="flex-1 rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              role="button"
+            >
               {t.label}
             </TabsTrigger>
           ))}
@@ -145,46 +150,52 @@ export function AttendancePage() {
 
       {/* Daily Attendance Tab */}
       {tab === 'daily' && (
-        <div className="space-y-4">
-          <Card>
+        <div className="space-y-3.5 animate-fade-in-up">
+          {/* Date Picker Card */}
+          <div className="rounded-[24px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 shadow-sm backdrop-blur-md">
             <AttendanceDatePicker date={date} onChange={handleDateChange} />
-          </Card>
+          </div>
 
+          {/* 3-Stat Summary Cards */}
           {membersHook.members.some(m => m.is_active) && (
-            <Card>
-              <AttendanceSummary
-                attendance={attendanceHook.attendance}
-                members={membersHook.members}
-                pendingStatuses={pendingStatuses}
-              />
-            </Card>
+            <AttendanceSummary
+              attendance={attendanceHook.attendance}
+              members={membersHook.members}
+              pendingStatuses={pendingStatuses}
+            />
           )}
 
-          <Card padding="none">
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                Daftar Anggota
-              </h3>
+          {/* Member Roster List Card */}
+          <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#2563EB] dark:text-blue-400" />
+                <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100">
+                  Daftar Anggota Tim
+                </h3>
+              </div>
+              <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                {membersHook.members.filter(m => m.is_active).length} Aktif
+              </span>
             </div>
-            <div className="px-4 pb-4">
-              <AttendanceList
-                members={membersHook.members}
-                attendance={attendanceHook.attendance}
-                pendingStatuses={pendingStatuses}
-                onStatusChange={handleStatusChange}
-                onSave={handleSave}
-                loading={membersHook.loading || attendanceHook.loading}
-                saving={saving}
-                hasChanges={hasChanges}
-              />
-            </div>
-          </Card>
+
+            <AttendanceList
+              members={membersHook.members}
+              attendance={attendanceHook.attendance}
+              pendingStatuses={pendingStatuses}
+              onStatusChange={handleStatusChange}
+              onSave={handleSave}
+              loading={membersHook.loading || attendanceHook.loading}
+              saving={saving}
+              hasChanges={hasChanges}
+            />
+          </div>
         </div>
       )}
 
       {/* Members Tab */}
       {tab === 'members' && (
-        <Card>
+        <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md animate-fade-in-up">
           <MemberList
             members={membersHook.members}
             loading={membersHook.loading}
@@ -204,13 +215,13 @@ export function AttendancePage() {
               }
             }}
           />
-        </Card>
+        </div>
       )}
 
       {/* Weekly Recap Tab */}
       {tab === 'weekly' && (
-        <div className="space-y-4">
-          <Card>
+        <div className="space-y-3.5 animate-fade-in-up">
+          <div className="rounded-[24px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 shadow-sm backdrop-blur-md">
             <WeekNavigation
               currentDate={weeklyHook.currentDate}
               onNext={weeklyHook.goNext}
@@ -218,39 +229,53 @@ export function AttendancePage() {
               onToday={weeklyHook.goToday}
               isToday={isSameDay(weeklyHook.currentDate, new Date())}
             />
-          </Card>
+          </div>
 
-          <Card>
-            <div className="flex justify-end gap-2 mb-3">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleExportPdf}
-                loading={exportLoading}
-                icon={<FileDown className="w-4 h-4" />}
-              >
-                PDF
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleExportExcel}
-                loading={exportLoading}
-                icon={<FileDown className="w-4 h-4" />}
-              >
-                Excel
-              </Button>
+          {/* Attendance Trend Chart */}
+          <AttendanceTrendChart
+            recap={weeklyHook.recap}
+            attendance={weeklyHook.attendance}
+          />
+
+          <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-3">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100">
+                Tabel Rekap Kehadiran
+              </h3>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleExportPdf}
+                  loading={exportLoading}
+                  icon={<FileDown className="w-3.5 h-3.5" />}
+                >
+                  PDF
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleExportExcel}
+                  loading={exportLoading}
+                  icon={<FileDown className="w-3.5 h-3.5" />}
+                >
+                  Excel
+                </Button>
+              </div>
             </div>
-            {exportError && <p className="text-xs text-danger mb-3">{exportError}</p>}
+
+            {exportError && <p className="text-xs text-rose-600 dark:text-rose-400 font-semibold">{exportError}</p>}
+
             <WeeklyAttendanceTable
               recap={weeklyHook.recap}
               attendance={weeklyHook.attendance}
               loading={weeklyHook.loading}
               hasMembers={membersHook.members.length > 0}
             />
-          </Card>
+          </div>
         </div>
       )}
+
       {/* Member Deactivate Confirmation */}
       <ConfirmDialog
         open={memberToggleConfirm !== null}

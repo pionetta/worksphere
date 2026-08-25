@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
 import type { Theme } from '@/hooks/useTheme'
 import { useSyncStatus } from '@/hooks/useSyncStatus'
@@ -26,6 +27,7 @@ export function AppLayout({
   headerActions,
 }: AppLayoutProps) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const sync = useSyncStatus(user?.id ?? null)
   const network = useNetworkStatus()
@@ -35,7 +37,10 @@ export function AppLayout({
   const handleLogout = async () => {
     await signOut()
     setShowLogoutConfirm(false)
+    navigate('/', { replace: true })
   }
+
+  const isDashboard = location.pathname === '/app' || location.pathname === '/app/'
 
   return (
     <div className="flex h-dvh bg-background">
@@ -46,7 +51,9 @@ export function AppLayout({
         onLogout={() => setShowLogoutConfirm(true)}
       />
 
-      <div className="flex flex-col flex-1 min-w-0">
+      <div
+        className="flex flex-col flex-1 min-w-0 transition-colors duration-200 bg-gradient-to-b from-[#E2EFFC] via-[#EDF5FD] to-[#DCEBFA] dark:from-[#0b1329] dark:via-[#0f172a] dark:to-[#0b1329]"
+      >
         {/* Offline banner */}
         <OfflineBanner isOnline={network === 'online'} />
 
@@ -57,6 +64,7 @@ export function AppLayout({
           theme={theme}
           onThemeChange={onThemeChange}
           user={user}
+          isDashboard={isDashboard}
           onOpenProfile={() => setShowProfileModal(true)}
           onLogout={() => setShowLogoutConfirm(true)}
           actions={
@@ -76,7 +84,7 @@ export function AppLayout({
         {/* Main content area — renders child route via Outlet with page fade-in animation */}
         <main
           key={location.pathname}
-          className="flex-1 overflow-y-auto px-4 py-4 pb-20 md:pb-4 animate-fade-in-up"
+          className="flex-1 overflow-y-auto px-4 py-4 pb-24 md:pb-4 animate-fade-in-up"
         >
           <Outlet />
         </main>

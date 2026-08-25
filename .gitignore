@@ -35,3 +35,5 @@ dist-ssr
 screenshots/
 __pycache__/
 .temp_*
+*.pdf
+dev-dist/
