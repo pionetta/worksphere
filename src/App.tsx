@@ -28,6 +28,7 @@ function LoadingScreen() {
       aria-label="Memuat aplikasi"
       className="p-4 sm:p-6 space-y-4 max-w-md mx-auto animate-pulse"
     >
+      <span className="sr-only">Memuat...</span>
       {/* Header Skeleton */}
       <div className="flex items-center justify-between pb-2">
         <div className="space-y-2">
