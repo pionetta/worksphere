@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/lib/auth'
 import { useTasks } from '@/features/todo/hooks/useTasks'
 import { useSubtasks } from '@/features/todo/hooks/useSubtasks'
 import { useTaskFilters } from '@/features/todo/hooks/useTaskFilters'
 import { useTaskReminder } from '@/features/todo/hooks/useTaskReminder'
 import { useJournal } from '@/features/journal/hooks/useJournal'
+import { useWishlist } from '@/features/finance/hooks/useWishlist'
 import * as subtaskService from '@/features/todo/services/subtaskService'
 import { TaskForm } from '@/features/todo/components/TaskForm'
 import { TaskList } from '@/features/todo/components/TaskList'
@@ -15,9 +16,12 @@ import { TaskStatusSelector } from '@/features/todo/components/TaskStatusSelecto
 import { SubtaskList } from '@/features/todo/components/SubtaskList'
 import { TaskAnalyticsCard } from '@/features/todo/components/TaskAnalyticsCard'
 import { JournalSection } from '@/features/journal/components/JournalSection'
+import { WishlistCard } from '@/features/finance/components/WishlistCard'
+import { WishlistForm } from '@/features/finance/components/WishlistForm'
 import { Button } from '@/components/ui/Button'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -25,11 +29,21 @@ import {
   ListTodo,
   LayoutGrid,
   List,
+  Gift,
   BookOpen,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import type { Task, TaskStatus, TaskPriority, TaskTimeframe, Subtask } from '@/types'
+import { formatCurrency } from '@/utils/currency'
+import type {
+  Task,
+  TaskStatus,
+  TaskPriority,
+  TaskTimeframe,
+  Subtask,
+  WishlistItem,
+  WishlistPeriod,
+} from '@/types'
 
 const STATUS_TABS: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Semua' },
@@ -58,12 +72,26 @@ export function TodoPage() {
   } = useTaskFilters(tasks)
   const { checkAndRequestPermission, scheduleAllReminders } = useTaskReminder()
   const journalHook = useJournal(userId || null)
+  const wishlistHook = useWishlist(userId || null)
 
   const [showForm, setShowForm] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'journal'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'wishlist' | 'journal'>('list')
+
+  // Wishlist states
+  const [showWishlistForm, setShowWishlistForm] = useState(false)
+  const [editingWishlist, setEditingWishlist] = useState<WishlistItem | null>(null)
+  const [wishlistPeriodFilter, setWishlistPeriodFilter] = useState<WishlistPeriod | 'all'>('all')
+  const [pendingDeleteWishlistId, setPendingDeleteWishlistId] = useState<string | null>(null)
+
+  const filteredWishlists = useMemo(() => {
+    return wishlistHook.items.filter(item => {
+      if (wishlistPeriodFilter === 'all') return true
+      return item.period === wishlistPeriodFilter
+    })
+  }, [wishlistHook.items, wishlistPeriodFilter])
 
   const {
     subtasks,
@@ -207,15 +235,47 @@ export function TodoPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-[#2563EB] dark:text-blue-400 flex items-center justify-center">
-            <ListTodo className="w-5 h-5" />
+          <div
+            className={cn(
+              'w-8 h-8 rounded-xl flex items-center justify-center transition-colors',
+              viewMode === 'wishlist'
+                ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400'
+                : viewMode === 'journal'
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                  : 'bg-blue-500/10 text-[#2563EB] dark:text-blue-400'
+            )}
+          >
+            {viewMode === 'wishlist' ? (
+              <Gift className="w-5 h-5" />
+            ) : viewMode === 'journal' ? (
+              <BookOpen className="w-5 h-5" />
+            ) : (
+              <ListTodo className="w-5 h-5" />
+            )}
           </div>
           <h1 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100">
-            Daftar Tugas & Jurnal
+            {viewMode === 'wishlist'
+              ? 'Wishlist Impian'
+              : viewMode === 'journal'
+                ? 'Catatan & Jurnal'
+                : 'Daftar Tugas (To-Do)'}
           </h1>
         </div>
 
-        {viewMode !== 'journal' && (
+        {/* Dynamic Top Action Button */}
+        {viewMode === 'wishlist' ? (
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditingWishlist(null)
+              setShowWishlistForm(true)
+            }}
+            icon={<Plus className="w-4 h-4" />}
+            className="bg-[#2563EB] hover:bg-blue-700 text-white font-bold"
+          >
+            Wishlist Baru
+          </Button>
+        ) : viewMode === 'list' || viewMode === 'kanban' ? (
           <Button
             size="sm"
             onClick={() => setShowForm(!showForm)}
@@ -224,16 +284,16 @@ export function TodoPage() {
           >
             {showForm ? 'Tutup' : 'Tugas Baru'}
           </Button>
-        )}
+        ) : null}
       </div>
 
       {/* Analytics Card (for Tasks) */}
-      {viewMode !== 'journal' && (
+      {(viewMode === 'list' || viewMode === 'kanban') && (
         <TaskAnalyticsCard tasks={tasks} />
       )}
 
-      {/* Task Creation Form Inline (if open) */}
-      {showForm && viewMode !== 'journal' && (
+      {/* Task Creation Form Inline (if open in task view) */}
+      {showForm && (viewMode === 'list' || viewMode === 'kanban') && (
         <div className="animate-fade-in-up">
           <TaskForm
             categories={categories}
@@ -244,13 +304,13 @@ export function TodoPage() {
         </div>
       )}
 
-      {/* View Mode Segmented Switcher (Daftar | Kanban | Catatan & Jurnal) */}
-      <div className="flex items-center justify-between p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs">
+      {/* View Mode Segmented Switcher (Daftar | Kanban | Wishlist | Catatan & Win) */}
+      <div className="flex items-center justify-between p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs gap-1">
         <button
           type="button"
           onClick={() => setViewMode('list')}
           className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
+            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
             viewMode === 'list'
               ? 'bg-[#2563EB] text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
@@ -264,7 +324,7 @@ export function TodoPage() {
           type="button"
           onClick={() => setViewMode('kanban')}
           className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
+            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
             viewMode === 'kanban'
               ? 'bg-[#2563EB] text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
@@ -276,21 +336,203 @@ export function TodoPage() {
 
         <button
           type="button"
+          onClick={() => setViewMode('wishlist')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
+            viewMode === 'wishlist'
+              ? 'bg-[#2563EB] text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+          )}
+        >
+          <Gift className="w-3.5 h-3.5" />
+          <span>Wishlist</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setViewMode('journal')}
           className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
+            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
             viewMode === 'journal'
               ? 'bg-amber-500 text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
           )}
         >
           <BookOpen className="w-3.5 h-3.5" />
-          <span>Catatan & Win</span>
+          <span>Catatan</span>
         </button>
       </div>
 
-      {/* Journal View */}
-      {viewMode === 'journal' ? (
+      {/* ─── 1. Wishlist View ─── */}
+      {viewMode === 'wishlist' ? (
+        <div className="space-y-4 animate-fade-in-up">
+          {/* Wishlist Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+                Estimasi Dibutuhkan
+              </p>
+              <p className="text-sm sm:text-base font-black text-rose-600 dark:text-rose-400 truncate">
+                {formatCurrency(wishlistHook.summary.totalEstimated)}
+              </p>
+              <span className="text-[10px] text-gray-400 font-medium">
+                {wishlistHook.summary.pendingCount} impian direncanakan
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+                Sudah Terbeli / Tercapai
+              </p>
+              <p className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 truncate">
+                {formatCurrency(wishlistHook.summary.totalAchieved)}
+              </p>
+              <span className="text-[10px] text-gray-400 font-medium">
+                {wishlistHook.summary.achievedCount} impian terwujud
+              </span>
+            </div>
+
+            <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs flex flex-col justify-between">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+                Breakdown Horizon
+              </p>
+              <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-300 font-bold">
+                <span>M: {formatCurrency(wishlistHook.summary.weeklyTotal)}</span>
+                <span>B: {formatCurrency(wishlistHook.summary.monthlyTotal)}</span>
+                <span>T: {formatCurrency(wishlistHook.summary.yearlyTotal)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Period Filter Selector */}
+          <div className="overflow-x-auto pb-1 no-scrollbar">
+            <div className="inline-flex gap-1.5 p-1 rounded-2xl bg-white/70 dark:bg-gray-800/70 border border-white/80 dark:border-gray-700/50 shadow-xs min-w-full sm:min-w-0">
+              {(
+                [
+                  { id: 'all', label: 'Semua Periode' },
+                  { id: 'weekly', label: '📦 Mingguan' },
+                  { id: 'monthly', label: '🛍️ Bulanan' },
+                  { id: 'yearly', label: '🎯 Tahunan' },
+                ] as const
+              ).map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setWishlistPeriodFilter(tab.id)}
+                  className={cn(
+                    'py-1.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap',
+                    wishlistPeriodFilter === tab.id
+                      ? 'bg-[#2563EB] text-white shadow-xs'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Wishlist List Feed */}
+          {wishlistHook.loading ? (
+            <div className="space-y-3 animate-pulse">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-28 rounded-2xl bg-white/60 dark:bg-gray-800/60 border border-white/60 dark:border-gray-700/40" />
+              ))}
+            </div>
+          ) : filteredWishlists.length === 0 ? (
+            <EmptyState
+              icon={<Gift className="w-8 h-8 text-gray-400" />}
+              title="Belum ada wishlist"
+              description="Catat impian atau barang yang ingin dibeli dalam horizon mingguan, bulanan, atau tahunan."
+              action={
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingWishlist(null)
+                    setShowWishlistForm(true)
+                  }}
+                  icon={<Plus className="w-4 h-4" />}
+                >
+                  Tambah Wishlist Pertama
+                </Button>
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {filteredWishlists.map(item => (
+                <WishlistCard
+                  key={item.id}
+                  item={item}
+                  onToggleAchieved={async (id, currentStatus) => {
+                    await wishlistHook.toggleAchieved(id, currentStatus)
+                    toast.success(
+                      currentStatus === 'pending'
+                        ? 'Wishlist ditandai tercapai! 🎉'
+                        : 'Status wishlist dikembalikan ke direncanakan'
+                    )
+                  }}
+                  onEdit={targetItem => {
+                    setEditingWishlist(targetItem)
+                    setShowWishlistForm(true)
+                  }}
+                  onDelete={id => {
+                    setPendingDeleteWishlistId(id)
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Wishlist BottomSheet Modal */}
+          <BottomSheet
+            open={showWishlistForm}
+            onClose={() => {
+              setShowWishlistForm(false)
+              setEditingWishlist(null)
+            }}
+            title={editingWishlist ? 'Edit Wishlist' : 'Tambah Wishlist Baru'}
+          >
+            <div className="pb-4">
+              <WishlistForm
+                initialData={editingWishlist ?? undefined}
+                onSubmit={async data => {
+                  if (editingWishlist) {
+                    await wishlistHook.updateItem(editingWishlist.id, data)
+                    toast.success('Wishlist berhasil diperbarui!')
+                  } else {
+                    await wishlistHook.addItem(data)
+                    toast.success('Wishlist baru berhasil disimpan! ✨')
+                  }
+                  setShowWishlistForm(false)
+                  setEditingWishlist(null)
+                }}
+                onCancel={() => {
+                  setShowWishlistForm(false)
+                  setEditingWishlist(null)
+                }}
+                submitLabel={editingWishlist ? 'Perbarui' : 'Simpan Wishlist'}
+              />
+            </div>
+          </BottomSheet>
+
+          {/* Wishlist Delete Confirmation */}
+          <ConfirmDialog
+            open={pendingDeleteWishlistId !== null}
+            onClose={() => setPendingDeleteWishlistId(null)}
+            onConfirm={async () => {
+              if (pendingDeleteWishlistId) {
+                await wishlistHook.deleteItem(pendingDeleteWishlistId)
+                toast.success('Wishlist berhasil dihapus')
+                setPendingDeleteWishlistId(null)
+              }
+            }}
+            title="Hapus Wishlist"
+            message="Apakah Anda yakin ingin menghapus wishlist ini?"
+            confirmLabel="Hapus"
+          />
+        </div>
+      ) : viewMode === 'journal' ? (
+        /* ─── 2. Journal & Wins View ─── */
         <JournalSection
           entries={journalHook.entries}
           loading={journalHook.loading}
@@ -299,7 +541,7 @@ export function TodoPage() {
           onDelete={journalHook.deleteEntry}
         />
       ) : (
-        /* Tasks List & Kanban View */
+        /* ─── 3. Tasks List & Kanban View ─── */
         <div className="space-y-3">
           {/* Time Horizon Filter Pills (Harian, Mingguan, Tahunan) */}
           <div className="overflow-x-auto pb-1 no-scrollbar">

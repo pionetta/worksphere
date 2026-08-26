@@ -37,10 +37,6 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { WishlistCard } from '@/features/finance/components/WishlistCard'
-import { WishlistForm } from '@/features/finance/components/WishlistForm'
-import { useWishlist } from '@/features/finance/hooks/useWishlist'
-import { cn } from '@/lib/utils'
 import {
   Plus,
   ArrowLeft,
@@ -51,11 +47,10 @@ import {
   PiggyBank,
   HandCoins,
   FileDown,
-  Gift,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/utils/currency'
-import type { Category, Transaction, Debt, WishlistItem, WishlistPeriod } from '@/types'
+import type { Category, Transaction, Debt } from '@/types'
 import {
   useFilteredTransactions,
   DEFAULT_FILTERS,
@@ -70,7 +65,6 @@ type Tab =
   | 'budgets'
   | 'savings'
   | 'debts'
-  | 'wishlist'
 
 export function FinancePage() {
   const { user } = useAuth()
@@ -86,19 +80,7 @@ export function FinancePage() {
   const budgetsHook = useBudgets(userId || null, currentMonth, currentYear)
   const savingsHook = useSavingsGoals(userId || null)
   const debtsHook = useDebts(userId || null)
-  const wishlistHook = useWishlist(userId || null)
   const summaryHook = useFinanceSummary(userId || null, currentMonth, currentYear)
-
-  const [showWishlistForm, setShowWishlistForm] = useState(false)
-  const [editingWishlist, setEditingWishlist] = useState<WishlistItem | null>(null)
-  const [wishlistPeriodFilter, setWishlistPeriodFilter] = useState<WishlistPeriod | 'all'>('all')
-
-  const filteredWishlists = useMemo(() => {
-    return wishlistHook.items.filter(item => {
-      if (wishlistPeriodFilter === 'all') return true
-      return item.period === wishlistPeriodFilter
-    })
-  }, [wishlistHook.items, wishlistPeriodFilter])
 
   const [categories, setCategories] = useState<Category[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
@@ -289,10 +271,10 @@ export function FinancePage() {
 
   return (
     <div className="max-w-md mx-auto space-y-3.5 pb-8">
-      {/* ─── Modern Minimalist Tab Bar (5 Menu: Ringkasan, Anggaran, Tabungan, Utang, Wishlist) ─── */}
+      {/* ─── Modern Minimalist Tab Bar (4 Menu: Ringkasan, Anggaran, Tabungan, Utang) ─── */}
       <div className="w-full">
         <Tabs value={tab} onValueChange={val => setTab(val as Tab)}>
-          <TabsList className="w-full h-11 p-1 rounded-xl bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 shadow-xs grid grid-cols-5 gap-1">
+          <TabsList className="w-full h-11 p-1 rounded-xl bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 shadow-xs grid grid-cols-4 gap-1">
             <TabsTrigger
               value="summary"
               onClick={() => setTab('summary')}
@@ -327,15 +309,6 @@ export function FinancePage() {
               className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-1 truncate"
             >
               Utang
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="wishlist"
-              onClick={() => setTab('wishlist')}
-              role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-1 truncate"
-            >
-              Wishlist
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -1390,200 +1363,6 @@ export function FinancePage() {
         </div>
       )}
 
-      {/* Wishlist Tab (Impian Mingguan, Bulanan, Tahunan) */}
-      {tab === 'wishlist' && (
-        <div className="space-y-4 animate-fade-in-up">
-          {/* Header Wishlist */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center">
-                <Gift className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-gray-100">
-                  Wishlist & Impian
-                </h3>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Rencanakan target belanja & impian berjangka waktu
-                </p>
-              </div>
-            </div>
-
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingWishlist(null)
-                setShowWishlistForm(true)
-              }}
-              icon={<Plus className="w-4 h-4" />}
-              className="bg-[#2563EB] hover:bg-blue-700 text-white font-bold"
-            >
-              Tambah
-            </Button>
-          </div>
-
-          {/* Wishlist Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
-              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
-                Estimasi Dibutuhkan
-              </p>
-              <p className="text-sm sm:text-base font-black text-rose-600 dark:text-rose-400 truncate">
-                {formatCurrency(wishlistHook.summary.totalEstimated)}
-              </p>
-              <span className="text-[10px] text-gray-400 font-medium">
-                {wishlistHook.summary.pendingCount} barang direncanakan
-              </span>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
-              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
-                Sudah Terbeli / Tercapai
-              </p>
-              <p className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 truncate">
-                {formatCurrency(wishlistHook.summary.totalAchieved)}
-              </p>
-              <span className="text-[10px] text-gray-400 font-medium">
-                {wishlistHook.summary.achievedCount} impian terwujud
-              </span>
-            </div>
-
-            <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs flex flex-col justify-between">
-              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
-                Breakdown Periode
-              </p>
-              <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-300 font-bold">
-                <span>M: {formatCurrency(wishlistHook.summary.weeklyTotal)}</span>
-                <span>B: {formatCurrency(wishlistHook.summary.monthlyTotal)}</span>
-                <span>T: {formatCurrency(wishlistHook.summary.yearlyTotal)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Period Filter Selector */}
-          <div className="overflow-x-auto pb-1 no-scrollbar">
-            <div className="inline-flex gap-1.5 p-1 rounded-2xl bg-white/70 dark:bg-gray-800/70 border border-white/80 dark:border-gray-700/50 shadow-xs min-w-full sm:min-w-0">
-              {(
-                [
-                  { id: 'all', label: 'Semua Periode' },
-                  { id: 'weekly', label: '📦 Mingguan' },
-                  { id: 'monthly', label: '🛍️ Bulanan' },
-                  { id: 'yearly', label: '🎯 Tahunan' },
-                ] as const
-              ).map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setWishlistPeriodFilter(tab.id)}
-                  className={cn(
-                    'py-1.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap',
-                    wishlistPeriodFilter === tab.id
-                      ? 'bg-[#2563EB] text-white shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Wishlist Feed List */}
-          {wishlistHook.loading ? (
-            <div className="space-y-3 animate-pulse">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-28 rounded-2xl bg-white/60 dark:bg-gray-800/60 border border-white/60 dark:border-gray-700/40" />
-              ))}
-            </div>
-          ) : filteredWishlists.length === 0 ? (
-            <EmptyState
-              icon={<Gift className="w-8 h-8 text-gray-400" />}
-              title="Belum ada wishlist"
-              description="Catat barang atau impian yang ingin Anda beli dalam horizon mingguan, bulanan, atau tahunan."
-              action={
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setEditingWishlist(null)
-                    setShowWishlistForm(true)
-                  }}
-                  icon={<Plus className="w-4 h-4" />}
-                >
-                  Tambah Wishlist Pertama
-                </Button>
-              }
-            />
-          ) : (
-            <div className="space-y-3">
-              {filteredWishlists.map(item => (
-                <WishlistCard
-                  key={item.id}
-                  item={item}
-                  onToggleAchieved={async (id, currentStatus) => {
-                    await wishlistHook.toggleAchieved(id, currentStatus)
-                    toast.success(
-                      currentStatus === 'pending'
-                        ? 'Wishlist ditandai tercapai! 🎉'
-                        : 'Status wishlist dikembalikan ke direncanakan'
-                    )
-                  }}
-                  onEdit={targetItem => {
-                    setEditingWishlist(targetItem)
-                    setShowWishlistForm(true)
-                  }}
-                  onDelete={id => {
-                    setPendingDelete({
-                      message: `Apakah Anda yakin ingin menghapus wishlist "${item.title}"?`,
-                      label: 'Hapus',
-                      onConfirm: async () => {
-                        await wishlistHook.deleteItem(id)
-                        toast.success('Wishlist berhasil dihapus')
-                      },
-                    })
-                  }}
-                  onRealizeTransaction={() => {
-                    setEditingTransaction(null)
-                    setTransactionType('expense')
-                    setShowTransactionForm(true)
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Wishlist BottomSheet Modal */}
-          <BottomSheet
-            open={showWishlistForm}
-            onClose={() => {
-              setShowWishlistForm(false)
-              setEditingWishlist(null)
-            }}
-            title={editingWishlist ? 'Edit Wishlist' : 'Tambah Wishlist Baru'}
-          >
-            <div className="pb-4">
-              <WishlistForm
-                initialData={editingWishlist ?? undefined}
-                onSubmit={async data => {
-                  if (editingWishlist) {
-                    await wishlistHook.updateItem(editingWishlist.id, data)
-                    toast.success('Wishlist berhasil diperbarui!')
-                  } else {
-                    await wishlistHook.addItem(data)
-                    toast.success('Wishlist baru berhasil disimpan! ✨')
-                  }
-                  setShowWishlistForm(false)
-                  setEditingWishlist(null)
-                }}
-                onCancel={() => {
-                  setShowWishlistForm(false)
-                  setEditingWishlist(null)
-                }}
-                submitLabel={editingWishlist ? 'Perbarui' : 'Simpan Wishlist'}
-              />
-            </div>
-          </BottomSheet>
-        </div>
-      )}
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={pendingDelete !== null}
