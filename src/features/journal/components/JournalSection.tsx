@@ -143,8 +143,8 @@ export function JournalSection({
         <Button
           size="sm"
           onClick={handleOpenAdd}
-          icon={<Plus className="w-4 h-4" />}
-          className="bg-amber-500 hover:bg-amber-600 text-white font-bold"
+          icon={<Plus className="w-3.5 h-3.5" />}
+          className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
         >
           Catat Baru
         </Button>

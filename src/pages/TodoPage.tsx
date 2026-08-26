@@ -270,17 +270,17 @@ export function TodoPage() {
               setEditingWishlist(null)
               setShowWishlistForm(true)
             }}
-            icon={<Plus className="w-4 h-4" />}
-            className="bg-[#2563EB] hover:bg-blue-700 text-white font-bold"
+            icon={<Plus className="w-3.5 h-3.5" />}
+            className="bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
           >
-            Wishlist Baru
+            Wishlist
           </Button>
         ) : viewMode === 'list' || viewMode === 'kanban' ? (
           <Button
             size="sm"
             onClick={() => setShowForm(!showForm)}
-            icon={<Plus className="w-4 h-4" />}
-            className="font-bold"
+            icon={<Plus className="w-3.5 h-3.5" />}
+            className="font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
           >
             {showForm ? 'Tutup' : 'Tugas Baru'}
           </Button>
