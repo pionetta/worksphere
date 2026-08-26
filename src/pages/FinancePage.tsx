@@ -669,12 +669,14 @@ export function FinancePage() {
                 categories={categories}
                 type={transactionType}
                 initialData={editingTransaction ?? undefined}
-                onSubmit={async (walletId, amount, categoryId, date, note) => {
+                onTypeChange={setTransactionType}
+                onSubmit={async (walletId, amount, categoryId, date, note, effectiveType) => {
+                  const finalType = effectiveType ?? transactionType
                   try {
                     if (editingTransaction) {
                       await transactionsHook.editTransaction(
                         editingTransaction.id,
-                        transactionType,
+                        finalType,
                         walletId,
                         amount,
                         categoryId,
@@ -682,7 +684,7 @@ export function FinancePage() {
                         note ?? undefined
                       )
                       toast.success('Transaksi berhasil diperbarui!')
-                    } else if (transactionType === 'income') {
+                    } else if (finalType === 'income') {
                       await transactionsHook.addIncome(
                         walletId,
                         amount,
@@ -1688,12 +1690,14 @@ export function FinancePage() {
             categories={categories}
             type={transactionType}
             initialData={editingTransaction ?? undefined}
-            onSubmit={async (walletId, amount, categoryId, date, note) => {
+            onTypeChange={setTransactionType}
+            onSubmit={async (walletId, amount, categoryId, date, note, effectiveType) => {
+              const finalType = effectiveType ?? transactionType
               try {
                 if (editingTransaction) {
                   await transactionsHook.editTransaction(
                     editingTransaction.id,
-                    transactionType,
+                    finalType,
                     walletId,
                     amount,
                     categoryId,
@@ -1701,7 +1705,7 @@ export function FinancePage() {
                     note ?? undefined
                   )
                   toast.success('Transaksi berhasil diperbarui!')
-                } else if (transactionType === 'income') {
+                } else if (finalType === 'income') {
                   await transactionsHook.addIncome(
                     walletId,
                     amount,

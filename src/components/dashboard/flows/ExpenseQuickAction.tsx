@@ -49,15 +49,26 @@ export function ExpenseQuickAction({ userId, onSuccess, onCancel }: ExpenseQuick
       wallets={wallets}
       categories={categories}
       type="expense"
-      onSubmit={async (walletId, amount, categoryId, date, note) => {
-        await transactionService.createExpense(
-          userId,
-          walletId,
-          amount,
-          categoryId,
-          date,
-          note ?? undefined
-        )
+      onSubmit={async (walletId, amount, categoryId, date, note, effectiveType) => {
+        if (effectiveType === 'income') {
+          await transactionService.createIncome(
+            userId,
+            walletId,
+            amount,
+            categoryId,
+            date,
+            note ?? undefined
+          )
+        } else {
+          await transactionService.createExpense(
+            userId,
+            walletId,
+            amount,
+            categoryId,
+            date,
+            note ?? undefined
+          )
+        }
         onSuccess()
       }}
       onCancel={onCancel}

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { cn } from '@/lib/utils'
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import type { WalletWithBalance, Category, Transaction } from '@/types'
 
 interface TransactionFormProps {
@@ -8,12 +10,14 @@ interface TransactionFormProps {
   categories: Category[]
   type: 'income' | 'expense'
   initialData?: Transaction
+  onTypeChange?: (type: 'income' | 'expense') => void
   onSubmit: (
     walletId: string,
     amount: number,
     categoryId: string | null,
     date: string,
-    note: string | null
+    note: string | null,
+    type?: 'income' | 'expense'
   ) => Promise<void>
   onCancel: () => void
 }
@@ -23,9 +27,13 @@ export function TransactionForm({
   categories,
   type,
   initialData,
+  onTypeChange,
   onSubmit,
   onCancel,
 }: TransactionFormProps) {
+  const [currentType, setCurrentType] = useState<'income' | 'expense'>(
+    initialData?.type === 'income' ? 'income' : type
+  )
   const [walletId, setWalletId] = useState(initialData?.wallet_id || wallets[0]?.id || '')
   const [amount, setAmount] = useState(initialData ? String(initialData.amount) : '')
   const [categoryId, setCategoryId] = useState<string>(initialData?.category_id || '')
@@ -38,7 +46,13 @@ export function TransactionForm({
 
   const isEditing = !!initialData
 
-  const filteredCategories = categories.filter(c => c.type === type)
+  const filteredCategories = categories.filter(c => c.type === currentType)
+
+  const handleTypeSwitch = (newType: 'income' | 'expense') => {
+    setCurrentType(newType)
+    setCategoryId('')
+    onTypeChange?.(newType)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +68,14 @@ export function TransactionForm({
     }
     setLoading(true)
     try {
-      await onSubmit(walletId, parsedAmount, categoryId || null, date, note.trim() || null)
+      await onSubmit(
+        walletId,
+        parsedAmount,
+        categoryId || null,
+        date,
+        note.trim() || null,
+        currentType
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menyimpan.')
     } finally {
@@ -64,14 +85,46 @@ export function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      {/* Type Switcher Segmented Control (Pemasukan vs Pengeluaran) */}
+      {!isEditing && (
+        <div className="grid grid-cols-2 p-1 bg-gray-100 dark:bg-gray-800/80 rounded-2xl border border-gray-200/80 dark:border-gray-700/80">
+          <button
+            type="button"
+            onClick={() => handleTypeSwitch('expense')}
+            className={cn(
+              'py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer',
+              currentType === 'expense'
+                ? 'bg-rose-500 text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            )}
+          >
+            <ArrowDownLeft className="w-4 h-4 shrink-0" />
+            <span>Pengeluaran</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTypeSwitch('income')}
+            className={cn(
+              'py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer',
+              currentType === 'income'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            )}
+          >
+            <ArrowUpRight className="w-4 h-4 shrink-0" />
+            <span>Pemasukan</span>
+          </button>
+        </div>
+      )}
+
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-          Dompet
+        <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+          Pilih Dompet / Akun
         </label>
         <select
           value={walletId}
           onChange={e => setWalletId(e.target.value)}
-          className="block w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+          className="block w-full px-3 py-2.5 text-xs sm:text-sm rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent transition-colors font-medium"
         >
           {wallets.map(w => (
             <option key={w.id} value={w.id}>
@@ -80,23 +133,25 @@ export function TransactionForm({
           ))}
         </select>
       </div>
+
       <Input
-        label="Nominal"
+        label="Nominal (Rp)"
         type="number"
         value={amount}
         onChange={e => setAmount(e.target.value)}
         placeholder="0"
         error={error}
       />
+
       {filteredCategories.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-            Kategori (opsional)
+          <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            Kategori {currentType === 'income' ? 'Pemasukan' : 'Pengeluaran'} (opsional)
           </label>
           <select
             value={categoryId}
             onChange={e => setCategoryId(e.target.value)}
-            className="block w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+            className="block w-full px-3 py-2.5 text-xs sm:text-sm rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent transition-colors font-medium"
           >
             <option value="">Tanpa kategori</option>
             {filteredCategories.map(c => (
@@ -107,19 +162,34 @@ export function TransactionForm({
           </select>
         </div>
       )}
-      <Input label="Tanggal" type="date" value={date} onChange={e => setDate(e.target.value)} />
+
+      <Input label="Tanggal Transaksi" type="date" value={date} onChange={e => setDate(e.target.value)} />
+
       <Input
         label="Catatan (opsional)"
         value={note}
         onChange={e => setNote(e.target.value)}
-        placeholder="Keterangan transaksi"
+        placeholder="Contoh: Gaji bulanan, makan siang, beli pulsa..."
       />
+
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Batal
         </Button>
-        <Button type="submit" loading={loading}>
-          {isEditing ? 'Perbarui' : 'Simpan'}
+        <Button
+          type="submit"
+          loading={loading}
+          className={cn(
+            currentType === 'income'
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              : 'bg-[#2563EB] hover:bg-blue-700 text-white'
+          )}
+        >
+          {isEditing
+            ? 'Perbarui Transaksi'
+            : currentType === 'income'
+            ? 'Simpan Pemasukan'
+            : 'Simpan Pengeluaran'}
         </Button>
       </div>
     </form>
