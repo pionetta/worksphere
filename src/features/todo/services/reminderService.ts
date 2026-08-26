@@ -14,9 +14,37 @@ export function getPermissionStatus(): NotificationPermission {
 }
 
 export function showNotification(title: string, options?: NotificationOptions): void {
-  if (!('Notification' in window)) return
+  if (typeof window === 'undefined' || !('Notification' in window)) return
   if (Notification.permission !== 'granted') return
-  new Notification(title, options)
+
+  // 1. If ServiceWorker is available, prefer registration.showNotification (works in Android Chrome/PWAs without throwing illegal constructor)
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    try {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg && 'showNotification' in reg) {
+          reg.showNotification(title, options).catch(() => {})
+        } else {
+          tryConstructNotification(title, options)
+        }
+      }).catch(() => {
+        tryConstructNotification(title, options)
+      })
+      return
+    } catch {
+      // Fallback
+    }
+  }
+
+  tryConstructNotification(title, options)
+}
+
+function tryConstructNotification(title: string, options?: NotificationOptions): void {
+  try {
+    // Only construct if browser supports window Notification constructor (desktop Chrome/Firefox/Safari)
+    new Notification(title, options)
+  } catch {
+    // Silently handle "Illegal constructor" error on mobile/Android browsers where new Notification() is forbidden
+  }
 }
 
 export function isReminderDue(reminderAt: string): boolean {
