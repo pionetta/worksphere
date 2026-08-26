@@ -287,10 +287,8 @@ export function TodoPage() {
         ) : null}
       </div>
 
-      {/* Analytics Card (for Tasks) */}
-      {(viewMode === 'list' || viewMode === 'kanban') && (
-        <TaskAnalyticsCard tasks={tasks} />
-      )}
+      {/* Analytics Card (Always visible across all tabs) */}
+      <TaskAnalyticsCard tasks={tasks} />
 
       {/* Task Creation Form Inline (if open in task view) */}
       {showForm && (viewMode === 'list' || viewMode === 'kanban') && (
