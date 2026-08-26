@@ -40,9 +40,23 @@ export function KanbanCard({
         isCompleted && 'opacity-75 bg-gray-50/80 dark:bg-gray-800/50'
       )}
     >
-      {/* Top row: Priority & Category */}
-      <div className="flex items-center justify-between gap-1.5">
-        <PriorityBadge priority={task.priority} />
+      {/* Top row: Priority, Timeframe & Category */}
+      <div className="flex items-center justify-between gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <PriorityBadge priority={task.priority} />
+          {task.timeframe && task.timeframe !== 'daily' && (
+            <span
+              className={cn(
+                'text-[10px] font-bold px-1.5 py-0.5 rounded-md border',
+                task.timeframe === 'weekly'
+                  ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+              )}
+            >
+              {task.timeframe === 'weekly' ? 'Mingguan' : 'Tahunan'}
+            </span>
+          )}
+        </div>
         {task.category && (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 truncate max-w-[110px]">
             {task.category}

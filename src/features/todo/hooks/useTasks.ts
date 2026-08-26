@@ -27,6 +27,7 @@ export function useTasks(userId: string | null) {
       options?: {
         description?: string
         priority?: TaskPriority
+        timeframe?: Task['timeframe']
         category?: string
         dueDate?: string | null
         reminderAt?: string | null

@@ -11,8 +11,14 @@ export type {
   TransactionType,
   TaskStatus,
   TaskPriority,
+  TaskTimeframe,
   DebtType,
   DebtStatus,
+  WishlistPeriod,
+  WishlistPriority,
+  WishlistStatus,
+  JournalType,
+  JournalPeriod,
   SyncOperationType,
   SyncStatusType,
   // Row types
@@ -27,6 +33,8 @@ export type {
   Debt,
   Task,
   Subtask,
+  WishlistItem,
+  JournalEntry,
   SyncQueueRow,
   // Database schema
   Database,

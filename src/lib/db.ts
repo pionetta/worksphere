@@ -10,6 +10,8 @@ import type {
   Debt,
   Task,
   Subtask,
+  WishlistItem,
+  JournalEntry,
   SyncQueueRow,
 } from '@/types'
 
@@ -26,13 +28,14 @@ class WorksphereDB extends Dexie {
   debts!: EntityTable<Debt, 'id'>
   tasks!: EntityTable<Task, 'id'>
   subtasks!: EntityTable<Subtask, 'id'>
+  wishlists!: EntityTable<WishlistItem, 'id'>
+  journal_entries!: EntityTable<JournalEntry, 'id'>
   sync_queue!: EntityTable<SyncQueueRow, 'id'>
 
   constructor() {
     super('worksphere')
 
     // Version 2 — full schema
-    // Version 1 had only sync_queue
     this.version(2).stores({
       members: 'id, user_id, name, is_active',
       attendance: 'id, user_id, member_id, attendance_date, [user_id+member_id+attendance_date]',
@@ -45,6 +48,24 @@ class WorksphereDB extends Dexie {
       debts: 'id, user_id, type, person_name, status, due_date',
       tasks: 'id, user_id, status, priority, category, due_date, deleted_at',
       subtasks: 'id, task_id, user_id, is_completed',
+      sync_queue: 'id, user_id, operation, entity, entity_id, status, created_at',
+    })
+
+    // Version 3 — Wishlists, Multi-Horizon Tasks, & Journal Entries
+    this.version(3).stores({
+      members: 'id, user_id, name, is_active',
+      attendance: 'id, user_id, member_id, attendance_date, [user_id+member_id+attendance_date]',
+      wallets: 'id, user_id, name, type, is_active',
+      categories: 'id, user_id, name, type, is_active',
+      transactions:
+        'id, user_id, wallet_id, type, category_id, transaction_date, transfer_group_id, deleted_at',
+      budgets: 'id, user_id, category_id, month, year',
+      savings_goals: 'id, user_id, name, deadline',
+      debts: 'id, user_id, type, person_name, status, due_date',
+      tasks: 'id, user_id, status, priority, category, timeframe, due_date, deleted_at',
+      subtasks: 'id, task_id, user_id, is_completed',
+      wishlists: 'id, user_id, period, priority, status, target_date, created_at',
+      journal_entries: 'id, user_id, type, period, category, entry_date, created_at',
       sync_queue: 'id, user_id, operation, entity, entity_id, status, created_at',
     })
   }

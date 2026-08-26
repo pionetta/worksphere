@@ -4,6 +4,7 @@ import { useTasks } from '@/features/todo/hooks/useTasks'
 import { useSubtasks } from '@/features/todo/hooks/useSubtasks'
 import { useTaskFilters } from '@/features/todo/hooks/useTaskFilters'
 import { useTaskReminder } from '@/features/todo/hooks/useTaskReminder'
+import { useJournal } from '@/features/journal/hooks/useJournal'
 import * as subtaskService from '@/features/todo/services/subtaskService'
 import { TaskForm } from '@/features/todo/components/TaskForm'
 import { TaskList } from '@/features/todo/components/TaskList'
@@ -13,15 +14,22 @@ import { TaskFiltersComponent } from '@/features/todo/components/TaskFilters'
 import { TaskStatusSelector } from '@/features/todo/components/TaskStatusSelector'
 import { SubtaskList } from '@/features/todo/components/SubtaskList'
 import { TaskAnalyticsCard } from '@/features/todo/components/TaskAnalyticsCard'
+import { JournalSection } from '@/features/journal/components/JournalSection'
 import { Button } from '@/components/ui/Button'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, ListTodo, Sparkles, LayoutGrid, List } from 'lucide-react'
+import {
+  Plus,
+  ListTodo,
+  LayoutGrid,
+  List,
+  BookOpen,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import type { Task, TaskStatus, TaskPriority, Subtask } from '@/types'
+import type { Task, TaskStatus, TaskPriority, TaskTimeframe, Subtask } from '@/types'
 
 const STATUS_TABS: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Semua' },
@@ -42,18 +50,20 @@ export function TodoPage() {
     setSearch,
     setStatus,
     setPriority,
+    setTimeframe,
     setCategory,
     setOverdueOnly,
     setSort,
     resetFilters,
   } = useTaskFilters(tasks)
   const { checkAndRequestPermission, scheduleAllReminders } = useTaskReminder()
+  const journalHook = useJournal(userId || null)
 
   const [showForm, setShowForm] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'journal'>('list')
 
   const {
     subtasks,
@@ -62,43 +72,44 @@ export function TodoPage() {
     toggleSubtask,
     removeSubtask,
     editSubtask,
-  } = useSubtasks(selectedTask?.id ?? null)
+  } = useSubtasks(selectedTask?.id ?? '')
 
-  // Subtasks for task cards
+  // Map subtasks for all tasks
   const [subtasksMap, setSubtasksMap] = useState<Map<string, Subtask[]>>(new Map())
 
   const loadSubtasksMap = useCallback(async () => {
-    if (!userId || filteredTasks.length === 0) {
-      setSubtasksMap(new Map())
-      return
-    }
+    if (!userId || tasks.length === 0) return
     const map = new Map<string, Subtask[]>()
-    for (const task of filteredTasks) {
-      const subs = await subtaskService.listSubtasksByTask(task.id)
-      map.set(task.id, subs)
+    for (const task of tasks) {
+      const items = await subtaskService.listSubtasksByTask(task.id)
+      map.set(task.id, items)
     }
     setSubtasksMap(map)
-  }, [userId, filteredTasks])
+  }, [userId, tasks])
 
   useEffect(() => {
     loadSubtasksMap()
   }, [loadSubtasksMap])
 
+  // Schedule reminders on mount
   useEffect(() => {
     if (tasks.length > 0) {
       scheduleAllReminders(tasks)
     }
   }, [tasks, scheduleAllReminders])
 
-  const totalTasks = tasks.length
-  const completedTasks = tasks.filter(t => t.status === 'completed').length
-  const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-  const remainingTasks = totalTasks - completedTasks
+  // Refresh subtasks when task selection changes
+  useEffect(() => {
+    if (selectedTask) {
+      refreshSubtasks()
+    }
+  }, [selectedTask, refreshSubtasks])
 
   const handleCreateTask = async (data: {
     title: string
     description?: string
     priority: TaskPriority
+    timeframe?: TaskTimeframe
     category?: string
     dueDate?: string
     reminderAt?: string
@@ -110,6 +121,7 @@ export function TodoPage() {
       await addTask(data.title, {
         description: data.description,
         priority: data.priority,
+        timeframe: data.timeframe ?? 'daily',
         category: data.category,
         dueDate: data.dueDate,
         reminderAt: data.reminderAt,
@@ -156,6 +168,7 @@ export function TodoPage() {
     title: string
     description?: string
     priority: TaskPriority
+    timeframe?: TaskTimeframe
     category?: string
     dueDate?: string
     reminderAt?: string
@@ -167,6 +180,7 @@ export function TodoPage() {
         description: data.description ?? null,
         status: selectedTask.status,
         priority: data.priority,
+        timeframe: data.timeframe,
         category: data.category ?? null,
         dueDate: data.dueDate ?? null,
         reminderAt: data.reminderAt ?? null,
@@ -176,6 +190,7 @@ export function TodoPage() {
         title: data.title,
         description: data.description ?? null,
         priority: data.priority,
+        timeframe: data.timeframe,
         category: data.category ?? null,
         due_date: data.dueDate ?? null,
         reminder_at: data.reminderAt ?? null,
@@ -196,154 +211,190 @@ export function TodoPage() {
             <ListTodo className="w-5 h-5" />
           </div>
           <h1 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100">
-            Daftar Tugas (To-Do)
+            Daftar Tugas & Jurnal
           </h1>
         </div>
-        <Button size="sm" onClick={() => setShowForm(true)} icon={<Plus className="w-4 h-4" />}>
-          Tambah
-        </Button>
+
+        {viewMode !== 'journal' && (
+          <Button
+            size="sm"
+            onClick={() => setShowForm(!showForm)}
+            icon={<Plus className="w-4 h-4" />}
+            className="font-bold"
+          >
+            {showForm ? 'Tutup' : 'Tugas Baru'}
+          </Button>
+        )}
       </div>
 
-      {/* Progres Harian Card */}
-      <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-3">
-        <div className="flex items-center justify-between text-xs font-bold">
-          <div className="flex items-center gap-1.5 text-[#2563EB] dark:text-blue-400 uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" />
-            <span>Progres Harian</span>
-          </div>
-          <span className="text-gray-500 dark:text-gray-400">
-            {completedTasks}/{totalTasks} Selesai
-          </span>
-        </div>
+      {/* Analytics Card (for Tasks) */}
+      {viewMode !== 'journal' && (
+        <TaskAnalyticsCard tasks={tasks} />
+      )}
 
-        <div className="flex items-baseline justify-between">
-          <span className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-            {progressPercent}%
-          </span>
-          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-            {remainingTasks} tugas tersisa
-          </span>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full h-2.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#2563EB] transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Task Analytics & Priority Breakdown */}
-      <TaskAnalyticsCard tasks={tasks} />
-
-      {/* Create Form */}
-      {showForm && (
-        <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md">
+      {/* Task Creation Form Inline (if open) */}
+      {showForm && viewMode !== 'journal' && (
+        <div className="animate-fade-in-up">
           <TaskForm
-            key="create-task"
+            categories={categories}
             onSubmit={handleCreateTask}
             onCancel={() => setShowForm(false)}
-            categories={categories}
             submitLabel="Buat Tugas"
           />
         </div>
       )}
 
-      {/* View Mode Toggle (Daftar / Papan Kanban) */}
+      {/* View Mode Segmented Switcher (Daftar | Kanban | Catatan & Jurnal) */}
       <div className="flex items-center justify-between p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs">
         <button
           type="button"
           onClick={() => setViewMode('list')}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer',
+            'flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
             viewMode === 'list'
               ? 'bg-[#2563EB] text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
           )}
         >
-          <List className="w-4 h-4" />
+          <List className="w-3.5 h-3.5" />
           <span>Daftar</span>
         </button>
+
         <button
           type="button"
           onClick={() => setViewMode('kanban')}
           className={cn(
-            'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer',
+            'flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
             viewMode === 'kanban'
               ? 'bg-[#2563EB] text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
           )}
         >
-          <LayoutGrid className="w-4 h-4" />
-          <span>Papan Kanban</span>
+          <LayoutGrid className="w-3.5 h-3.5" />
+          <span>Kanban</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setViewMode('journal')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
+            viewMode === 'journal'
+              ? 'bg-amber-500 text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+          )}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Catatan & Win</span>
         </button>
       </div>
 
-      {/* Search & Filters */}
-      <div className="space-y-2">
-        <TaskSearch value={filters.search} onChange={setSearch} />
-
-        {viewMode === 'list' && (
-          <div className="overflow-x-auto pb-1 no-scrollbar">
-            <Tabs value={filters.status} onValueChange={val => setStatus(val as TaskStatus | 'all')}>
-              <TabsList className="min-w-max w-full h-11 p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs">
-                {STATUS_TABS.map(tab => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    role="button"
-                    className="flex-1 rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all px-3"
-                  >
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </div>
-        )}
-
-        <TaskFiltersComponent
-          filters={filters}
-          categories={categories}
-          activeFilterCount={activeFilterCount}
-          onSetStatus={setStatus}
-          onSetPriority={setPriority}
-          onSetCategory={setCategory}
-          onSetOverdueOnly={setOverdueOnly}
-          onSetSort={setSort}
-          onReset={resetFilters}
-        />
-      </div>
-
-      {/* Task Content: List or Kanban */}
-      {loading ? (
-        <LoadingState text="Memuat tugas..." />
-      ) : viewMode === 'kanban' ? (
-        <KanbanBoard
-          tasks={filteredTasks}
-          subtasksMap={subtasksMap}
-          onSelectTask={handleTaskClick}
-          onChangeStatus={handleStatusChange}
-          onAddTask={() => setShowForm(true)}
+      {/* Journal View */}
+      {viewMode === 'journal' ? (
+        <JournalSection
+          entries={journalHook.entries}
+          loading={journalHook.loading}
+          onAdd={journalHook.addEntry}
+          onEdit={journalHook.updateEntry}
+          onDelete={journalHook.deleteEntry}
         />
       ) : (
-        <TaskList
-          tasks={filteredTasks}
-          subtasksMap={subtasksMap}
-          onTaskClick={handleTaskClick}
-          onStatusChange={handleStatusChange}
-          emptyTitle={
-            filters.search || activeFilterCount > 0
-              ? 'Tidak ada tugas yang sesuai.'
-              : 'Belum ada tugas'
-          }
-          emptyDescription={
-            filters.search || activeFilterCount > 0
-              ? 'Coba ubah filter atau kata kunci pencarian.'
-              : 'Tambahkan tugas untuk mulai mengatur pekerjaan Anda.'
-          }
-        />
+        /* Tasks List & Kanban View */
+        <div className="space-y-3">
+          {/* Time Horizon Filter Pills (Harian, Mingguan, Tahunan) */}
+          <div className="overflow-x-auto pb-1 no-scrollbar">
+            <div className="inline-flex gap-1.5 p-1 rounded-2xl bg-white/70 dark:bg-gray-800/70 border border-white/80 dark:border-gray-700/50 shadow-xs min-w-full sm:min-w-0">
+              {(
+                [
+                  { id: 'all', label: 'Semua Horizon' },
+                  { id: 'daily', label: '☀️ Harian' },
+                  { id: 'weekly', label: '📅 Mingguan' },
+                  { id: 'yearly', label: '🎯 Tahunan' },
+                ] as const
+              ).map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setTimeframe(tab.id)}
+                  className={cn(
+                    'py-1.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap',
+                    filters.timeframe === tab.id
+                      ? 'bg-[#2563EB] text-white shadow-xs'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search & Filters */}
+          <div className="space-y-2">
+            <TaskSearch value={filters.search} onChange={setSearch} />
+
+            {viewMode === 'list' && (
+              <div className="overflow-x-auto pb-1 no-scrollbar">
+                <Tabs value={filters.status} onValueChange={val => setStatus(val as TaskStatus | 'all')}>
+                  <TabsList className="min-w-max w-full h-11 p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs">
+                    {STATUS_TABS.map(tab => (
+                      <TabsTrigger
+                        key={tab.value}
+                        value={tab.value}
+                        role="button"
+                        className="flex-1 rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all px-3"
+                      >
+                        {tab.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
+
+            <TaskFiltersComponent
+              filters={filters}
+              categories={categories}
+              activeFilterCount={activeFilterCount}
+              onSetStatus={setStatus}
+              onSetPriority={setPriority}
+              onSetCategory={setCategory}
+              onSetOverdueOnly={setOverdueOnly}
+              onSetSort={setSort}
+              onReset={resetFilters}
+            />
+          </div>
+
+          {/* Task Content: List or Kanban */}
+          {loading ? (
+            <LoadingState text="Memuat tugas..." />
+          ) : viewMode === 'kanban' ? (
+            <KanbanBoard
+              tasks={filteredTasks}
+              subtasksMap={subtasksMap}
+              onSelectTask={handleTaskClick}
+              onChangeStatus={handleStatusChange}
+              onAddTask={() => setShowForm(true)}
+            />
+          ) : (
+            <TaskList
+              tasks={filteredTasks}
+              subtasksMap={subtasksMap}
+              onTaskClick={handleTaskClick}
+              onStatusChange={handleStatusChange}
+              emptyTitle={
+                filters.search || activeFilterCount > 0
+                  ? 'Tidak ada tugas yang sesuai.'
+                  : 'Belum ada tugas'
+              }
+              emptyDescription={
+                filters.search || activeFilterCount > 0
+                  ? 'Coba ubah filter atau kata kunci pencarian.'
+                  : 'Tambahkan tugas untuk mulai mengatur pekerjaan Anda.'
+              }
+            />
+          )}
+        </div>
       )}
 
       {/* Task Detail Modal */}
@@ -371,6 +422,7 @@ export function TodoPage() {
               initialTitle={selectedTask.title}
               initialDescription={selectedTask.description ?? ''}
               initialPriority={selectedTask.priority}
+              initialTimeframe={selectedTask.timeframe ?? 'daily'}
               initialCategory={selectedTask.category ?? ''}
               initialDueDate={selectedTask.due_date?.slice(0, 16) ?? ''}
               initialReminderAt={selectedTask.reminder_at?.slice(0, 16) ?? ''}

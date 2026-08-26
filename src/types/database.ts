@@ -19,9 +19,21 @@ export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'cancelled'
 
 export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low'
 
+export type TaskTimeframe = 'daily' | 'weekly' | 'yearly'
+
 export type DebtType = 'debt' | 'receivable'
 
 export type DebtStatus = 'unpaid' | 'partially_paid' | 'paid'
+
+export type WishlistPeriod = 'weekly' | 'monthly' | 'yearly'
+
+export type WishlistPriority = 'high' | 'medium' | 'low'
+
+export type WishlistStatus = 'pending' | 'achieved' | 'cancelled'
+
+export type JournalType = 'note' | 'achievement'
+
+export type JournalPeriod = 'daily' | 'weekly' | 'monthly'
 
 export type SyncOperationType = 'create' | 'update' | 'delete'
 
@@ -141,6 +153,7 @@ export interface Task {
   description: string | null
   status: TaskStatus
   priority: TaskPriority
+  timeframe?: TaskTimeframe
   category: string | null
   due_date: string | null // TIMESTAMPTZ
   reminder_at: string | null // TIMESTAMPTZ
@@ -157,6 +170,36 @@ export interface Subtask {
   title: string
   is_completed: boolean
   position: number
+  created_at: string
+  updated_at: string
+}
+
+export interface WishlistItem {
+  id: string
+  user_id: string
+  title: string
+  estimated_price: number // BIGINT
+  period: WishlistPeriod
+  priority: WishlistPriority
+  target_date: string | null // DATE
+  url: string | null
+  note: string | null
+  status: WishlistStatus
+  achieved_at: string | null // TIMESTAMPTZ
+  created_at: string
+  updated_at: string
+}
+
+export interface JournalEntry {
+  id: string
+  user_id: string
+  title: string
+  content: string
+  type: JournalType
+  period: JournalPeriod
+  category: string // 'work' | 'finance' | 'personal' | 'learning' | 'health' | 'other'
+  icon_tag: string // 'trophy' | 'party' | 'star' | 'lightbulb' | 'sparkles' | 'target'
+  entry_date: string // DATE (YYYY-MM-DD)
   created_at: string
   updated_at: string
 }

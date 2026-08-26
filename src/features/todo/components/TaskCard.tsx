@@ -110,6 +110,18 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
             </h3>
             <PriorityBadge priority={task.priority} />
             <Badge variant={statusBadge[task.status]}>{statusLabels[task.status]}</Badge>
+            {task.timeframe && task.timeframe !== 'daily' && (
+              <span
+                className={cn(
+                  'px-2 py-0.5 rounded-lg text-[10px] font-bold border',
+                  task.timeframe === 'weekly'
+                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                )}
+              >
+                {task.timeframe === 'weekly' ? '📅 Mingguan' : '🎯 Tahunan'}
+              </span>
+            )}
           </div>
 
           {task.description && (

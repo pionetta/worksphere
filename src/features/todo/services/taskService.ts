@@ -10,6 +10,7 @@ export async function createTask(
   options?: {
     description?: string
     priority?: TaskPriority
+    timeframe?: Task['timeframe']
     category?: string
     dueDate?: string | null
     reminderAt?: string | null
@@ -19,6 +20,7 @@ export async function createTask(
     title,
     description: options?.description ?? undefined,
     priority: options?.priority ?? 'medium',
+    timeframe: options?.timeframe ?? 'daily',
     category: options?.category ?? undefined,
     due_date: options?.dueDate ?? null,
     reminder_at: options?.reminderAt ?? null,
@@ -30,6 +32,7 @@ export async function createTask(
     description: parsed.description || null,
     status: 'todo',
     priority: parsed.priority,
+    timeframe: parsed.timeframe ?? 'daily',
     category: parsed.category || null,
     due_date: parsed.due_date || null,
     reminder_at: parsed.reminder_at || null,
@@ -45,6 +48,7 @@ export async function updateTask(
     description?: string | null
     status?: TaskStatus
     priority?: TaskPriority
+    timeframe?: Task['timeframe']
     category?: string | null
     dueDate?: string | null
     reminderAt?: string | null
@@ -55,6 +59,7 @@ export async function updateTask(
     description: data.description,
     status: data.status,
     priority: data.priority,
+    timeframe: data.timeframe,
     category: data.category,
     due_date: data.dueDate,
     reminder_at: data.reminderAt,
@@ -67,6 +72,7 @@ export async function updateTask(
       | 'description'
       | 'status'
       | 'priority'
+      | 'timeframe'
       | 'category'
       | 'due_date'
       | 'reminder_at'
@@ -78,6 +84,7 @@ export async function updateTask(
   if (parsed.description !== undefined) updatePayload.description = parsed.description || null
   if (parsed.status !== undefined) updatePayload.status = parsed.status
   if (parsed.priority !== undefined) updatePayload.priority = parsed.priority
+  if (parsed.timeframe !== undefined) updatePayload.timeframe = parsed.timeframe
   if (parsed.category !== undefined) updatePayload.category = parsed.category || null
   if (parsed.due_date !== undefined) updatePayload.due_date = parsed.due_date || null
   if (parsed.reminder_at !== undefined) updatePayload.reminder_at = parsed.reminder_at || null

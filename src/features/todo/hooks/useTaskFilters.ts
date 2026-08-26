@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import * as taskService from '@/features/todo/services/taskService'
-import type { Task, TaskStatus, TaskPriority } from '@/types'
+import type { Task, TaskStatus, TaskPriority, TaskTimeframe } from '@/types'
 
 export type SortOption = 'deadline' | 'priority' | 'created' | 'updated'
 
@@ -8,6 +8,7 @@ export interface TaskFilters {
   search: string
   status: TaskStatus | 'all'
   priority: TaskPriority | 'all'
+  timeframe: TaskTimeframe | 'all'
   category: string | 'all'
   overdueOnly: boolean
   sort: SortOption
@@ -17,6 +18,7 @@ const defaultFilters: TaskFilters = {
   search: '',
   status: 'all',
   priority: 'all',
+  timeframe: 'all',
   category: 'all',
   overdueOnly: false,
   sort: 'deadline',
@@ -42,6 +44,10 @@ export function useTaskFilters(tasks: Task[]) {
 
   const setPriority = useCallback((priority: TaskPriority | 'all') => {
     setFilters(prev => ({ ...prev, priority }))
+  }, [])
+
+  const setTimeframe = useCallback((timeframe: TaskTimeframe | 'all') => {
+    setFilters(prev => ({ ...prev, timeframe }))
   }, [])
 
   const setCategory = useCallback((category: string | 'all') => {
@@ -84,6 +90,11 @@ export function useTaskFilters(tasks: Task[]) {
     // Priority filter
     if (filters.priority !== 'all') {
       result = result.filter(t => t.priority === filters.priority)
+    }
+
+    // Timeframe filter (Daily, Weekly, Yearly)
+    if (filters.timeframe !== 'all') {
+      result = result.filter(t => (t.timeframe ?? 'daily') === filters.timeframe)
     }
 
     // Category filter
@@ -131,6 +142,7 @@ export function useTaskFilters(tasks: Task[]) {
     if (filters.search) count++
     if (filters.status !== 'all') count++
     if (filters.priority !== 'all') count++
+    if (filters.timeframe !== 'all') count++
     if (filters.category !== 'all') count++
     if (filters.overdueOnly) count++
     return count
@@ -144,6 +156,7 @@ export function useTaskFilters(tasks: Task[]) {
     setSearch,
     setStatus,
     setPriority,
+    setTimeframe,
     setCategory,
     setOverdueOnly,
     setSort,
