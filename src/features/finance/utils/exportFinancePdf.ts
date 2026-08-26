@@ -95,7 +95,7 @@ export function exportFinancePdf(data: FinanceExportData): void {
       typeLabel,
       catName,
       walletName,
-      t.description || '-',
+      t.note || '-',
       `${sign}${formatCurrency(t.amount)}`,
     ]
   })

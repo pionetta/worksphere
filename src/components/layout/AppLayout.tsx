@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
 import type { Theme } from '@/hooks/useTheme'
 import { useSyncStatus } from '@/hooks/useSyncStatus'

@@ -94,7 +94,7 @@ export async function exportFinanceExcel(data: FinanceExportData): Promise<void>
       type: isIncome ? 'Pemasukan' : 'Pengeluaran',
       category: catName,
       wallet: walletName,
-      desc: t.description || '-',
+      desc: t.note || '-',
       amount: `${isIncome ? '+' : '-'} Rp ${t.amount.toLocaleString('id-ID')}`,
     })
   }

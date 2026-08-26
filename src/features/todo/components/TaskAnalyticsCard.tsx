@@ -1,6 +1,6 @@
 import type { Task } from '@/types'
 import { isOverdue } from '@/features/todo/services/taskService'
-import { BarChart3, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
+import { BarChart3, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 interface TaskAnalyticsCardProps {
   tasks: Task[]

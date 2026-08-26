@@ -175,7 +175,7 @@ export function FinancePage() {
         t.category_id &&
         t.type === 'expense' &&
         t.deleted_at === null &&
-        t.date.startsWith(prefix)
+        t.transaction_date.startsWith(prefix)
       ) {
         map[t.category_id] = (map[t.category_id] || 0) + t.amount
       }
@@ -233,6 +233,32 @@ export function FinancePage() {
       toast.error('Gagal mengekspor Excel laporan keuangan')
     } finally {
       setExportLoading(false)
+    }
+  }
+  const handleAddSavings = async () => {
+    if (!addSavingsToId || !addAmount) return
+    const num = parseInt(addAmount, 10)
+    if (isNaN(num) || num <= 0) return
+    try {
+      await savingsHook.addToSavings(addSavingsToId, num)
+      setAddSavingsToId(null)
+      setAddAmount('')
+    } catch {
+      toast.error('Gagal mencatat setoran tabungan')
+    }
+  }
+
+  const handleWithdrawSavings = async () => {
+    if (!withdrawSavingsFromId || !withdrawAmount) return
+    const num = parseInt(withdrawAmount, 10)
+    if (isNaN(num) || num <= 0) return
+    try {
+      await savingsHook.withdrawSavings(withdrawSavingsFromId, num)
+      setWithdrawSavingsFromId(null)
+      setWithdrawAmount('')
+      toast.success('Penarikan tabungan berhasil!')
+    } catch {
+      toast.error('Gagal menarik saldo tabungan')
     }
   }
 
@@ -458,7 +484,7 @@ export function FinancePage() {
               transactions={transactionsHook.transactions.slice(0, 5)}
               categoryMap={categoryMap}
               walletMap={walletMap}
-              onSelect={tx => setSelectedTransaction(tx)}
+              onClick={(tx: Transaction) => setSelectedTransaction(tx)}
             />
           </div>
         </div>
@@ -1573,7 +1599,7 @@ export function FinancePage() {
               transactions={filteredTransactions}
               categoryMap={categoryMap}
               walletMap={walletMap}
-              onSelect={tx => setSelectedTransaction(tx)}
+              onClick={(tx: Transaction) => setSelectedTransaction(tx)}
             />
           )}
         </div>

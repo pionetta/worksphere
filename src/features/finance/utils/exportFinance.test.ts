@@ -25,9 +25,9 @@ const mockCategories: Category[] = [
     name: 'Gaji',
     type: 'income',
     icon: 'wallet',
-    color: '#10B981',
-    is_default: true,
+    is_active: true,
     created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
 ]
 
@@ -40,7 +40,7 @@ const mockTransactions: Transaction[] = [
     type: 'income',
     amount: 500000,
     transaction_date: '2026-08-25',
-    description: 'Bonus project',
+    note: 'Bonus project',
     transfer_group_id: null,
     deleted_at: null,
     created_at: new Date().toISOString(),

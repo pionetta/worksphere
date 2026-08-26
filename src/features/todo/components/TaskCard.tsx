@@ -1,4 +1,3 @@
-import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/progress'
 import { PriorityBadge } from '@/features/todo/components/PriorityBadge'

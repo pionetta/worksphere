@@ -1,5 +1,5 @@
 import { PriorityBadge } from './PriorityBadge'
-import { Calendar, CheckCircle2, Circle, ArrowLeft, ArrowRight, Check, ListChecks } from 'lucide-react'
+import { Calendar, Circle, ArrowLeft, ArrowRight, Check, ListChecks } from 'lucide-react'
 import { formatDate } from '@/utils/date'
 import { cn } from '@/lib/utils'
 import type { Task, TaskStatus, Subtask } from '@/types'

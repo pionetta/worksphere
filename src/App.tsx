@@ -5,7 +5,6 @@ import { useTheme } from '@/hooks/useTheme'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoginPage } from '@/pages/LoginPage'
-import { Loader2 } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 
 const LandingPage = lazy(() => import('@/pages/LandingPage').then(m => ({ default: m.LandingPage })))

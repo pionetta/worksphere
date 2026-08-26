@@ -9,11 +9,12 @@ import {
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
 import { id } from 'date-fns/locale'
-import type { WeeklyAttendanceRecap, Attendance } from '@/types'
+import type { WeeklyRecap } from '@/features/attendance/services/attendanceStatsService'
+import type { Attendance } from '@/types'
 import { TrendingUp, Award } from 'lucide-react'
 
 interface AttendanceTrendChartProps {
-  recap: WeeklyAttendanceRecap
+  recap: WeeklyRecap
   attendance: Attendance[]
 }
 
@@ -45,7 +46,7 @@ function CustomTooltip({ active, payload, label }: any) {
 
 export function AttendanceTrendChart({ recap, attendance }: AttendanceTrendChartProps) {
   // Aggregate daily counts across the 7 days of the week
-  const dailyData: DailyAttendanceStat[] = recap.days.map(dayStr => {
+  const dailyData: DailyAttendanceStat[] = recap.days.map((dayStr: string) => {
     const dayAttendance = attendance.filter(a => a.attendance_date === dayStr)
     const present = dayAttendance.filter(a => a.status === 'present').length
     const absent = dayAttendance.filter(a => a.status === 'absent').length

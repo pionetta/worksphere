@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Calendar, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { format, subDays, isToday, isYesterday } from 'date-fns'
 import { id } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
