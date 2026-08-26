@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoginPage } from '@/pages/LoginPage'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Toaster } from '@/components/ui/sonner'
 
 const LandingPage = lazy(() => import('@/pages/LandingPage').then(m => ({ default: m.LandingPage })))
@@ -24,28 +25,33 @@ function LoadingScreen() {
     <div
       role="status"
       aria-live="polite"
-      className="min-h-dvh flex flex-col bg-gradient-to-b from-[#E2EFFC] via-[#EDF5FD] to-[#DCEBFA] dark:from-[#0b1329] dark:via-[#0f172a] dark:to-[#0b1329] px-4 py-4 max-w-md mx-auto w-full space-y-4"
+      aria-label="Memuat aplikasi"
+      className="p-4 sm:p-6 space-y-4 max-w-md mx-auto animate-pulse"
     >
-      <span className="sr-only">Memuat...</span>
-      {/* Topbar Skeleton */}
-      <div className="flex items-center justify-between h-14 pb-2">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-white/80 dark:bg-gray-800/80 animate-pulse border border-white/60 dark:border-gray-700/50" />
-          <div className="w-32 h-5 rounded-full bg-white/80 dark:bg-gray-800/80 animate-pulse" />
+      {/* Header Skeleton */}
+      <div className="flex items-center justify-between pb-2">
+        <div className="space-y-2">
+          <div className="h-4 w-32 rounded-lg bg-gray-200 dark:bg-gray-700/80" />
+          <div className="h-6 w-48 rounded-xl bg-gray-300 dark:bg-gray-600/80" />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-white/80 dark:bg-gray-800/80 animate-pulse" />
-          <div className="w-8 h-8 rounded-xl bg-white/80 dark:bg-gray-800/80 animate-pulse" />
-        </div>
+        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700/80" />
       </div>
 
       {/* Main Card Skeleton */}
-      <div className="rounded-[24px] bg-white/80 dark:bg-gray-800/80 p-6 space-y-4 shadow-sm border border-white/80 dark:border-gray-700/50 animate-pulse h-48" />
+      <div className="rounded-[26px] bg-white/80 dark:bg-gray-800/80 p-5 space-y-4 border border-white/80 dark:border-gray-700/50 shadow-sm backdrop-blur-md">
+        <div className="h-4 w-28 rounded-lg bg-gray-200 dark:bg-gray-700/80" />
+        <div className="h-8 w-40 rounded-xl bg-gray-300 dark:bg-gray-600/80" />
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="h-16 rounded-2xl bg-gray-100 dark:bg-gray-700/50" />
+          <div className="h-16 rounded-2xl bg-gray-100 dark:bg-gray-700/50" />
+        </div>
+      </div>
 
-      {/* 2-Col Cards Skeleton */}
-      <div className="grid grid-cols-2 gap-3.5">
-        <div className="rounded-[22px] bg-white/80 dark:bg-gray-800/80 p-5 h-28 border border-white/80 dark:border-gray-700/50 animate-pulse" />
-        <div className="rounded-[22px] bg-white/80 dark:bg-gray-800/80 p-5 h-28 border border-white/80 dark:border-gray-700/50 animate-pulse" />
+      {/* Quick Action Grid Skeleton */}
+      <div className="grid grid-cols-4 gap-2">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-20 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50" />
+        ))}
       </div>
 
       {/* Detail Container Skeleton */}
@@ -68,9 +74,11 @@ export function AppRoutes() {
       <Route
         path="/"
         element={
-          <Suspense fallback={<LoadingScreen />}>
-            <LandingPage />
-          </Suspense>
+          <ErrorBoundary fallbackTitle="Kendala Memuat Halaman Utama">
+            <Suspense fallback={<LoadingScreen />}>
+              <LandingPage />
+            </Suspense>
+          </ErrorBoundary>
         }
       />
 
@@ -92,33 +100,41 @@ export function AppRoutes() {
         <Route
           index
           element={
-            <Suspense fallback={<LoadingScreen />}>
-              <DashboardPage />
-            </Suspense>
+            <ErrorBoundary fallbackTitle="Kendala Memuat Dashboard">
+              <Suspense fallback={<LoadingScreen />}>
+                <DashboardPage />
+              </Suspense>
+            </ErrorBoundary>
           }
         />
         <Route
           path="attendance"
           element={
-            <Suspense fallback={<LoadingScreen />}>
-              <AttendancePage />
-            </Suspense>
+            <ErrorBoundary fallbackTitle="Kendala Memuat Halaman Presensi">
+              <Suspense fallback={<LoadingScreen />}>
+                <AttendancePage />
+              </Suspense>
+            </ErrorBoundary>
           }
         />
         <Route
           path="finance"
           element={
-            <Suspense fallback={<LoadingScreen />}>
-              <FinancePage />
-            </Suspense>
+            <ErrorBoundary fallbackTitle="Kendala Memuat Halaman Keuangan">
+              <Suspense fallback={<LoadingScreen />}>
+                <FinancePage />
+              </Suspense>
+            </ErrorBoundary>
           }
         />
         <Route
           path="todo"
           element={
-            <Suspense fallback={<LoadingScreen />}>
-              <TodoPage />
-            </Suspense>
+            <ErrorBoundary fallbackTitle="Kendala Memuat Halaman To-Do">
+              <Suspense fallback={<LoadingScreen />}>
+                <TodoPage />
+              </Suspense>
+            </ErrorBoundary>
           }
         />
       </Route>
@@ -131,12 +147,14 @@ export function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-        <Toaster />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+          <Toaster />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
 

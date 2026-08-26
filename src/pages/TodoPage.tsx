@@ -23,6 +23,13 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import type { Task, TaskStatus, TaskPriority, Subtask } from '@/types'
 
+const STATUS_TABS: { value: TaskStatus | 'all'; label: string }[] = [
+  { value: 'all', label: 'Semua' },
+  { value: 'todo', label: 'Belum' },
+  { value: 'in_progress', label: 'Dikerjakan' },
+  { value: 'completed', label: 'Selesai' },
+]
+
 export function TodoPage() {
   const { user } = useAuth()
   const userId = user?.id ?? ''
@@ -180,13 +187,6 @@ export function TodoPage() {
     }
   }
 
-  const statusTabs: Array<{ value: TaskStatus | 'all'; label: string }> = [
-    { value: 'all', label: 'Semua' },
-    { value: 'todo', label: 'Belum' },
-    { value: 'in_progress', label: 'Dikerjakan' },
-    { value: 'completed', label: 'Selesai' },
-  ]
-
   return (
     <div className="max-w-md mx-auto space-y-3.5 pb-8">
       {/* Header */}
@@ -288,7 +288,7 @@ export function TodoPage() {
           <div className="overflow-x-auto pb-1 no-scrollbar">
             <Tabs value={filters.status} onValueChange={val => setStatus(val as TaskStatus | 'all')}>
               <TabsList className="min-w-max w-full h-11 p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs">
-                {statusTabs.map(tab => (
+                {STATUS_TABS.map(tab => (
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
