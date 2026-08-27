@@ -19,6 +19,15 @@ export function useTasks(userId: string | null) {
 
   useEffect(() => {
     refresh()
+
+    const handleSync = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (!detail || !detail.table || detail.table === 'tasks' || detail.type === 'full-pull') {
+        refresh()
+      }
+    }
+    window.addEventListener('worksphere-data-synced', handleSync)
+    return () => window.removeEventListener('worksphere-data-synced', handleSync)
   }, [refresh])
 
   const addTask = useCallback(

@@ -152,6 +152,12 @@ export function useDashboard(userId: string | null) {
 
   useEffect(() => {
     refresh()
+
+    const handleSync = () => {
+      refresh()
+    }
+    window.addEventListener('worksphere-data-synced', handleSync)
+    return () => window.removeEventListener('worksphere-data-synced', handleSync)
   }, [refresh])
 
   return {

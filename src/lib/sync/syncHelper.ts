@@ -31,6 +31,13 @@ export async function addToSyncQueue(data: SyncQueueData): Promise<string> {
     updated_at: timestamp,
   })
 
+  // Trigger immediate push to Supabase Cloud if online
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    import('@/lib/sync/syncEngine').then(({ processSyncQueue }) => {
+      processSyncQueue(data.user_id).catch(() => {})
+    })
+  }
+
   return id
 }
 

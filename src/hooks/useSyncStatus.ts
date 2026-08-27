@@ -3,6 +3,8 @@ import {
   processSyncQueue,
   getPendingCount,
   isSyncInProgress,
+  pullCloudData,
+  subscribeToUserRealtime,
   type SyncResult,
 } from '@/lib/sync/syncEngine'
 import { isOnline, onNetworkChange } from '@/lib/sync/networkDetector'
@@ -44,6 +46,10 @@ export function useSyncStatus(userId: string | null): SyncState {
     setStatus('syncing')
 
     try {
+      // 1. Pull down any remote changes first
+      await pullCloudData(userId)
+
+      // 2. Process outbound sync queue
       const result = await processSyncQueue(userId)
       setLastSyncResult(result)
 
@@ -96,6 +102,34 @@ export function useSyncStatus(userId: string | null): SyncState {
     }
   }, [userId, updatePendingCount])
 
+  // Realtime multi-device subscription & Initial pull
+  useEffect(() => {
+    if (!userId) return
+
+    // 1. Initial downsync
+    if (isOnline()) {
+      pullCloudData(userId)
+      doSync()
+    }
+
+    // 2. Subscribe to live postgres changes for this user
+    const unsubscribeRealtime = subscribeToUserRealtime(userId)
+
+    // 3. Downsync on tab/window focus (when user switches back to this device)
+    const handleFocus = () => {
+      if (isOnline() && userId) {
+        pullCloudData(userId)
+        doSync()
+      }
+    }
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      unsubscribeRealtime()
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Network change listener
   useEffect(() => {
     if (!userId) return
@@ -110,17 +144,6 @@ export function useSyncStatus(userId: string | null): SyncState {
 
     return unsubscribe
   }, [userId, doSync])
-
-  // Initial sync on mount if online
-  useEffect(() => {
-    if (!userId) return
-
-    updatePendingCount()
-
-    if (isOnline() && pendingCount > 0) {
-      doSync()
-    }
-  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-sync when online and new items are added to queue
   useEffect(() => {

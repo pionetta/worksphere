@@ -384,3 +384,111 @@ export async function cleanupCompletedItems(userId: string): Promise<number> {
     .and(item => item.user_id === userId)
     .delete()
 }
+
+// ─── Cloud Pull & Realtime Multi-Device Sync ─────────────────────────────────
+
+/**
+ * Pull all cloud data for a user into local Dexie (Downsync)
+ */
+export async function pullCloudData(userId: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return
+  if (!userId) return
+
+  const { db } = await import('@/lib/db')
+
+  const tablesToSync = [
+    { table: 'members', dexieKey: 'members' as const },
+    { table: 'wallets', dexieKey: 'wallets' as const },
+    { table: 'categories', dexieKey: 'categories' as const },
+    { table: 'tasks', dexieKey: 'tasks' as const },
+    { table: 'subtasks', dexieKey: 'subtasks' as const },
+    { table: 'attendance', dexieKey: 'attendance' as const },
+    { table: 'transactions', dexieKey: 'transactions' as const },
+    { table: 'budgets', dexieKey: 'budgets' as const },
+    { table: 'savings_goals', dexieKey: 'savings_goals' as const },
+    { table: 'debts', dexieKey: 'debts' as const },
+  ]
+
+  let hasUpdates = false
+
+  for (const { table, dexieKey } of tablesToSync) {
+    try {
+      const { data, error } = await (supabase.from(table) as any)
+        .select('*')
+        .eq('user_id', userId)
+
+      if (!error && data && Array.isArray(data) && data.length > 0) {
+        for (const item of data) {
+          const local = await (db[dexieKey] as any).get(item.id)
+          if (
+            !local ||
+            !local.updated_at ||
+            new Date(item.updated_at).getTime() >= new Date(local.updated_at).getTime()
+          ) {
+            await (db[dexieKey] as any).put(item)
+            hasUpdates = true
+          }
+        }
+      }
+    } catch {
+      // Continue to next table
+    }
+  }
+
+  if (hasUpdates && typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('worksphere-data-synced', { detail: { type: 'full-pull' } })
+    )
+  }
+}
+
+/**
+ * Subscribe to realtime changes from other devices for this user
+ */
+export function subscribeToUserRealtime(userId: string): () => void {
+  if (typeof window === 'undefined' || !userId) return () => {}
+
+  const channel = supabase
+    .channel(`user-live-sync-${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        filter: `user_id=eq.${userId}`,
+      },
+      async payload => {
+        try {
+          const { db } = await import('@/lib/db')
+          const table = payload.table
+          const targetDexieKey = (table in db ? table : null) as keyof typeof db | null
+
+          if (targetDexieKey && (db as any)[targetDexieKey]) {
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              if (payload.new && (payload.new as any).id) {
+                await (db as any)[targetDexieKey].put(payload.new)
+              }
+            } else if (payload.eventType === 'DELETE') {
+              if (payload.old && (payload.old as any).id) {
+                await (db as any)[targetDexieKey].delete((payload.old as any).id)
+              }
+            }
+
+            window.dispatchEvent(
+              new CustomEvent('worksphere-data-synced', {
+                detail: { table, eventType: payload.eventType, record: payload.new || payload.old },
+              })
+            )
+          }
+        } catch (err) {
+          console.warn('Realtime sync handler error:', err)
+        }
+      }
+    )
+    .subscribe()
+
+  return () => {
+    supabase.removeChannel(channel)
+  }
+}
+
