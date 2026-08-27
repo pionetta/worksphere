@@ -24,6 +24,21 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Unhandled Error in React Component Tree:', error, errorInfo)
+
+    // Automatically recover from stale chunks after new deployments
+    const isChunkLoadFailed =
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('dynamically imported module') ||
+      error?.message?.includes('Loading chunk')
+
+    if (isChunkLoadFailed) {
+      const lastReload = sessionStorage.getItem('worksphere_eb_chunk_reload')
+      const now = Date.now()
+      if (!lastReload || now - Number(lastReload) > 5000) {
+        sessionStorage.setItem('worksphere_eb_chunk_reload', String(now))
+        window.location.reload()
+      }
+    }
   }
 
   handleReset = () => {

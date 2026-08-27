@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { useTheme } from '@/hooks/useTheme'
@@ -8,19 +8,23 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { LoginPage } from '@/pages/LoginPage'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Toaster } from '@/components/ui/sonner'
+import { lazyWithRetry } from '@/utils/lazyWithRetry'
 
-const LandingPage = lazy(() => import('@/pages/LandingPage').then(m => ({ default: m.LandingPage })))
-const DashboardPage = lazy(() =>
-  import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage }))
+const LandingPage = lazyWithRetry(() => import('@/pages/LandingPage').then(m => ({ default: m.LandingPage })), 'LandingPage')
+const DashboardPage = lazyWithRetry(() =>
+  import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage })),
+  'DashboardPage'
 )
-const AttendancePage = lazy(() =>
-  import('@/pages/AttendancePage').then(m => ({ default: m.AttendancePage }))
+const AttendancePage = lazyWithRetry(() =>
+  import('@/pages/AttendancePage').then(m => ({ default: m.AttendancePage })),
+  'AttendancePage'
 )
-const FinancePage = lazy(() =>
-  import('@/pages/FinancePage').then(m => ({ default: m.FinancePage }))
+const FinancePage = lazyWithRetry(() =>
+  import('@/pages/FinancePage').then(m => ({ default: m.FinancePage })),
+  'FinancePage'
 )
-const TodoPage = lazy(() => import('@/pages/TodoPage').then(m => ({ default: m.TodoPage })))
-const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })))
+const TodoPage = lazyWithRetry(() => import('@/pages/TodoPage').then(m => ({ default: m.TodoPage })), 'TodoPage')
+const AdminPage = lazyWithRetry(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })), 'AdminPage')
 
 function LoadingScreen() {
   return (

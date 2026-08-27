@@ -12,6 +12,19 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   })
 }
 
+// Automatically recover from stale dynamic import chunks on new deployments
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault()
+    const lastReload = sessionStorage.getItem('worksphere_preload_reload')
+    const now = Date.now()
+    if (!lastReload || now - Number(lastReload) > 5000) {
+      sessionStorage.setItem('worksphere_preload_reload', String(now))
+      window.location.reload()
+    }
+  })
+}
+
 // Apply initial theme before render to prevent flash
 const stored = localStorage.getItem('worksphere-theme')
 const theme = stored === 'dark' || stored === 'light' ? stored : 'system'
