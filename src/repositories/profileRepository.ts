@@ -26,6 +26,9 @@ export async function upsertProfile(
         id: profile.id,
         email: profile.email,
         display_name: profile.display_name,
+        role: profile.role,
+        permissions: profile.permissions,
+        is_active: profile.is_active,
         updated_at: now,
       } as never,
       { onConflict: 'id' }
@@ -42,7 +45,7 @@ export async function upsertProfile(
 
 export async function updateProfile(
   userId: string,
-  data: Partial<Pick<Profile, 'display_name'>>
+  data: Partial<Pick<Profile, 'display_name' | 'role' | 'permissions' | 'is_active'>>
 ): Promise<void> {
   const { error } = await supabase
     .from('profiles')

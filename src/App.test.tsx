@@ -6,6 +6,8 @@ import { AppRoutes } from '@/App'
 const mockUseAuth = vi.fn()
 vi.mock('@/lib/auth', () => ({
   useAuth: () => mockUseAuth(),
+  useIsAdmin: () => true,
+  usePermissions: () => ({ attendance: true, finance: true, todo: true }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 

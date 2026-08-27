@@ -27,6 +27,14 @@ export type DebtStatus = 'unpaid' | 'partially_paid' | 'paid'
 
 export type WishlistPeriod = 'weekly' | 'monthly' | 'yearly'
 
+export type UserRole = 'admin' | 'user'
+
+export interface UserPermissions {
+  attendance: boolean
+  finance: boolean
+  todo: boolean
+}
+
 export type WishlistPriority = 'high' | 'medium' | 'low'
 
 export type WishlistStatus = 'pending' | 'achieved' | 'cancelled'
@@ -45,6 +53,9 @@ export interface Profile {
   id: string
   email: string
   display_name: string
+  role: UserRole
+  permissions: UserPermissions
+  is_active: boolean
   created_at: string
   updated_at: string
 }

@@ -1,6 +1,9 @@
+import { useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/utils/cn'
-import { Home, Users, Wallet, ListTodo, LogOut } from 'lucide-react'
+import { usePermissions, useIsAdmin } from '@/lib/auth'
+import { Home, Users, Wallet, ListTodo, ShieldCheck, LogOut } from 'lucide-react'
+import type { User } from '@supabase/supabase-js'
 
 interface NavItem {
   to: string
@@ -8,14 +11,38 @@ interface NavItem {
   icon: React.ReactNode
 }
 
-const navItems: NavItem[] = [
-  { to: '/app', label: 'Beranda', icon: <Home className="w-5 h-5" /> },
-  { to: '/app/attendance', label: 'Absensi', icon: <Users className="w-5 h-5" /> },
-  { to: '/app/finance', label: 'Keuangan', icon: <Wallet className="w-5 h-5" /> },
-  { to: '/app/todo', label: 'To-Do', icon: <ListTodo className="w-5 h-5" /> },
-]
+export function useNavItems(): NavItem[] {
+  const permissions = usePermissions()
+  const isAdmin = useIsAdmin()
+
+  return useMemo(() => {
+    const items: NavItem[] = [
+      { to: '/app', label: 'Beranda', icon: <Home className="w-5 h-5" /> },
+    ]
+
+    if (isAdmin || permissions.attendance) {
+      items.push({ to: '/app/attendance', label: 'Absensi', icon: <Users className="w-5 h-5" /> })
+    }
+
+    if (isAdmin || permissions.finance) {
+      items.push({ to: '/app/finance', label: 'Keuangan', icon: <Wallet className="w-5 h-5" /> })
+    }
+
+    if (isAdmin || permissions.todo) {
+      items.push({ to: '/app/todo', label: 'To-Do', icon: <ListTodo className="w-5 h-5" /> })
+    }
+
+    if (isAdmin) {
+      items.push({ to: '/app/admin', label: 'Admin', icon: <ShieldCheck className="w-5 h-5" /> })
+    }
+
+    return items
+  }, [permissions, isAdmin])
+}
 
 export function BottomNavigation() {
+  const navItems = useNavItems()
+
   return (
     <nav
       className="fixed bottom-3 inset-x-3 z-30 max-w-md mx-auto h-16 rounded-[26px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/80 dark:border-gray-700/60 shadow-xl shadow-blue-500/10 flex items-center justify-around px-2 safe-area-bottom md:hidden transition-all duration-200"
@@ -39,10 +66,20 @@ export function BottomNavigation() {
           >
             {({ isActive }) => (
               <>
-                <span className={cn('relative transition-transform duration-200', isActive && 'scale-110 -translate-y-0.5')}>
+                <span
+                  className={cn(
+                    'relative transition-transform duration-200',
+                    isActive && 'scale-110 -translate-y-0.5'
+                  )}
+                >
                   {item.icon}
                 </span>
-                <span className={cn('text-[11px] transition-all duration-200', isActive ? 'font-bold' : 'font-medium')}>
+                <span
+                  className={cn(
+                    'text-[11px] transition-all duration-200',
+                    isActive ? 'font-bold' : 'font-medium'
+                  )}
+                >
                   {item.label}
                 </span>
               </>
@@ -54,8 +91,6 @@ export function BottomNavigation() {
   )
 }
 
-import type { User } from '@supabase/supabase-js'
-
 interface SidebarNavigationProps {
   user?: User | null
   onOpenProfile?: () => void
@@ -64,6 +99,7 @@ interface SidebarNavigationProps {
 
 // Desktop sidebar navigation
 export function SidebarNavigation({ user, onOpenProfile, onLogout }: SidebarNavigationProps) {
+  const navItems = useNavItems()
   const avatarUrl = user?.user_metadata?.avatar_url as string | undefined
   const displayName =
     user?.user_metadata?.full_name ||
@@ -93,7 +129,7 @@ export function SidebarNavigation({ user, onOpenProfile, onLogout }: SidebarNavi
               cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors mb-1',
                 isActive
-                  ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
+                  ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 font-bold'
                   : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/50'
               )
             }
@@ -108,7 +144,7 @@ export function SidebarNavigation({ user, onOpenProfile, onLogout }: SidebarNavi
         {onOpenProfile && (
           <button
             onClick={onOpenProfile}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer"
           >
             <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-semibold text-xs flex-shrink-0 border border-gray-200 dark:border-gray-700">
               {avatarUrl ? (
@@ -129,7 +165,7 @@ export function SidebarNavigation({ user, onOpenProfile, onLogout }: SidebarNavi
         {onLogout && (
           <button
             onClick={onLogout}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-medium text-danger hover:bg-danger-light/30 dark:hover:bg-red-900/30 transition-colors"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-medium text-danger hover:bg-danger-light/30 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Keluar</span>

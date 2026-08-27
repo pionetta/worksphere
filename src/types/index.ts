@@ -19,6 +19,8 @@ export type {
   WishlistStatus,
   JournalType,
   JournalPeriod,
+  UserRole,
+  UserPermissions,
   SyncOperationType,
   SyncStatusType,
   // Row types

@@ -83,6 +83,9 @@ describe('Profile Repository', () => {
         id: 'user-123',
         email: 'test@example.com',
         display_name: 'Test User',
+        role: 'user' as const,
+        permissions: { attendance: true, finance: true, todo: true },
+        is_active: true,
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
       }
@@ -94,6 +97,9 @@ describe('Profile Repository', () => {
         id: 'user-123',
         email: 'test@example.com',
         display_name: 'Test User',
+        role: 'user',
+        permissions: { attendance: true, finance: true, todo: true },
+        is_active: true,
       })
 
       expect(result).toEqual(mockProfile)
@@ -114,6 +120,9 @@ describe('Profile Repository', () => {
           id: 'user-123',
           email: 'test@example.com',
           display_name: 'Test User',
+          role: 'user',
+          permissions: { attendance: true, finance: true, todo: true },
+          is_active: true,
         })
       ).rejects.toThrow()
     })

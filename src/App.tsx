@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/lib/auth'
 import { useTheme } from '@/hooks/useTheme'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { PermissionGuard, AdminGuard } from '@/components/auth/PermissionGuard'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoginPage } from '@/pages/LoginPage'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -19,6 +20,7 @@ const FinancePage = lazy(() =>
   import('@/pages/FinancePage').then(m => ({ default: m.FinancePage }))
 )
 const TodoPage = lazy(() => import('@/pages/TodoPage').then(m => ({ default: m.TodoPage })))
+const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })))
 
 function LoadingScreen() {
   return (
@@ -51,7 +53,10 @@ function LoadingScreen() {
       {/* Quick Action Grid Skeleton */}
       <div className="grid grid-cols-4 gap-2">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-20 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50" />
+          <div
+            key={i}
+            className="h-20 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50"
+          />
         ))}
       </div>
 
@@ -113,7 +118,9 @@ export function AppRoutes() {
           element={
             <ErrorBoundary fallbackTitle="Kendala Memuat Halaman Presensi">
               <Suspense fallback={<LoadingScreen />}>
-                <AttendancePage />
+                <PermissionGuard module="attendance">
+                  <AttendancePage />
+                </PermissionGuard>
               </Suspense>
             </ErrorBoundary>
           }
@@ -123,7 +130,9 @@ export function AppRoutes() {
           element={
             <ErrorBoundary fallbackTitle="Kendala Memuat Halaman Keuangan">
               <Suspense fallback={<LoadingScreen />}>
-                <FinancePage />
+                <PermissionGuard module="finance">
+                  <FinancePage />
+                </PermissionGuard>
               </Suspense>
             </ErrorBoundary>
           }
@@ -133,7 +142,21 @@ export function AppRoutes() {
           element={
             <ErrorBoundary fallbackTitle="Kendala Memuat Halaman To-Do">
               <Suspense fallback={<LoadingScreen />}>
-                <TodoPage />
+                <PermissionGuard module="todo">
+                  <TodoPage />
+                </PermissionGuard>
+              </Suspense>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="admin"
+          element={
+            <ErrorBoundary fallbackTitle="Kendala Memuat Panel Admin">
+              <Suspense fallback={<LoadingScreen />}>
+                <AdminGuard>
+                  <AdminPage />
+                </AdminGuard>
               </Suspense>
             </ErrorBoundary>
           }

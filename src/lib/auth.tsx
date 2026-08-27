@@ -1,6 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import {
+  ensureUserProfile,
+  getUserProfile,
+  DEFAULT_PERMISSIONS,
+  isDefaultAdminEmail,
+} from '@/services/userService'
+import type { UserRole, UserPermissions } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -9,6 +16,9 @@ interface AuthState {
   session: Session | null
   loading: boolean
   isAuthenticated: boolean
+  role: UserRole
+  permissions: UserPermissions
+  isActive: boolean
 }
 
 export const DEMO_STORAGE_KEY = 'worksphere_local_user'
@@ -16,7 +26,7 @@ export const DEMO_STORAGE_KEY = 'worksphere_local_user'
 export const DEMO_USER: User = {
   id: '00000000-0000-4000-8000-000000000001',
   app_metadata: { provider: 'email' },
-  user_metadata: { full_name: 'Pengguna Demo' },
+  user_metadata: { full_name: 'Pengguna Demo', role: 'admin' },
   aud: 'authenticated',
   created_at: '2026-08-22T00:00:00.000Z',
   email: 'demo@worksphere.local',
@@ -37,11 +47,13 @@ interface AuthContextValue extends AuthState {
     options?: SignUpOptions
   ) => Promise<{ data: any | null; error: AuthError | null }>
   signInWithGoogle: () => Promise<{ error: AuthError | null }>
+  resetPassword: (email: string) => Promise<{ error: AuthError | null }>
   updateUserProfile: (data: {
     username?: string
     avatarUrl?: string | null
   }) => Promise<{ data: { user: User | null } | null; error: AuthError | null }>
   updateUserPassword: (newPassword: string) => Promise<{ error: AuthError | null }>
+  refreshProfile: () => Promise<void>
   signInDemo: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -79,6 +91,22 @@ export async function signInWithGoogle(): Promise<{ error: AuthError | null }> {
   }
 }
 
+export async function resetPassword(email: string): Promise<{ error: AuthError | null }> {
+  try {
+    const redirectUrl =
+      typeof window !== 'undefined' && window.location?.origin
+        ? `${window.location.origin}/login?reset=true`
+        : undefined
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    })
+    return { error }
+  } catch (err: any) {
+    return { error: err as AuthError }
+  }
+}
+
 export async function signUp(
   email: string,
   password: string,
@@ -91,11 +119,14 @@ export async function signUp(
         ? `${window.location.origin}/app`
         : undefined)
 
+    const isAdmin = isDefaultAdminEmail(email)
+    const role: UserRole = isAdmin ? 'admin' : 'user'
+
     const signUpParams: {
       email: string
       password: string
       options?: {
-        data?: { username?: string; full_name?: string }
+        data?: { username?: string; full_name?: string; role?: UserRole }
         emailRedirectTo?: string
       }
     } = {
@@ -103,13 +134,14 @@ export async function signUp(
       password,
     }
 
-    if (options?.username || redirectUrl) {
-      signUpParams.options = {
+    signUpParams.options = {
+      data: {
         ...(options?.username
-          ? { data: { username: options.username.trim(), full_name: options.username.trim() } }
+          ? { username: options.username.trim(), full_name: options.username.trim() }
           : {}),
-        ...(redirectUrl ? { emailRedirectTo: redirectUrl } : {}),
-      }
+        role,
+      },
+      ...(redirectUrl ? { emailRedirectTo: redirectUrl } : {}),
     }
 
     const { data, error } = await supabase.auth.signUp(signUpParams)
@@ -180,16 +212,19 @@ export async function updateUserPassword(
   }
 }
 
-export async function signOut(): Promise<void> {
-  localStorage.removeItem(DEMO_STORAGE_KEY)
-  await supabase.auth.signOut()
+export async function signOut(): Promise<{ error: AuthError | null }> {
+  try {
+    localStorage.removeItem(DEMO_STORAGE_KEY)
+    const { error } = await supabase.auth.signOut()
+    return { error }
+  } catch (err: any) {
+    return { error: err as AuthError }
+  }
 }
 
-// ─── Context ──────────────────────────────────────────────────────────────────
+// ─── Context & Provider ────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextValue | null>(null)
-
-// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
@@ -205,6 +240,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   })
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [role, setRole] = useState<UserRole>('user')
+  const [permissions, setPermissions] = useState<UserPermissions>(DEFAULT_PERMISSIONS)
+  const [isActive, setIsActive] = useState(true)
+
+  const syncProfile = async (currentUser: User | null) => {
+    if (!currentUser) {
+      setRole('user')
+      setPermissions(DEFAULT_PERMISSIONS)
+      setIsActive(true)
+      return
+    }
+
+    try {
+      const profile = await ensureUserProfile(currentUser)
+      setRole(profile.role)
+      setPermissions(profile.permissions)
+      setIsActive(profile.is_active)
+    } catch {
+      // Fallback: check email whitelist
+      const isAdmin = isDefaultAdminEmail(currentUser.email)
+      setRole(isAdmin ? 'admin' : 'user')
+      setPermissions(DEFAULT_PERMISSIONS)
+      setIsActive(true)
+    }
+  }
+
+  const refreshProfile = async () => {
+    if (!user) return
+    const profile = await getUserProfile(user.id)
+    if (profile) {
+      setRole(profile.role)
+      setPermissions(profile.permissions)
+      setIsActive(profile.is_active)
+    }
+  }
 
   useEffect(() => {
     const localUserJson = localStorage.getItem(DEMO_STORAGE_KEY)
@@ -212,7 +282,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(localUserJson)
         setUser(parsed)
-        setLoading(false)
+        syncProfile(parsed).finally(() => setLoading(false))
         return
       } catch {
         localStorage.removeItem(DEMO_STORAGE_KEY)
@@ -224,8 +294,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!localStorage.getItem(DEMO_STORAGE_KEY)) {
         setSession(session)
         setUser(session?.user ?? null)
+        syncProfile(session?.user ?? null).finally(() => setLoading(false))
+      } else {
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     // Listen for auth changes
@@ -235,7 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!localStorage.getItem(DEMO_STORAGE_KEY)) {
         setSession(session)
         setUser(session?.user ?? null)
-        setLoading(false)
+        syncProfile(session?.user ?? null).finally(() => setLoading(false))
       }
     })
 
@@ -246,6 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await updateUserProfile(data)
     if (!res.error && res.data?.user) {
       setUser(res.data.user)
+      await syncProfile(res.data.user)
     }
     return res
   }
@@ -258,12 +331,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(DEMO_USER))
     setUser(DEMO_USER)
     setSession(null)
+    await syncProfile(DEMO_USER)
   }
 
   const handleSignOut = async () => {
     localStorage.removeItem(DEMO_STORAGE_KEY)
     setUser(null)
     setSession(null)
+    setRole('user')
+    setPermissions(DEFAULT_PERMISSIONS)
+    setIsActive(true)
     await supabase.auth.signOut()
   }
 
@@ -272,11 +349,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     loading,
     isAuthenticated: !!user,
+    role,
+    permissions,
+    isActive,
     signIn,
     signUp,
     signInWithGoogle,
+    resetPassword,
     updateUserProfile: handleUpdateProfile,
     updateUserPassword: handleUpdatePassword,
+    refreshProfile,
     signInDemo,
     signOut: handleSignOut,
   }
@@ -284,7 +366,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// ─── Hooks ─────────────────────────────────────────────────────────────────────
 
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext)
@@ -292,4 +374,17 @@ export function useAuth(): AuthContextValue {
     throw new Error('useAuth harus digunakan dalam AuthProvider')
   }
   return context
+}
+
+export function useIsAdmin(): boolean {
+  const { role } = useAuth()
+  return role === 'admin'
+}
+
+export function usePermissions(): UserPermissions {
+  const { permissions, role } = useAuth()
+  if (role === 'admin') {
+    return { attendance: true, finance: true, todo: true }
+  }
+  return permissions
 }

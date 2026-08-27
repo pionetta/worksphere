@@ -81,7 +81,7 @@ describe('Auth', () => {
         email: 'new@example.com',
         password: 'password123',
         options: {
-          data: { username: 'testuser', full_name: 'testuser' },
+          data: { username: 'testuser', full_name: 'testuser', role: 'user' },
           emailRedirectTo: expect.any(String),
         },
       })

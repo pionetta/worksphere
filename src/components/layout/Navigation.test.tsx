@@ -1,15 +1,20 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { AuthProvider } from '@/lib/auth'
 import { BottomNavigation, SidebarNavigation } from './Navigation'
+
+function renderWithProviders(ui: React.ReactElement) {
+  return render(
+    <AuthProvider>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </AuthProvider>
+  )
+}
 
 describe('BottomNavigation', () => {
   it('should render all navigation items', () => {
-    render(
-      <MemoryRouter>
-        <BottomNavigation />
-      </MemoryRouter>
-    )
+    renderWithProviders(<BottomNavigation />)
     expect(screen.getByText('Beranda')).toBeInTheDocument()
     expect(screen.getByText('Absensi')).toBeInTheDocument()
     expect(screen.getByText('Keuangan')).toBeInTheDocument()
@@ -17,11 +22,7 @@ describe('BottomNavigation', () => {
   })
 
   it('should have correct links', () => {
-    render(
-      <MemoryRouter>
-        <BottomNavigation />
-      </MemoryRouter>
-    )
+    renderWithProviders(<BottomNavigation />)
     const links = screen.getAllByRole('link')
     const hrefs = links.map(l => l.getAttribute('href'))
     expect(hrefs).toContain('/app')
@@ -31,20 +32,12 @@ describe('BottomNavigation', () => {
   })
 
   it('should have aria-label for navigation', () => {
-    render(
-      <MemoryRouter>
-        <BottomNavigation />
-      </MemoryRouter>
-    )
+    renderWithProviders(<BottomNavigation />)
     expect(screen.getByLabelText('Navigasi utama')).toBeInTheDocument()
   })
 
   it('should be hidden on md+ screens', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <BottomNavigation />
-      </MemoryRouter>
-    )
+    const { container } = renderWithProviders(<BottomNavigation />)
     const nav = container.querySelector('nav')
     expect(nav?.className).toContain('md:hidden')
   })
@@ -52,11 +45,7 @@ describe('BottomNavigation', () => {
 
 describe('SidebarNavigation', () => {
   it('should render all navigation items', () => {
-    render(
-      <MemoryRouter>
-        <SidebarNavigation />
-      </MemoryRouter>
-    )
+    renderWithProviders(<SidebarNavigation />)
     expect(screen.getByText('Beranda')).toBeInTheDocument()
     expect(screen.getByText('Absensi')).toBeInTheDocument()
     expect(screen.getByText('Keuangan')).toBeInTheDocument()
@@ -64,21 +53,13 @@ describe('SidebarNavigation', () => {
   })
 
   it('should render brand logo', () => {
-    render(
-      <MemoryRouter>
-        <SidebarNavigation />
-      </MemoryRouter>
-    )
+    renderWithProviders(<SidebarNavigation />)
     expect(screen.getByText('Worksphere')).toBeInTheDocument()
     expect(screen.getByText('W')).toBeInTheDocument()
   })
 
   it('should be hidden on small screens', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <SidebarNavigation />
-      </MemoryRouter>
-    )
+    const { container } = renderWithProviders(<SidebarNavigation />)
     const nav = container.querySelector('nav')
     expect(nav?.className).toContain('hidden')
     expect(nav?.className).toContain('md:flex')
