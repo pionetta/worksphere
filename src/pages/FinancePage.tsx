@@ -37,6 +37,9 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useRecurringTransactions } from '@/features/finance/hooks/useRecurringTransactions'
+import { RecurringCard } from '@/features/finance/components/RecurringCard'
+import { RecurringFormModal } from '@/features/finance/components/RecurringFormModal'
 import {
   Plus,
   ArrowLeft,
@@ -47,10 +50,11 @@ import {
   PiggyBank,
   HandCoins,
   FileDown,
+  RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/utils/currency'
-import type { Category, Transaction, Debt } from '@/types'
+import type { Category, Transaction, Debt, RecurringTransaction } from '@/types'
 import {
   useFilteredTransactions,
   DEFAULT_FILTERS,
@@ -65,6 +69,7 @@ type Tab =
   | 'budgets'
   | 'savings'
   | 'debts'
+  | 'recurring'
 
 export function FinancePage() {
   const { user } = useAuth()
@@ -80,7 +85,11 @@ export function FinancePage() {
   const budgetsHook = useBudgets(userId || null, currentMonth, currentYear)
   const savingsHook = useSavingsGoals(userId || null)
   const debtsHook = useDebts(userId || null)
+  const recurringHook = useRecurringTransactions(userId || null)
   const summaryHook = useFinanceSummary(userId || null, currentMonth, currentYear)
+
+  const [showRecurringModal, setShowRecurringModal] = useState(false)
+  const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null)
 
   const [categories, setCategories] = useState<Category[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
@@ -274,21 +283,30 @@ export function FinancePage() {
       {/* ─── Modern Minimalist Tab Bar (4 Menu: Ringkasan, Anggaran, Tabungan, Utang) ─── */}
       <div className="w-full">
         <Tabs value={tab} onValueChange={val => setTab(val as Tab)}>
-          <TabsList className="w-full h-11 p-1 rounded-xl bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 shadow-xs grid grid-cols-4 gap-1">
+          <TabsList className="w-full h-11 p-1 rounded-xl bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 shadow-xs grid grid-cols-5 gap-1">
             <TabsTrigger
               value="summary"
               onClick={() => setTab('summary')}
               role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-1 truncate"
+              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
             >
               Ringkasan
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="recurring"
+              onClick={() => setTab('recurring')}
+              role="button"
+              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
+            >
+              Rutin
             </TabsTrigger>
 
             <TabsTrigger
               value="budgets"
               onClick={() => setTab('budgets')}
               role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-1 truncate"
+              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
             >
               Anggaran
             </TabsTrigger>
@@ -297,7 +315,7 @@ export function FinancePage() {
               value="savings"
               onClick={() => setTab('savings')}
               role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-1 truncate"
+              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
             >
               Tabungan
             </TabsTrigger>
@@ -306,7 +324,7 @@ export function FinancePage() {
               value="debts"
               onClick={() => setTab('debts')}
               role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-1 truncate"
+              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
             >
               Utang
             </TabsTrigger>
@@ -452,7 +470,7 @@ export function FinancePage() {
             </div>
           </div>
 
-          {/* Ringkasan Anggaran & Tabungan */}
+          {/* Ringkasan Anggaran, Tabungan & Tagihan Rutin */}
           <BudgetSummary
             budgets={budgetsHook.budgets}
             spentByCategory={spentByCategory}
@@ -461,6 +479,61 @@ export function FinancePage() {
           />
 
           <SavingsSummary savings={savingsHook.goals} onViewAll={() => setTab('savings')} />
+
+          {/* Ringkasan Transaksi Rutin / Langganan */}
+          <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 flex items-center justify-center">
+                  <RefreshCw className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100">
+                  Tagihan & Transaksi Rutin
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTab('recurring')}
+                className="text-xs text-[#2563EB] dark:text-blue-400 font-bold hover:underline cursor-pointer"
+              >
+                Lihat Semua ({recurringHook.recurringList.filter(r => r.is_active).length}) &rarr;
+              </button>
+            </div>
+
+            {recurringHook.recurringList.length === 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400 py-1">
+                Belum ada tagihan atau pengeluaran rutin terdaftar.
+              </p>
+            ) : (
+              <div className="space-y-2.5">
+                {recurringHook.recurringList.slice(0, 3).map(item => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800/60 text-xs"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <p className="font-bold text-gray-900 dark:text-white truncate">
+                        {item.note || (item.type === 'income' ? 'Pemasukan Rutin' : 'Pengeluaran Rutin')}
+                      </p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                        Jatuh tempo: {item.next_due_date}
+                      </p>
+                    </div>
+                    <span
+                      className={`font-black shrink-0 ${
+                        item.type === 'income'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-rose-600 dark:text-rose-400'
+                      }`}
+                    >
+                      {item.type === 'income' ? '+' : '-'}
+                      {formatCurrency(item.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Grafik & Charts */}
           <IncomeExpenseChart
@@ -494,6 +567,98 @@ export function FinancePage() {
               onClick={(tx: Transaction) => setSelectedTransaction(tx)}
             />
           </div>
+        </div>
+      )}
+
+      {/* ─── Recurring Tab (Transaksi Rutin & Tagihan) ─── */}
+      {tab === 'recurring' && (
+        <div className="space-y-4 animate-fade-in-up">
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/85 dark:bg-gray-800/85 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md">
+            <div>
+              <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">
+                Transaksi Rutin & Tagihan
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {recurringHook.recurringList.filter(r => r.is_active).length} Langganan Aktif
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingRecurring(null)
+                setShowRecurringModal(true)
+              }}
+              icon={<Plus className="w-4 h-4" />}
+            >
+              Tambah Rutin
+            </Button>
+          </div>
+
+          {recurringHook.loading ? (
+            <LoadingState text="Memuat transaksi rutin..." />
+          ) : recurringHook.error ? (
+            <ErrorState message={recurringHook.error} onRetry={recurringHook.refresh} />
+          ) : recurringHook.recurringList.length === 0 ? (
+            <EmptyState
+              icon={<RefreshCw className="w-8 h-8 text-gray-400" />}
+              title="Belum Ada Transaksi Rutin"
+              description="Catat tagihan bulanan rutin seperti sewa tempat, internet, langganan streaming, atau gaji berkala."
+              action={
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingRecurring(null)
+                    setShowRecurringModal(true)
+                  }}
+                  icon={<Plus className="w-4 h-4" />}
+                >
+                  Tambah Transaksi Rutin
+                </Button>
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {recurringHook.recurringList.map(item => (
+                <RecurringCard
+                  key={item.id}
+                  recurring={item}
+                  wallets={walletsHook.wallets}
+                  categories={categories}
+                  onEdit={rec => {
+                    setEditingRecurring(rec)
+                    setShowRecurringModal(true)
+                  }}
+                  onToggleActive={async (id, active) => {
+                    try {
+                      await recurringHook.toggleActive(id, active)
+                      toast.success(active ? 'Transaksi rutin diaktifkan' : 'Transaksi rutin dijeda')
+                    } catch {
+                      toast.error('Gagal memperbarui status')
+                    }
+                  }}
+                  onDelete={async id => {
+                    try {
+                      await recurringHook.removeRecurring(id)
+                      toast.success('Transaksi rutin dihapus')
+                    } catch {
+                      toast.error('Gagal menghapus transaksi rutin')
+                    }
+                  }}
+                  onExecuteNow={async id => {
+                    try {
+                      await recurringHook.executeNow(id)
+                      toast.success('Transaksi berhasil dicatat ke dompet!')
+                      await walletsHook.refresh()
+                      await transactionsHook.refresh()
+                      await summaryHook.refresh()
+                    } catch {
+                      toast.error('Gagal mencatat transaksi rutin')
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1803,6 +1968,37 @@ export function FinancePage() {
           />
         </div>
       </BottomSheet>
+
+      {/* ─── Popup: Form Transaksi Rutin / Langganan ─── */}
+      <RecurringFormModal
+        open={showRecurringModal}
+        onClose={() => {
+          setShowRecurringModal(false)
+          setEditingRecurring(null)
+        }}
+        initialData={editingRecurring}
+        wallets={walletsHook.wallets}
+        categories={categories}
+        onSubmit={async data => {
+          try {
+            await recurringHook.addRecurring(data)
+            toast.success('Transaksi rutin berhasil ditambahkan!')
+            setShowRecurringModal(false)
+          } catch {
+            toast.error('Gagal menambahkan transaksi rutin')
+          }
+        }}
+        onUpdate={async (id, data) => {
+          try {
+            await recurringHook.editRecurring(id, data)
+            toast.success('Transaksi rutin berhasil diperbarui!')
+            setShowRecurringModal(false)
+            setEditingRecurring(null)
+          } catch {
+            toast.error('Gagal memperbarui transaksi rutin')
+          }
+        }}
+      />
     </div>
   )
 }

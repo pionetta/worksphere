@@ -27,6 +27,8 @@ export type DebtStatus = 'unpaid' | 'partially_paid' | 'paid'
 
 export type WishlistPeriod = 'weekly' | 'monthly' | 'yearly'
 
+export type RecurringFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
+
 export type UserRole = 'admin' | 'user'
 
 export interface UserPermissions {
@@ -211,6 +213,26 @@ export interface JournalEntry {
   category: string // 'work' | 'finance' | 'personal' | 'learning' | 'health' | 'other'
   icon_tag: string // 'trophy' | 'party' | 'star' | 'lightbulb' | 'sparkles' | 'target'
   entry_date: string // DATE (YYYY-MM-DD)
+  created_at: string
+  updated_at: string
+}
+
+export interface RecurringTransaction {
+  id: string
+  user_id: string
+  wallet_id: string
+  category_id: string | null
+  type: 'income' | 'expense'
+  amount: number
+  frequency: RecurringFrequency
+  interval_count: number
+  start_date: string // YYYY-MM-DD
+  end_date: string | null // YYYY-MM-DD
+  next_due_date: string // YYYY-MM-DD
+  last_processed_date: string | null // YYYY-MM-DD
+  is_active: boolean
+  auto_record: boolean
+  note: string | null
   created_at: string
   updated_at: string
 }

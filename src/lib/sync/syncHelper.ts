@@ -50,6 +50,7 @@ export const ENTITY_NAMES = {
   wallet: 'wallet',
   category: 'category',
   transaction: 'transaction',
+  recurring_transaction: 'recurring_transaction',
   budget: 'budget',
   savings_goal: 'savings_goal',
   debt: 'debt',
