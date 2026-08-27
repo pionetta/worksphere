@@ -95,24 +95,29 @@ export async function getAllUsers(): Promise<Profile[]> {
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (!error && data && data.length > 0) {
+      if (error) {
+        console.warn('Supabase profiles fetch warning:', error.message)
+      } else if (data && data.length > 0) {
         // Cache to Dexie
         for (const item of data) {
+          const isAdmin = isDefaultAdminEmail(item.email)
           await db.profiles.put({
             id: item.id,
-            email: item.email,
-            display_name: item.display_name,
-            role: (item.role as UserRole) || 'user',
-            permissions: item.permissions || { ...DEFAULT_PERMISSIONS },
+            email: item.email || '',
+            display_name: item.display_name || item.email?.split('@')[0] || 'User',
+            role: isAdmin ? 'admin' : (item.role as UserRole) || 'user',
+            permissions: isAdmin
+              ? { attendance: true, finance: true, todo: true }
+              : item.permissions || { ...DEFAULT_PERMISSIONS },
             is_active: item.is_active !== false,
-            created_at: item.created_at,
-            updated_at: item.updated_at,
+            created_at: item.created_at || new Date().toISOString(),
+            updated_at: item.updated_at || new Date().toISOString(),
           })
         }
       }
     }
-  } catch {
-    // Fall back to local Dexie cache
+  } catch (err: any) {
+    console.error('Failed to fetch profiles from cloud:', err?.message)
   }
 
   return await db.profiles.toArray()
