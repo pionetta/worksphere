@@ -311,8 +311,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })
 
-    return () => subscription.unsubscribe()
-  }, [])
+    // Listen for realtime profile & permission updates
+    let profileChannel: ReturnType<typeof supabase.channel> | null = null
+    const currentUser = user || session?.user
+    if (currentUser && !localStorage.getItem(DEMO_STORAGE_KEY)) {
+      profileChannel = supabase
+        .channel(`profile-updates-${currentUser.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${currentUser.id}`,
+          },
+          payload => {
+            if (payload.new) {
+              const item = payload.new as any
+              const isAdmin = isDefaultAdminEmail(currentUser.email)
+              setRole(isAdmin ? 'admin' : (item.role as UserRole) || 'user')
+              setPermissions(
+                isAdmin
+                  ? { attendance: true, finance: true, todo: true }
+                  : item.permissions || DEFAULT_PERMISSIONS
+              )
+              setIsActive(item.is_active !== false)
+            }
+          }
+        )
+        .subscribe()
+    }
+
+    return () => {
+      subscription.unsubscribe()
+      if (profileChannel) {
+        supabase.removeChannel(profileChannel)
+      }
+    }
+  }, [user?.id])
 
   const handleUpdateProfile = async (data: { username?: string; avatarUrl?: string | null }) => {
     const res = await updateUserProfile(data)

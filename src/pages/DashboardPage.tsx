@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '@/lib/auth'
+import { useAuth, usePermissions, useIsAdmin } from '@/lib/auth'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useDashboard } from '@/hooks/useDashboard'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -14,6 +14,7 @@ import {
   ArrowLeftRight,
   CheckSquare,
   ChevronRight,
+  Lock,
 } from 'lucide-react'
 
 function getGreeting(): string {
@@ -35,9 +36,24 @@ function formatDate(): string {
 
 export function DashboardPage() {
   const { user } = useAuth()
+  const permissions = usePermissions()
+  const isAdmin = useIsAdmin()
   const network = useNetworkStatus()
   const { data, loading, error, refresh } = useDashboard(user?.id ?? null)
+  
+  const canAccessFinance = isAdmin || permissions.finance
+  const canAccessAttendance = isAdmin || permissions.attendance
+  const canAccessTodo = isAdmin || permissions.todo
+
   const [activeTab, setActiveTab] = useState<'keuangan' | 'absensi' | 'tugas'>('keuangan')
+
+  useEffect(() => {
+    if (!canAccessFinance && canAccessAttendance) {
+      setActiveTab('absensi')
+    } else if (!canAccessFinance && !canAccessAttendance && canAccessTodo) {
+      setActiveTab('tugas')
+    }
+  }, [canAccessFinance, canAccessAttendance, canAccessTodo])
 
   const displayName =
     user?.user_metadata?.full_name ||
@@ -94,156 +110,188 @@ export function DashboardPage() {
       ) : (
         <>
           {/* ─── 1. Main Balance Card (Total Saldo Kas -> Navigasi ke Keuangan) ──── */}
-          <Link
-            to="/app/finance"
-            className="group block relative overflow-hidden rounded-[24px] bg-gradient-to-tr from-[#3B82F6] via-[#3B7BF2] to-[#5085F8] text-white p-5 sm:p-6 shadow-xl shadow-blue-500/20 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-1 active:scale-[0.99] transition-all duration-200 animate-fade-in-up cursor-pointer"
-          >
-            {/* Subtle glow highlight */}
-            <div className="absolute top-0 right-0 -mt-10 -mr-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
-
-            {/* Top Label */}
-            <div className="flex items-center justify-between text-white/90">
-              <div className="flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-white stroke-[2.2]" />
-                <span className="text-xs sm:text-sm font-medium tracking-wide">Total Saldo Kas</span>
+          {canAccessFinance ? (
+            <Link
+              to="/app/finance"
+              className="group block relative overflow-hidden rounded-[24px] bg-gradient-to-tr from-[#3B82F6] via-[#3B7BF2] to-[#5085F8] text-white p-5 sm:p-6 shadow-xl shadow-blue-500/20 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-1 active:scale-[0.99] transition-all duration-200 animate-fade-in-up cursor-pointer"
+            >
+              <div className="absolute top-0 right-0 -mt-10 -mr-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500" />
+              <div className="flex items-center justify-between text-white/90">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-white stroke-[2.2]" />
+                  <span className="text-xs sm:text-sm font-medium tracking-wide">Total Saldo Kas</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/70 group-hover:translate-x-1.5 transition-transform duration-200" />
               </div>
-              <ChevronRight className="w-4 h-4 text-white/70 group-hover:translate-x-1.5 transition-transform duration-200" />
-            </div>
-
-            {/* Big Balance Number */}
-            <div className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Rp {formatAmount(data.finance.totalBalance)}
-            </div>
-
-            {/* Monthly Trend Indicator */}
-            <div className="mt-1 flex items-center gap-1 text-xs text-blue-100/90 font-medium">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-300 stroke-[2.5]" />
-              <span>{netIncomeDisplay} bulan ini</span>
-            </div>
-
-            {/* Income & Expense Two-Column Split */}
-            <div className="mt-5 grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
-              <div>
-                <div className="text-[11px] text-white/75 font-medium">Pemasukan</div>
-                <div className="text-sm sm:text-base font-bold text-[#86EFAC] tracking-tight mt-0.5">
-                  +Rp {formatAmount(data.finance.totalIncome)}
+              <div className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight">
+                Rp {formatAmount(data.finance.totalBalance)}
+              </div>
+              <div className="mt-1 flex items-center gap-1 text-xs text-blue-100/90 font-medium">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-300 stroke-[2.5]" />
+                <span>{netIncomeDisplay} bulan ini</span>
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
+                <div>
+                  <div className="text-[11px] text-white/75 font-medium">Pemasukan</div>
+                  <div className="text-sm sm:text-base font-bold text-[#86EFAC] tracking-tight mt-0.5">
+                    +Rp {formatAmount(data.finance.totalIncome)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] text-white/75 font-medium">Pengeluaran</div>
+                  <div className="text-sm sm:text-base font-bold text-[#FCA5A5] tracking-tight mt-0.5">
+                    -Rp {formatAmount(data.finance.totalExpense)}
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="text-[11px] text-white/75 font-medium">Pengeluaran</div>
-                <div className="text-sm sm:text-base font-bold text-[#FCA5A5] tracking-tight mt-0.5">
-                  -Rp {formatAmount(data.finance.totalExpense)}
+            </Link>
+          ) : (
+            <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-tr from-gray-500/80 to-gray-600/80 text-white p-5 sm:p-6 shadow-md opacity-75">
+              <div className="flex items-center justify-between text-white/90">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-white" />
+                  <span className="text-xs sm:text-sm font-medium tracking-wide">Keuangan (Akses Dibatasi)</span>
                 </div>
               </div>
+              <div className="mt-2 text-sm text-white/80">
+                Fitur keuangan belum diaktifkan oleh Administrator untuk akun Anda.
+              </div>
             </div>
-          </Link>
+          )}
 
           {/* ─── 2. Row of 2 Cards (Absensi & To-Do) ─────────────────────────── */}
           <div className="grid grid-cols-2 gap-3.5 animate-fade-in-up animation-delay-100">
-            {/* Left Card: Absensi -> Navigasi ke Absensi */}
-            <Link
-              to="/app/attendance"
-              className="rounded-[22px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-blue-400/50 dark:hover:border-blue-500/50 border border-white/60 dark:border-gray-700/50 backdrop-blur-md transition-all duration-200 active:scale-[0.98] group flex flex-col justify-between cursor-pointer space-y-2"
-            >
-              <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
-                <span>Absensi Hari Ini</span>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-500 transition-all duration-200" />
-              </div>
-              <div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                    {data.attendance.present}
-                  </span>
-                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                    /{data.attendance.totalMembers}
-                  </span>
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 ml-0.5">
-                    Hadir
-                  </span>
+            {/* Left Card: Absensi */}
+            {canAccessAttendance ? (
+              <Link
+                to="/app/attendance"
+                className="rounded-[22px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-blue-400/50 dark:hover:border-blue-500/50 border border-white/60 dark:border-gray-700/50 backdrop-blur-md transition-all duration-200 active:scale-[0.98] group flex flex-col justify-between cursor-pointer space-y-2"
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
+                  <span>Absensi Hari Ini</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-500 transition-all duration-200" />
                 </div>
-                <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
-                  {data.attendance.totalMembers === 0
-                    ? 'Belum ada anggota'
-                    : data.attendance.unrecorded > 0
-                    ? `${data.attendance.unrecorded} belum absen`
-                    : 'Semua tercatat'}
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                      {data.attendance.present}
+                    </span>
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                      /{data.attendance.totalMembers}
+                    </span>
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 ml-0.5">
+                      Hadir
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
+                    {data.attendance.totalMembers === 0
+                      ? 'Belum ada anggota'
+                      : data.attendance.unrecorded > 0
+                      ? `${data.attendance.unrecorded} belum absen`
+                      : 'Semua tercatat'}
+                  </div>
                 </div>
+              </Link>
+            ) : (
+              <div className="rounded-[22px] bg-gray-100/70 dark:bg-gray-800/40 p-4 sm:p-5 border border-dashed border-gray-300 dark:border-gray-700 flex flex-col justify-between space-y-2 opacity-60">
+                <div className="flex items-center justify-between text-xs font-bold text-gray-400">
+                  <span>Absensi</span>
+                  <Lock className="w-3.5 h-3.5 text-gray-400" />
+                </div>
+                <div className="text-xs text-gray-400">Akses dibatasi</div>
               </div>
-            </Link>
+            )}
 
-            {/* Right Card: To-Do -> Navigasi ke To-Do */}
-            <Link
-              to="/app/todo"
-              className="rounded-[22px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-blue-400/50 dark:hover:border-blue-500/50 border border-white/60 dark:border-gray-700/50 backdrop-blur-md transition-all duration-200 active:scale-[0.98] group flex flex-col justify-between cursor-pointer space-y-2"
-            >
-              <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
-                <span>To-Do</span>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-500 transition-all duration-200" />
-              </div>
-              <div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                    {data.todo.completed}
-                  </span>
-                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                    /{data.todo.total}
-                  </span>
-                  <span className="text-xs font-bold text-[#2563EB] dark:text-blue-400 ml-0.5">
-                    Selesai
-                  </span>
+            {/* Right Card: To-Do */}
+            {canAccessTodo ? (
+              <Link
+                to="/app/todo"
+                className="rounded-[22px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-blue-400/50 dark:hover:border-blue-500/50 border border-white/60 dark:border-gray-700/50 backdrop-blur-md transition-all duration-200 active:scale-[0.98] group flex flex-col justify-between cursor-pointer space-y-2"
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
+                  <span>To-Do</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-500 transition-all duration-200" />
                 </div>
-                <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
-                  {data.todo.total === 0
-                    ? 'Belum ada tugas'
-                    : data.todo.overdue > 0
-                    ? `${data.todo.overdue} tugas terlambat`
-                    : `${data.todo.todo + data.todo.inProgress} tugas aktif`}
+                <div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                      {data.todo.completed}
+                    </span>
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                      /{data.todo.total}
+                    </span>
+                    <span className="text-xs font-bold text-[#2563EB] dark:text-blue-400 ml-0.5">
+                      Selesai
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
+                    {data.todo.total === 0
+                      ? 'Belum ada tugas'
+                      : data.todo.overdue > 0
+                      ? `${data.todo.overdue} tugas terlambat`
+                      : `${data.todo.todo + data.todo.inProgress} tugas aktif`}
+                  </div>
                 </div>
+              </Link>
+            ) : (
+              <div className="rounded-[22px] bg-gray-100/70 dark:bg-gray-800/40 p-4 sm:p-5 border border-dashed border-gray-300 dark:border-gray-700 flex flex-col justify-between space-y-2 opacity-60">
+                <div className="flex items-center justify-between text-xs font-bold text-gray-400">
+                  <span>To-Do</span>
+                  <Lock className="w-3.5 h-3.5 text-gray-400" />
+                </div>
+                <div className="text-xs text-gray-400">Akses dibatasi</div>
               </div>
-            </Link>
+            )}
           </div>
 
           {/* ─── 3. Detail Item Card with Segmented Tabs ──────────────────────── */}
-          <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm border border-white/60 dark:border-gray-700/50 backdrop-blur-md space-y-3.5 animate-fade-in-up animation-delay-200">
-            {/* Segmented Tab Bar */}
-            <div className="rounded-2xl border border-gray-400/40 dark:border-gray-600 p-1 flex items-center bg-gray-100/60 dark:bg-gray-900/40">
-              <button
-                type="button"
-                onClick={() => setActiveTab('keuangan')}
-                className={cn(
-                  'flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-center cursor-pointer',
-                  activeTab === 'keuangan'
-                    ? 'bg-white dark:bg-gray-800 shadow-sm text-[#2563EB] dark:text-blue-400'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+          {(canAccessFinance || canAccessAttendance || canAccessTodo) && (
+            <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm border border-white/60 dark:border-gray-700/50 backdrop-blur-md space-y-3.5 animate-fade-in-up animation-delay-200">
+              {/* Segmented Tab Bar */}
+              <div className="rounded-2xl border border-gray-400/40 dark:border-gray-600 p-1 flex items-center bg-gray-100/60 dark:bg-gray-900/40">
+                {canAccessFinance && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('keuangan')}
+                    className={cn(
+                      'flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-center cursor-pointer',
+                      activeTab === 'keuangan'
+                        ? 'bg-white dark:bg-gray-800 shadow-sm text-[#2563EB] dark:text-blue-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    )}
+                  >
+                    Keuangan
+                  </button>
                 )}
-              >
-                Keuangan
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('absensi')}
-                className={cn(
-                  'flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-center cursor-pointer',
-                  activeTab === 'absensi'
-                    ? 'bg-white dark:bg-gray-800 shadow-sm text-[#2563EB] dark:text-blue-400'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                {canAccessAttendance && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('absensi')}
+                    className={cn(
+                      'flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-center cursor-pointer',
+                      activeTab === 'absensi'
+                        ? 'bg-white dark:bg-gray-800 shadow-sm text-[#2563EB] dark:text-blue-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    )}
+                  >
+                    Absensi
+                  </button>
                 )}
-              >
-                Absensi
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('tugas')}
-                className={cn(
-                  'flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-center cursor-pointer',
-                  activeTab === 'tugas'
-                    ? 'bg-white dark:bg-gray-800 shadow-sm text-[#2563EB] dark:text-blue-400'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                {canAccessTodo && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('tugas')}
+                    className={cn(
+                      'flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-center cursor-pointer',
+                      activeTab === 'tugas'
+                        ? 'bg-white dark:bg-gray-800 shadow-sm text-[#2563EB] dark:text-blue-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    )}
+                  >
+                    Tugas
+                  </button>
                 )}
-              >
-                Tugas
-              </button>
-            </div>
+              </div>
 
             {/* Inner Content Box (Dynamic Item Display) */}
             <div className="rounded-2xl border border-gray-400/40 dark:border-gray-600 bg-white/50 dark:bg-gray-900/30 p-4 min-h-[170px] flex flex-col justify-between">
@@ -466,6 +514,7 @@ export function DashboardPage() {
               )}
             </div>
           </div>
+        )}
         </>
       )}
     </div>

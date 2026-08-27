@@ -8,6 +8,8 @@ vi.mock('@/lib/auth', () => ({
     user: { id: 'user-1', email: 'test@worksphere.id' },
     isAuthenticated: true,
   }),
+  useIsAdmin: () => true,
+  usePermissions: () => ({ attendance: true, finance: true, todo: true }),
 }))
 
 vi.mock('@/hooks/useNetworkStatus', () => ({

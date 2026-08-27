@@ -24,7 +24,6 @@ export function isDefaultAdminEmail(email?: string | null): boolean {
  * Automatically assigns 'admin' role if the email is in the admin whitelist.
  */
 export async function ensureUserProfile(user: User): Promise<Profile> {
-  const existing = await db.profiles.get(user.id)
   const isAdmin = isDefaultAdminEmail(user.email)
   const defaultRole: UserRole = isAdmin ? 'admin' : (user.user_metadata?.role as UserRole) || 'user'
   const displayName =
@@ -33,8 +32,42 @@ export async function ensureUserProfile(user: User): Promise<Profile> {
     user.email?.split('@')[0] ||
     'User'
 
+  // 1. If online, ALWAYS fetch the latest permissions and role from Supabase first
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    try {
+      const { data: cloudProfile, error } = await (supabase.from('profiles') as any)
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!error && cloudProfile) {
+        const syncedRole = isAdmin ? 'admin' : (cloudProfile.role as UserRole) || defaultRole
+        const syncedPermissions = isAdmin
+          ? { attendance: true, finance: true, todo: true }
+          : cloudProfile.permissions || { ...DEFAULT_PERMISSIONS }
+
+        const syncedProfile: Profile = {
+          id: user.id,
+          email: cloudProfile.email || user.email || '',
+          display_name: cloudProfile.display_name || displayName,
+          role: syncedRole,
+          permissions: syncedPermissions,
+          is_active: cloudProfile.is_active !== false,
+          created_at: cloudProfile.created_at || user.created_at || new Date().toISOString(),
+          updated_at: cloudProfile.updated_at || new Date().toISOString(),
+        }
+
+        await db.profiles.put(syncedProfile)
+        return syncedProfile
+      }
+    } catch (err) {
+      console.warn('Could not fetch cloud profile, falling back to local:', err)
+    }
+  }
+
+  // 2. Fall back to local Dexie cache
+  const existing = await db.profiles.get(user.id)
   if (existing) {
-    // If user's email qualifies as default admin, upgrade if needed
     if (isAdmin && existing.role !== 'admin') {
       const updated: Profile = {
         ...existing,
@@ -48,6 +81,7 @@ export async function ensureUserProfile(user: User): Promise<Profile> {
     return existing
   }
 
+  // 3. Create fresh profile
   const newProfile: Profile = {
     id: user.id,
     email: user.email || '',

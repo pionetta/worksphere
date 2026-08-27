@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { UserCheck, TrendingUp, TrendingDown, ArrowLeftRight, ListTodo } from 'lucide-react'
+import { usePermissions, useIsAdmin } from '@/lib/auth'
 import { cn } from '@/utils/cn'
 
 export type QuickActionType = 'attendance' | 'income' | 'expense' | 'transfer' | 'task'
@@ -57,8 +58,19 @@ interface QuickActionMenuProps {
 }
 
 export function QuickActionMenu({ open, onSelect, onClose }: QuickActionMenuProps) {
+  const permissions = usePermissions()
+  const isAdmin = useIsAdmin()
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const availableActions = quickActions.filter(action => {
+    if (isAdmin) return true
+    if (action.type === 'attendance') return permissions.attendance
+    if (action.type === 'income' || action.type === 'expense' || action.type === 'transfer')
+      return permissions.finance
+    if (action.type === 'task') return permissions.todo
+    return true
+  })
 
   useEffect(() => {
     if (open) {
@@ -139,7 +151,7 @@ export function QuickActionMenu({ open, onSelect, onClose }: QuickActionMenuProp
           'flex flex-col gap-2 items-end'
         )}
       >
-        {quickActions.map((action, index) => (
+        {availableActions.map((action, index) => (
           <button
             key={action.type}
             role="menuitem"
