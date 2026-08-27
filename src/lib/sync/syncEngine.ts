@@ -448,19 +448,37 @@ export async function pullCloudData(userId: string): Promise<void> {
 export function subscribeToUserRealtime(userId: string): () => void {
   if (typeof window === 'undefined' || !userId) return () => {}
 
-  const channel = supabase
-    .channel(`user-live-sync-${userId}`)
-    .on(
+  const tables = [
+    'tasks',
+    'subtasks',
+    'wallets',
+    'categories',
+    'transactions',
+    'budgets',
+    'savings_goals',
+    'debts',
+    'members',
+    'attendance',
+  ]
+
+  let channel = supabase.channel(`user-sync-all-${userId}`)
+
+  for (const table of tables) {
+    channel = channel.on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
-        filter: `user_id=eq.${userId}`,
+        table,
       },
       async payload => {
         try {
+          const record = (payload.new || payload.old) as any
+          if (record && record.user_id && record.user_id !== userId) {
+            return
+          }
+
           const { db } = await import('@/lib/db')
-          const table = payload.table
           const targetDexieKey = (table in db ? table : null) as keyof typeof db | null
 
           if (targetDexieKey && (db as any)[targetDexieKey]) {
@@ -485,7 +503,9 @@ export function subscribeToUserRealtime(userId: string): () => void {
         }
       }
     )
-    .subscribe()
+  }
+
+  channel.subscribe()
 
   return () => {
     supabase.removeChannel(channel)

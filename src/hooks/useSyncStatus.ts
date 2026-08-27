@@ -156,11 +156,16 @@ export function useSyncStatus(userId: string | null): SyncState {
     return () => clearTimeout(timer)
   }, [userId, pendingCount, doSync])
 
-  // Check pending count periodically (to update UI)
+  // Check pending count and pull latest data periodically (every 3 seconds when online)
   useEffect(() => {
     if (!userId) return
 
-    const interval = setInterval(updatePendingCount, 5000)
+    const interval = setInterval(() => {
+      updatePendingCount()
+      if (isOnline() && !syncInProgressRef.current) {
+        pullCloudData(userId)
+      }
+    }, 3000)
     return () => clearInterval(interval)
   }, [userId, updatePendingCount])
 
