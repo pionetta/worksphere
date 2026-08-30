@@ -92,4 +92,17 @@ describe('BottomSheet', () => {
     )
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-label', 'My Dialog')
   })
+
+  it('should render delete button at top header when onDelete is provided', () => {
+    const onDelete = vi.fn()
+    render(
+      <BottomSheet open={true} onClose={vi.fn()} title="My Dialog" onDelete={onDelete} deleteLabel="Hapus Data">
+        <div>Content</div>
+      </BottomSheet>
+    )
+    const deleteBtn = screen.getByRole('button', { name: 'Hapus Data' })
+    expect(deleteBtn).toBeInTheDocument()
+    fireEvent.click(deleteBtn)
+    expect(onDelete).toHaveBeenCalledTimes(1)
+  })
 })

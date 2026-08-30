@@ -80,8 +80,8 @@ describe('Data Security & Multi-Tenant Isolation Suite', () => {
     })
 
     it('strictly isolates habits and streak logs', async () => {
-      const habitIdAlpha = await habitService.createHabit(userAlpha, { title: 'Meditasi Alpha', target_days_per_week: 7 })
-      const habitIdBeta = await habitService.createHabit(userBeta, { title: 'Coding Beta', target_days_per_week: 5 })
+      const habitIdAlpha = await habitService.createHabit(userAlpha, { title: 'Meditasi Alpha', frequency: 'daily' })
+      const habitIdBeta = await habitService.createHabit(userBeta, { title: 'Coding Beta', frequency: 'weekly' })
 
       const alphaHabits = await habitService.listHabits(userAlpha)
       const betaHabits = await habitService.listHabits(userBeta)

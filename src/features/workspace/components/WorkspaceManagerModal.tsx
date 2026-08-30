@@ -97,7 +97,19 @@ export function WorkspaceManagerModal({
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={isCreating ? 'Buat Workspace Tim Baru' : `Kelola Workspace: ${workspace?.name || ''}`}
+      title={isCreating ? 'Buat Workspace Tim Baru' : `Kelola: ${workspace?.name || ''}`}
+      onDelete={
+        !isCreating && onDeleteWorkspace && workspace
+          ? async () => {
+              if (confirm(`Apakah Anda yakin ingin menghapus workspace "${workspace.name}"?`)) {
+                await onDeleteWorkspace()
+                toast.success('Workspace berhasil dihapus')
+                onClose()
+              }
+            }
+          : undefined
+      }
+      deleteLabel="Hapus Workspace"
     >
       <div className="space-y-4 py-2 pb-6 max-h-[75vh] overflow-y-auto">
         {/* Workspace Form (Name & Description) */}
@@ -280,24 +292,6 @@ export function WorkspaceManagerModal({
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Delete Workspace Button */}
-            <div className="pt-2">
-              <Button
-                type="button"
-                variant="danger"
-                className="w-full text-xs"
-                onClick={async () => {
-                  if (confirm(`Apakah Anda yakin ingin menghapus workspace "${workspace.name}"?`)) {
-                    await onDeleteWorkspace?.()
-                    toast.success('Workspace berhasil dihapus')
-                    onClose()
-                  }
-                }}
-              >
-                Hapus Workspace Ini
-              </Button>
             </div>
           </>
         )}

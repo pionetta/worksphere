@@ -9,7 +9,6 @@ import {
   ArrowLeftRight,
   Settings2,
   Pencil,
-  Trash2,
 } from 'lucide-react'
 import type { Transaction } from '@/types'
 
@@ -88,7 +87,20 @@ export function TransactionDetail({
   const isPositive = transaction.type === 'income' || transaction.type === 'transfer_in'
 
   return (
-    <BottomSheet open={!!transaction} onClose={onClose} title="Detail Transaksi">
+    <BottomSheet
+      open={!!transaction}
+      onClose={onClose}
+      title="Detail Transaksi"
+      onDelete={
+        onDelete
+          ? () => {
+              onClose()
+              onDelete(transaction.id)
+            }
+          : undefined
+      }
+      deleteLabel="Hapus"
+    >
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <div
@@ -113,34 +125,19 @@ export function TransactionDetail({
           <DetailRow label="ID Transaksi" value={transaction.id.slice(0, 8) + '...'} />
         </div>
 
-        {(onEdit || onDelete) && (
-          <div className="flex gap-2 pt-2">
-            {onEdit && isEditable && (
-              <Button
-                variant="secondary"
-                className="flex-1"
-                icon={<Pencil className="w-4 h-4" />}
-                onClick={() => {
-                  onClose()
-                  onEdit(transaction)
-                }}
-              >
-                Edit
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                variant="danger"
-                className="flex-1"
-                icon={<Trash2 className="w-4 h-4" />}
-                onClick={() => {
-                  onClose()
-                  onDelete(transaction.id)
-                }}
-              >
-                Hapus
-              </Button>
-            )}
+        {onEdit && isEditable && (
+          <div className="pt-2">
+            <Button
+              variant="secondary"
+              className="w-full"
+              icon={<Pencil className="w-4 h-4" />}
+              onClick={() => {
+                onClose()
+                onEdit(transaction)
+              }}
+            >
+              Edit Transaksi
+            </Button>
           </div>
         )}
       </div>

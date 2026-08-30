@@ -886,6 +886,8 @@ export function TodoPage() {
         open={showDetail && !!selectedTask}
         onClose={handleCloseDetail}
         title="Detail Tugas"
+        onDelete={() => setShowDeleteConfirm(true)}
+        deleteLabel="Hapus Tugas"
       >
         {selectedTask && (
           <div className="space-y-4 pb-2">
@@ -944,10 +946,6 @@ export function TodoPage() {
                 }}
               />
             </div>
-
-            <Button variant="danger" className="w-full" onClick={() => setShowDeleteConfirm(true)}>
-              Hapus Tugas
-            </Button>
           </div>
         )}
       </BottomSheet>
