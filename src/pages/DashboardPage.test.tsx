@@ -63,7 +63,7 @@ describe('DashboardPage', () => {
       </MemoryRouter>
     )
     expect(screen.getByText('Absensi Hari Ini')).toBeInTheDocument()
-    expect(screen.getByText('Keuangan')).toBeInTheDocument()
+    expect(screen.getAllByText(/Keuangan/).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('To-Do')).toBeInTheDocument()
   })
 
@@ -99,7 +99,7 @@ describe('DashboardPage', () => {
       </MemoryRouter>
     )
     expect(screen.getByText('Absensi Hari Ini')).toBeInTheDocument()
-    expect(screen.getByText('Hadir')).toBeInTheDocument()
+    expect(screen.getAllByText('Hadir').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1)
   })
 
@@ -109,7 +109,7 @@ describe('DashboardPage', () => {
         <DashboardPage />
       </MemoryRouter>
     )
-    expect(screen.getByText('Keuangan')).toBeInTheDocument()
+    expect(screen.getAllByText(/Keuangan/).length).toBeGreaterThanOrEqual(1)
   })
 
   it('should render todo summary card with stats', () => {

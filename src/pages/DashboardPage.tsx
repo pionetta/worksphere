@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth, usePermissions, useIsAdmin } from '@/lib/auth'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -23,6 +23,8 @@ import {
   Clock,
   SlidersHorizontal,
   CheckSquare,
+  Users,
+  ListTodo,
 } from 'lucide-react'
 
 function getGreeting(): string {
@@ -60,16 +62,6 @@ export function DashboardPage() {
   const canAccessAttendance = isAdmin || permissions.attendance
   const canAccessTodo = isAdmin || permissions.todo
 
-  const [activeTab, setActiveTab] = useState<'keuangan' | 'absensi' | 'tugas'>('keuangan')
-
-  useEffect(() => {
-    if (!canAccessFinance && canAccessAttendance) {
-      setActiveTab('absensi')
-    } else if (!canAccessFinance && !canAccessAttendance && canAccessTodo) {
-      setActiveTab('tugas')
-    }
-  }, [canAccessFinance, canAccessAttendance, canAccessTodo])
-
   const displayName =
     user?.user_metadata?.full_name ||
     user?.user_metadata?.username ||
@@ -80,7 +72,6 @@ export function DashboardPage() {
   const netIncomeSign = netIncome >= 0 ? '+' : '-'
   const netIncomeDisplay = `${netIncomeSign}Rp ${formatAmount(Math.abs(netIncome))}`
 
-  const recentTransactions = data?.finance?.recentTransactions || []
   const memberRoster = data?.attendance?.members || []
   const taskList = data?.todo?.tasks || []
 
@@ -124,7 +115,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => setShowCalendarModal(true)}
-            className="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 transition-colors shadow-2xs"
+            className="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 transition-colors shadow-2xs cursor-pointer"
             title="Buka Kalender Terpadu"
           >
             <Calendar className="w-4 h-4" />
@@ -132,7 +123,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => setShowCustomizer(true)}
-            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-gray-700/60 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors shadow-2xs"
+            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-gray-700/60 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors shadow-2xs cursor-pointer"
             title="Atur Tata Letak Widget Dashboard"
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -177,7 +168,7 @@ export function DashboardPage() {
                           <div className="flex items-center gap-2">
                             <Wallet className="w-5 h-5 text-white stroke-[2.2]" />
                             <span className="text-xs sm:text-sm font-medium tracking-wide">
-                              Total Saldo Kas
+                              Keuangan • Total Saldo Kas
                             </span>
                           </div>
                           <ChevronRight className="w-4 h-4 text-white/70 group-hover:translate-x-1.5 transition-transform duration-200" />
@@ -223,333 +214,89 @@ export function DashboardPage() {
                 )
               }
 
-              // 2. Quick Actions & 2-Col Cards
+              // 2. Quick Actions 2-Column Shortcuts (Absensi & To-Do)
               if (widget.id === 'quick_actions') {
                 return (
-                  <div key={widget.id} className="space-y-3.5">
-                    <div className="grid grid-cols-2 gap-3.5 animate-fade-in-up animation-delay-100">
-                      {/* Absensi Card */}
-                      {canAccessAttendance ? (
-                        <Link
-                          to="/app/attendance"
-                          className="rounded-[22px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-blue-400/50 dark:hover:border-blue-500/50 border border-white/60 dark:border-gray-700/50 backdrop-blur-md transition-all duration-200 active:scale-[0.98] group flex flex-col justify-between cursor-pointer space-y-2"
-                        >
-                          <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
-                            <span>Absensi Hari Ini</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-500 transition-all duration-200" />
-                          </div>
-                          <div>
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                                {data.attendance.present}
-                              </span>
-                              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                                /{data.attendance.totalMembers}
-                              </span>
-                              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 ml-0.5">
-                                Hadir
-                              </span>
-                            </div>
-                            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
-                              {data.attendance.totalMembers === 0
-                                ? 'Belum ada anggota'
-                                : data.attendance.unrecorded > 0
-                                ? `${data.attendance.unrecorded} belum absen`
-                                : 'Semua tercatat'}
-                            </div>
-                          </div>
-                        </Link>
-                      ) : (
-                        <div className="rounded-[22px] bg-gray-100/70 dark:bg-gray-800/40 p-4 sm:p-5 border border-dashed border-gray-300 dark:border-gray-700 flex flex-col justify-between space-y-2 opacity-60">
-                          <div className="flex items-center justify-between text-xs font-bold text-gray-400">
-                            <span>Absensi</span>
-                            <Lock className="w-3.5 h-3.5 text-gray-400" />
-                          </div>
-                          <div className="text-xs text-gray-400">Akses dibatasi</div>
+                  <div key={widget.id} className="grid grid-cols-2 gap-3.5 animate-fade-in-up">
+                    {/* Absensi Card */}
+                    {canAccessAttendance ? (
+                      <Link
+                        to="/app/attendance"
+                        className="rounded-[22px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-blue-400/50 dark:hover:border-blue-500/50 border border-white/60 dark:border-gray-700/50 backdrop-blur-md transition-all duration-200 active:scale-[0.98] group flex flex-col justify-between cursor-pointer space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
+                          <span>Absensi Hari Ini</span>
+                          <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-500 transition-all duration-200" />
                         </div>
-                      )}
-
-                      {/* To-Do Card */}
-                      {canAccessTodo ? (
-                        <Link
-                          to="/app/todo"
-                          className="rounded-[22px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-blue-400/50 dark:hover:border-blue-500/50 border border-white/60 dark:border-gray-700/50 backdrop-blur-md transition-all duration-200 active:scale-[0.98] group flex flex-col justify-between cursor-pointer space-y-2"
-                        >
-                          <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
-                            <span>To-Do</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-500 transition-all duration-200" />
+                        <div>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                              {data.attendance.present}
+                            </span>
+                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                              /{data.attendance.totalMembers}
+                            </span>
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 ml-0.5">
+                              Hadir
+                            </span>
                           </div>
-                          <div>
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                                {data.todo.completed}
-                              </span>
-                              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                                /{data.todo.total}
-                              </span>
-                              <span className="text-xs font-bold text-[#2563EB] dark:text-blue-400 ml-0.5">
-                                Selesai
-                              </span>
-                            </div>
-                            <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
-                              {data.todo.total === 0
-                                ? 'Belum ada tugas'
-                                : data.todo.overdue > 0
-                                ? `${data.todo.overdue} tugas terlambat`
-                                : `${data.todo.todo + data.todo.inProgress} tugas aktif`}
-                            </div>
+                          <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
+                            {data.attendance.totalMembers === 0
+                              ? 'Belum ada anggota'
+                              : data.attendance.unrecorded > 0
+                              ? `${data.attendance.unrecorded} belum absen`
+                              : 'Semua tercatat'}
                           </div>
-                        </Link>
-                      ) : (
-                        <div className="rounded-[22px] bg-gray-100/70 dark:bg-gray-800/40 p-4 sm:p-5 border border-dashed border-gray-300 dark:border-gray-700 flex flex-col justify-between space-y-2 opacity-60">
-                          <div className="flex items-center justify-between text-xs font-bold text-gray-400">
-                            <span>To-Do</span>
-                            <Lock className="w-3.5 h-3.5 text-gray-400" />
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="rounded-[22px] bg-gray-100/70 dark:bg-gray-800/40 p-4 sm:p-5 border border-dashed border-gray-300 dark:border-gray-700 flex flex-col justify-between space-y-2 opacity-60">
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-400">
+                          <span>Absensi</span>
+                          <Lock className="w-3.5 h-3.5 text-gray-400" />
+                        </div>
+                        <div className="text-xs text-gray-400">Akses dibatasi</div>
+                      </div>
+                    )}
+
+                    {/* To-Do Card */}
+                    {canAccessTodo ? (
+                      <Link
+                        to="/app/todo"
+                        className="rounded-[22px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-blue-400/50 dark:hover:border-blue-500/50 border border-white/60 dark:border-gray-700/50 backdrop-blur-md transition-all duration-200 active:scale-[0.98] group flex flex-col justify-between cursor-pointer space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-500 dark:text-gray-400">
+                          <span>To-Do</span>
+                          <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-500 transition-all duration-200" />
+                        </div>
+                        <div>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                              {data.todo.completed}
+                            </span>
+                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                              /{data.todo.total}
+                            </span>
+                            <span className="text-xs font-bold text-[#2563EB] dark:text-blue-400 ml-0.5">
+                              Selesai
+                            </span>
                           </div>
-                          <div className="text-xs text-gray-400">Akses dibatasi</div>
+                          <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-1 truncate">
+                            {data.todo.total === 0
+                              ? 'Belum ada tugas'
+                              : data.todo.overdue > 0
+                              ? `${data.todo.overdue} tugas terlambat`
+                              : `${data.todo.todo + data.todo.inProgress} tugas aktif`}
+                          </div>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Segmented Details */}
-                    {(canAccessFinance || canAccessAttendance || canAccessTodo) && (
-                      <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 p-4 sm:p-5 shadow-sm border border-white/60 dark:border-gray-700/50 backdrop-blur-md space-y-3.5 animate-fade-in-up animation-delay-200">
-                        <div className="rounded-2xl border border-gray-400/40 dark:border-gray-600 p-1 flex items-center bg-gray-100/60 dark:bg-gray-900/40">
-                          {canAccessFinance && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveTab('keuangan')}
-                              className={cn(
-                                'flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-center cursor-pointer',
-                                activeTab === 'keuangan'
-                                  ? 'bg-white dark:bg-gray-800 shadow-sm text-[#2563EB] dark:text-blue-400'
-                                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                              )}
-                            >
-                              Keuangan
-                            </button>
-                          )}
-                          {canAccessAttendance && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveTab('absensi')}
-                              className={cn(
-                                'flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-center cursor-pointer',
-                                activeTab === 'absensi'
-                                  ? 'bg-white dark:bg-gray-800 shadow-sm text-[#2563EB] dark:text-blue-400'
-                                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                              )}
-                            >
-                              Absensi
-                            </button>
-                          )}
-                          {canAccessTodo && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveTab('tugas')}
-                              className={cn(
-                                'flex-1 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-center cursor-pointer',
-                                activeTab === 'tugas'
-                                  ? 'bg-white dark:bg-gray-800 shadow-sm text-[#2563EB] dark:text-blue-400'
-                                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                              )}
-                            >
-                              Tugas
-                            </button>
-                          )}
+                      </Link>
+                    ) : (
+                      <div className="rounded-[22px] bg-gray-100/70 dark:bg-gray-800/40 p-4 sm:p-5 border border-dashed border-gray-300 dark:border-gray-700 flex flex-col justify-between space-y-2 opacity-60">
+                        <div className="flex items-center justify-between text-xs font-bold text-gray-400">
+                          <span>To-Do</span>
+                          <Lock className="w-3.5 h-3.5 text-gray-400" />
                         </div>
-
-                        <div className="rounded-2xl border border-gray-400/40 dark:border-gray-600 bg-white/50 dark:bg-gray-900/30 p-4 min-h-[170px] flex flex-col justify-between">
-                          {activeTab === 'keuangan' && (
-                            <div className="space-y-2.5">
-                              <div className="flex items-center justify-between pb-1.5 border-b border-gray-200/60 dark:border-gray-700/60">
-                                <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                  Transaksi Terbaru
-                                </span>
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                                  {data.finance.walletCount} Dompet Aktif
-                                </span>
-                              </div>
-
-                              {recentTransactions.length === 0 ? (
-                                <div className="text-center py-6 text-xs text-gray-500 dark:text-gray-400">
-                                  Belum ada transaksi bulan ini.
-                                </div>
-                              ) : (
-                                <div className="space-y-2">
-                                  {recentTransactions.slice(0, 3).map((tx) => (
-                                    <div
-                                      key={tx.id}
-                                      className="flex items-center justify-between text-xs py-1 border-b border-gray-100 dark:border-gray-800/40 last:border-0"
-                                    >
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <div
-                                          className={cn(
-                                            'w-7 h-7 rounded-lg flex items-center justify-center shrink-0',
-                                            tx.type === 'income'
-                                              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                              : 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400'
-                                          )}
-                                        >
-                                          {tx.type === 'income' ? '+' : '-'}
-                                        </div>
-                                        <div className="min-w-0">
-                                          <div className="font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[150px]">
-                                            {tx.note || (tx.type === 'income' ? 'Pemasukan' : 'Pengeluaran')}
-                                          </div>
-                                          <div className="text-[10px] text-gray-400">
-                                            {tx.transaction_date}
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div
-                                        className={cn(
-                                          'font-bold',
-                                          tx.type === 'income'
-                                            ? 'text-emerald-600 dark:text-emerald-400'
-                                            : 'text-rose-600 dark:text-rose-400'
-                                        )}
-                                      >
-                                        {tx.type === 'income' ? '+' : '-'}
-                                        {formatCurrency(tx.amount)}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              <Link
-                                to="/app/finance"
-                                className="pt-1 text-xs font-semibold text-[#2563EB] dark:text-blue-400 flex items-center justify-center gap-1 hover:underline cursor-pointer"
-                              >
-                                Lihat Semua Transaksi <ChevronRight className="w-3.5 h-3.5" />
-                              </Link>
-                            </div>
-                          )}
-
-                          {activeTab === 'absensi' && (
-                            <div className="space-y-2.5">
-                              <div className="flex items-center justify-between pb-1.5 border-b border-gray-200/60 dark:border-gray-700/60">
-                                <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                  Rekap Presensi
-                                </span>
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                                  {data.attendance.totalMembers} Anggota
-                                </span>
-                              </div>
-
-                              <div className="grid grid-cols-4 gap-1.5 text-center py-1">
-                                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40">
-                                  <div className="text-[10px] font-bold text-emerald-600">Hadir</div>
-                                  <div className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">
-                                    {data.attendance.present}
-                                  </div>
-                                </div>
-                                <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40">
-                                  <div className="text-[10px] font-bold text-rose-600">Absen</div>
-                                  <div className="text-sm font-extrabold text-rose-700 dark:text-rose-300">
-                                    {data.attendance.absent}
-                                  </div>
-                                </div>
-                                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40">
-                                  <div className="text-[10px] font-bold text-amber-600">Libur</div>
-                                  <div className="text-sm font-extrabold text-amber-700 dark:text-amber-300">
-                                    {data.attendance.holiday}
-                                  </div>
-                                </div>
-                                <div className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700">
-                                  <div className="text-[10px] font-bold text-gray-600 dark:text-gray-400">Belum</div>
-                                  <div className="text-sm font-extrabold text-gray-700 dark:text-gray-300">
-                                    {data.attendance.unrecorded}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {memberRoster.length > 0 && (
-                                <div className="space-y-1.5 pt-1">
-                                  {memberRoster.slice(0, 3).map(m => (
-                                    <div
-                                      key={m.id}
-                                      className="flex items-center justify-between text-xs py-1 px-2 rounded-md bg-white/70 dark:bg-gray-800/60"
-                                    >
-                                      <span className="font-medium text-gray-800 dark:text-gray-200 truncate">
-                                        {m.name}
-                                      </span>
-                                      <span className="text-[10px] font-bold text-gray-500">
-                                        {m.status === 'present' ? 'Hadir' : m.status === 'absent' ? 'Absen' : m.status === 'holiday' ? 'Libur' : 'Belum'}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              <Link
-                                to="/app/attendance"
-                                className="pt-1 text-xs font-semibold text-[#2563EB] dark:text-blue-400 flex items-center justify-center gap-1 hover:underline cursor-pointer"
-                              >
-                                Buka Lembar & Rekap Absensi <ChevronRight className="w-3.5 h-3.5" />
-                              </Link>
-                            </div>
-                          )}
-
-                          {activeTab === 'tugas' && (
-                            <div className="space-y-2.5">
-                              <div className="flex items-center justify-between pb-1.5 border-b border-gray-200/60 dark:border-gray-700/60">
-                                <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                  Daftar Tugas Aktif
-                                </span>
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                                  {data.todo.total} Total
-                                </span>
-                              </div>
-
-                              {taskList.length === 0 ? (
-                                <div className="text-center py-6 text-xs text-gray-500 dark:text-gray-400">
-                                  Belum ada tugas aktif.
-                                </div>
-                              ) : (
-                                <div className="space-y-1.5">
-                                  {taskList.map((task) => (
-                                    <div
-                                      key={task.id}
-                                      className="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-white/70 dark:bg-gray-800/60 border border-gray-200/40 dark:border-gray-700/40"
-                                    >
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <CheckSquare className="w-4 h-4 text-primary-500 shrink-0" />
-                                        <span className="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[170px]">
-                                          {task.title}
-                                        </span>
-                                      </div>
-                                      <span
-                                        className={cn(
-                                          'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2',
-                                          task.priority === 'high'
-                                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
-                                            : task.priority === 'medium'
-                                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
-                                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                                        )}
-                                      >
-                                        {task.priority === 'high'
-                                          ? 'Tinggi'
-                                          : task.priority === 'medium'
-                                          ? 'Sedang'
-                                          : 'Rendah'}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              <Link
-                                to="/app/todo"
-                                className="pt-1 text-xs font-semibold text-[#2563EB] dark:text-blue-400 flex items-center justify-center gap-1 hover:underline cursor-pointer"
-                              >
-                                Kelola Semua Tugas To-Do <ChevronRight className="w-3.5 h-3.5" />
-                              </Link>
-                            </div>
-                          )}
-                        </div>
+                        <div className="text-xs text-gray-400">Akses dibatasi</div>
                       </div>
                     )}
                   </div>
@@ -627,7 +374,164 @@ export function DashboardPage() {
                 )
               }
 
-              // 4. Recurring Bills Widget
+              // 4. To-Do Priority & Active Tasks Widget
+              if (widget.id === 'todo_summary') {
+                return (
+                  <div
+                    key={widget.id}
+                    className="p-4 sm:p-5 rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 shadow-sm backdrop-blur-md space-y-3 animate-fade-in-up"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 flex items-center justify-center">
+                          <ListTodo className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
+                          Tugas Prioritas (To-Do)
+                        </h4>
+                      </div>
+                      <Link
+                        to="/app/todo"
+                        className="text-xs text-[#2563EB] dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                      >
+                        Semua ({data.todo.total}) &rarr;
+                      </Link>
+                    </div>
+
+                    {taskList.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-gray-500 dark:text-gray-400">
+                        Belum ada tugas aktif.{' '}
+                        <Link to="/app/todo" className="text-blue-600 font-bold hover:underline">
+                          Buat Tugas
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {taskList.map(task => (
+                          <div
+                            key={task.id}
+                            className="flex items-center justify-between text-xs py-2 px-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800/60"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                              <CheckSquare className="w-4 h-4 text-primary-500 shrink-0" />
+                              <span className="font-medium text-gray-800 dark:text-gray-200 truncate">
+                                {task.title}
+                              </span>
+                            </div>
+                            <span
+                              className={cn(
+                                'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
+                                task.priority === 'high'
+                                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                  : task.priority === 'medium'
+                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                              )}
+                            >
+                              {task.priority === 'high'
+                                ? 'Tinggi'
+                                : task.priority === 'medium'
+                                ? 'Sedang'
+                                : 'Rendah'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+
+              // 5. Attendance Roster Widget
+              if (widget.id === 'attendance_roster') {
+                return (
+                  <div
+                    key={widget.id}
+                    className="p-4 sm:p-5 rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 shadow-sm backdrop-blur-md space-y-3 animate-fade-in-up"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
+                          Presensi & Kehadiran Anggota
+                        </h4>
+                      </div>
+                      <Link
+                        to="/app/attendance"
+                        className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
+                      >
+                        Buka Rekap &rarr;
+                      </Link>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1.5 text-center py-1">
+                      <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40">
+                        <div className="text-[10px] font-bold text-emerald-600">Hadir</div>
+                        <div className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">
+                          {data.attendance.present}
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/40">
+                        <div className="text-[10px] font-bold text-rose-600">Absen</div>
+                        <div className="text-sm font-extrabold text-rose-700 dark:text-rose-300">
+                          {data.attendance.absent}
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40">
+                        <div className="text-[10px] font-bold text-amber-600">Libur</div>
+                        <div className="text-sm font-extrabold text-amber-700 dark:text-amber-300">
+                          {data.attendance.holiday}
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700">
+                        <div className="text-[10px] font-bold text-gray-600 dark:text-gray-400">Belum</div>
+                        <div className="text-sm font-extrabold text-gray-700 dark:text-gray-300">
+                          {data.attendance.unrecorded}
+                        </div>
+                      </div>
+                    </div>
+
+                    {memberRoster.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        {memberRoster.slice(0, 3).map(m => (
+                          <div
+                            key={m.id}
+                            className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800/60"
+                          >
+                            <span className="font-medium text-gray-800 dark:text-gray-200 truncate">
+                              {m.name}
+                            </span>
+                            <span
+                              className={cn(
+                                'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                                m.status === 'present'
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                  : m.status === 'absent'
+                                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                  : m.status === 'holiday'
+                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                              )}
+                            >
+                              {m.status === 'present'
+                                ? 'Hadir'
+                                : m.status === 'absent'
+                                ? 'Absen'
+                                : m.status === 'holiday'
+                                ? 'Libur'
+                                : 'Belum'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+
+              // 6. Recurring Bills Widget
               if (widget.id === 'recurring_bills') {
                 return (
                   <div
@@ -688,7 +592,7 @@ export function DashboardPage() {
                 )
               }
 
-              // 5. Mini Master Calendar Widget
+              // 7. Mini Master Calendar Widget
               if (widget.id === 'master_calendar_mini') {
                 return (
                   <div

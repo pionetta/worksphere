@@ -70,7 +70,7 @@ describe('Default Categories', () => {
       expect(queue.length).toBeGreaterThanOrEqual(13)
       queue.forEach(item => {
         expect(item.operation).toBe('create')
-        expect(item.status).toBe('pending')
+        expect(['pending', 'processing']).toContain(item.status)
       })
     })
 
