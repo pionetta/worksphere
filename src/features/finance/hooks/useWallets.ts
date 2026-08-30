@@ -7,27 +7,32 @@ export function useWallets(userId: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await walletService.getWalletsWithBalance(userId)
-      setWallets(data)
-    } catch {
-      setError('Gagal memuat data dompet. Silakan coba lagi.')
-    } finally {
-      setLoading(false)
-    }
-  }, [userId])
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!userId) return
+      if (!silent) {
+        setLoading(true)
+      }
+      setError(null)
+      try {
+        const data = await walletService.getWalletsWithBalance(userId)
+        setWallets(data)
+      } catch {
+        setError('Gagal memuat data dompet. Silakan coba lagi.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId]
+  )
 
   useEffect(() => {
-    refresh()
+    refresh(false)
 
     const handleSync = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (!detail || !detail.table || detail.table === 'wallets' || detail.type === 'full-pull') {
-        refresh()
+        refresh(true)
       }
     }
     window.addEventListener('worksphere-data-synced', handleSync)

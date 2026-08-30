@@ -6,24 +6,29 @@ export function useTasks(userId: string | null) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
 
-  const refresh = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    try {
-      const data = await taskService.listTasks(userId)
-      setTasks(data)
-    } finally {
-      setLoading(false)
-    }
-  }, [userId])
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!userId) return
+      if (!silent) {
+        setLoading(true)
+      }
+      try {
+        const data = await taskService.listTasks(userId)
+        setTasks(data)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId]
+  )
 
   useEffect(() => {
-    refresh()
+    refresh(false)
 
     const handleSync = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (!detail || !detail.table || detail.table === 'tasks' || detail.type === 'full-pull') {
-        refresh()
+        refresh(true)
       }
     }
     window.addEventListener('worksphere-data-synced', handleSync)

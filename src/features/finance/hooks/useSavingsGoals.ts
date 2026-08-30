@@ -7,27 +7,32 @@ export function useSavingsGoals(userId: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await savingsService.getSavingsGoals(userId)
-      setGoals(data)
-    } catch {
-      setError('Gagal memuat data tabungan. Silakan coba lagi.')
-    } finally {
-      setLoading(false)
-    }
-  }, [userId])
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!userId) return
+      if (!silent) {
+        setLoading(true)
+      }
+      setError(null)
+      try {
+        const data = await savingsService.getSavingsGoals(userId)
+        setGoals(data)
+      } catch {
+        setError('Gagal memuat data tabungan. Silakan coba lagi.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId]
+  )
 
   useEffect(() => {
-    refresh()
+    refresh(false)
 
     const handleSync = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (!detail || !detail.table || detail.table === 'savings_goals' || detail.type === 'full-pull') {
-        refresh()
+        refresh(true)
       }
     }
     window.addEventListener('worksphere-data-synced', handleSync)

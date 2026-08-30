@@ -14,35 +14,40 @@ export function useJournal(userId: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    if (!userId) {
-      setEntries([])
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const [list, sum] = await Promise.all([
-        journalService.getAllJournalEntries(userId),
-        journalService.getJournalSummary(userId),
-      ])
-      setEntries(list)
-      setSummary(sum)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal memuat catatan & pencapaian')
-    } finally {
-      setLoading(false)
-    }
-  }, [userId])
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!userId) {
+        setEntries([])
+        setLoading(false)
+        return
+      }
+      if (!silent) {
+        setLoading(true)
+      }
+      setError(null)
+      try {
+        const [list, sum] = await Promise.all([
+          journalService.getAllJournalEntries(userId),
+          journalService.getJournalSummary(userId),
+        ])
+        setEntries(list)
+        setSummary(sum)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Gagal memuat catatan & pencapaian')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId]
+  )
 
   useEffect(() => {
-    refresh()
+    refresh(false)
 
     const handleSync = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (!detail || !detail.table || detail.table === 'journal_entries' || detail.type === 'full-pull') {
-        refresh()
+        refresh(true)
       }
     }
     window.addEventListener('worksphere-data-synced', handleSync)

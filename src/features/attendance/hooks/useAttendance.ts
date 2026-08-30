@@ -9,24 +9,29 @@ export function useAttendance(userId: string | null, date: Date) {
 
   const dateStr = toISODate(date)
 
-  const refresh = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    try {
-      const data = await attendanceService.getAttendanceForDate(userId, dateStr)
-      setAttendance(data)
-    } finally {
-      setLoading(false)
-    }
-  }, [userId, dateStr])
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!userId) return
+      if (!silent) {
+        setLoading(true)
+      }
+      try {
+        const data = await attendanceService.getAttendanceForDate(userId, dateStr)
+        setAttendance(data)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId, dateStr]
+  )
 
   useEffect(() => {
-    refresh()
+    refresh(false)
 
     const handleSync = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (!detail || !detail.table || detail.table === 'attendance' || detail.type === 'full-pull') {
-        refresh()
+        refresh(true)
       }
     }
     window.addEventListener('worksphere-data-synced', handleSync)

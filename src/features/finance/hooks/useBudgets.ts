@@ -7,27 +7,32 @@ export function useBudgets(userId: string | null, month: number, year: number) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await budgetService.getBudgetsByMonth(userId, month, year)
-      setBudgets(data)
-    } catch {
-      setError('Gagal memuat data budget. Silakan coba lagi.')
-    } finally {
-      setLoading(false)
-    }
-  }, [userId, month, year])
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!userId) return
+      if (!silent) {
+        setLoading(true)
+      }
+      setError(null)
+      try {
+        const data = await budgetService.getBudgetsByMonth(userId, month, year)
+        setBudgets(data)
+      } catch {
+        setError('Gagal memuat data budget. Silakan coba lagi.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId, month, year]
+  )
 
   useEffect(() => {
-    refresh()
+    refresh(false)
 
     const handleSync = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (!detail || !detail.table || detail.table === 'budgets' || detail.type === 'full-pull') {
-        refresh()
+        refresh(true)
       }
     }
     window.addEventListener('worksphere-data-synced', handleSync)

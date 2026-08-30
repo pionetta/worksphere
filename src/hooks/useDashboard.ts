@@ -59,102 +59,107 @@ export function useDashboard(userId: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    setError(null)
-    try {
-      const today = toISODate(new Date())
-      const now = new Date()
-      const currentMonth = now.getMonth() + 1
-      const currentYear = now.getFullYear()
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!userId) return
+      if (!silent) {
+        setLoading(true)
+      }
+      setError(null)
+      try {
+        const today = toISODate(new Date())
+        const now = new Date()
+        const currentMonth = now.getMonth() + 1
+        const currentYear = now.getFullYear()
 
-      const [financeSummary, wallets, rawTransactions, members, attendance, tasks, allTasks] =
-        await Promise.all([
-          financeSummaryService.getFinanceSummaryByMonth(userId, currentMonth, currentYear),
-          walletBalanceService.getAllWalletBalances(userId),
-          transactionService.getTransactions(userId).catch(() => []),
-          memberService.getAllMembers(userId),
-          attendanceService.getAttendanceForDate(userId, today),
-          taskStatsService.getTaskStats(userId),
-          taskRepo.listTasks(userId).catch(() => []),
-        ])
+        const [financeSummary, wallets, rawTransactions, members, attendance, tasks, allTasks] =
+          await Promise.all([
+            financeSummaryService.getFinanceSummaryByMonth(userId, currentMonth, currentYear),
+            walletBalanceService.getAllWalletBalances(userId),
+            transactionService.getTransactions(userId).catch(() => []),
+            memberService.getAllMembers(userId),
+            attendanceService.getAttendanceForDate(userId, today),
+            taskStatsService.getTaskStats(userId),
+            taskRepo.listTasks(userId).catch(() => []),
+          ])
 
-      const activeMembers = members.filter(m => m.is_active)
-      const activeMemberIds = new Set(activeMembers.map(m => m.id))
-      const totalMembers = activeMembers.length
+        const activeMembers = members.filter(m => m.is_active)
+        const activeMemberIds = new Set(activeMembers.map(m => m.id))
+        const totalMembers = activeMembers.length
 
-      const activeAttendance = attendance.filter(a => activeMemberIds.has(a.member_id))
-      const present = activeAttendance.filter(a => a.status === 'present').length
-      const absent = activeAttendance.filter(a => a.status === 'absent').length
-      const holiday = activeAttendance.filter(a => a.status === 'holiday').length
-      const unrecorded = Math.max(0, totalMembers - activeAttendance.length)
+        const activeAttendance = attendance.filter(a => activeMemberIds.has(a.member_id))
+        const present = activeAttendance.filter(a => a.status === 'present').length
+        const absent = activeAttendance.filter(a => a.status === 'absent').length
+        const holiday = activeAttendance.filter(a => a.status === 'holiday').length
+        const unrecorded = Math.max(0, totalMembers - activeAttendance.length)
 
-      const recentTransactions = [...rawTransactions]
-        .sort(
-          (a, b) =>
-            b.transaction_date.localeCompare(a.transaction_date) ||
-            b.created_at.localeCompare(a.created_at)
-        )
-        .slice(0, 4)
+        const recentTransactions = [...rawTransactions]
+          .sort(
+            (a, b) =>
+              b.transaction_date.localeCompare(a.transaction_date) ||
+              b.created_at.localeCompare(a.created_at)
+          )
+          .slice(0, 4)
 
-      const membersList = activeMembers.slice(0, 5).map(m => {
-        const record = activeAttendance.find(a => a.member_id === m.id)
-        return {
-          id: m.id,
-          name: m.name,
-          status: record?.status || 'unrecorded',
-        }
-      })
+        const membersList = activeMembers.slice(0, 5).map(m => {
+          const record = activeAttendance.find(a => a.member_id === m.id)
+          return {
+            id: m.id,
+            name: m.name,
+            status: record?.status || 'unrecorded',
+          }
+        })
 
-      const activeTaskList = allTasks
-        .filter(t => t.status !== 'completed')
-        .slice(0, 4)
-        .map(t => ({
-          id: t.id,
-          title: t.title,
-          priority: t.priority,
-          due_date: t.due_date,
-          status: t.status,
-        }))
+        const activeTaskList = allTasks
+          .filter(t => t.status !== 'completed')
+          .slice(0, 4)
+          .map(t => ({
+            id: t.id,
+            title: t.title,
+            priority: t.priority,
+            due_date: t.due_date,
+            status: t.status,
+          }))
 
-      setData({
-        finance: {
-          totalBalance: financeSummary.totalBalance,
-          totalIncome: financeSummary.totalIncome,
-          totalExpense: financeSummary.totalExpense,
-          walletCount: wallets.length,
-          recentTransactions,
-        },
-        attendance: {
-          present,
-          absent,
-          holiday,
-          unrecorded: Math.max(0, unrecorded),
-          totalMembers,
-          members: membersList,
-        },
-        todo: {
-          total: tasks.total,
-          todo: tasks.todo,
-          inProgress: tasks.inProgress,
-          completed: tasks.completed,
-          overdue: tasks.overdue,
-          tasks: activeTaskList,
-        },
-      })
-    } catch {
-      setError('Gagal memuat data dashboard. Silakan coba lagi.')
-    } finally {
-      setLoading(false)
-    }
-  }, [userId])
+        setData({
+          finance: {
+            totalBalance: financeSummary.totalBalance,
+            totalIncome: financeSummary.totalIncome,
+            totalExpense: financeSummary.totalExpense,
+            walletCount: wallets.length,
+            recentTransactions,
+          },
+          attendance: {
+            present,
+            absent,
+            holiday,
+            unrecorded: Math.max(0, unrecorded),
+            totalMembers,
+            members: membersList,
+          },
+          todo: {
+            total: tasks.total,
+            todo: tasks.todo,
+            inProgress: tasks.inProgress,
+            completed: tasks.completed,
+            overdue: tasks.overdue,
+            tasks: activeTaskList,
+          },
+        })
+      } catch {
+        setError('Gagal memuat data dashboard. Silakan coba lagi.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId]
+  )
 
   useEffect(() => {
-    refresh()
+    refresh(false)
 
     const handleSync = () => {
-      refresh()
+      refresh(true)
     }
     window.addEventListener('worksphere-data-synced', handleSync)
     return () => window.removeEventListener('worksphere-data-synced', handleSync)

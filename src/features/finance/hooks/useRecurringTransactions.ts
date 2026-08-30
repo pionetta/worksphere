@@ -8,30 +8,35 @@ export function useRecurringTransactions(userId: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    if (!userId) {
-      setRecurringList([])
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      // 1. Process any due items in the background
-      await recurringService.processDueRecurringTransactions(userId)
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!userId) {
+        setRecurringList([])
+        setLoading(false)
+        return
+      }
+      if (!silent) {
+        setLoading(true)
+      }
+      setError(null)
+      try {
+        // 1. Process any due items in the background
+        await recurringService.processDueRecurringTransactions(userId)
 
-      // 2. Fetch fresh list
-      const data = await recurringService.getAllRecurring(userId)
-      setRecurringList(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal memuat transaksi rutin')
-    } finally {
-      setLoading(false)
-    }
-  }, [userId])
+        // 2. Fetch fresh list
+        const data = await recurringService.getAllRecurring(userId)
+        setRecurringList(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Gagal memuat transaksi rutin')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId]
+  )
 
   useEffect(() => {
-    refresh()
+    refresh(false)
 
     const handleSync = (e: Event) => {
       const detail = (e as CustomEvent).detail
@@ -42,7 +47,7 @@ export function useRecurringTransactions(userId: string | null) {
         detail.table === 'transactions' ||
         detail.type === 'full-pull'
       ) {
-        refresh()
+        refresh(true)
       }
     }
     window.addEventListener('worksphere-data-synced', handleSync)

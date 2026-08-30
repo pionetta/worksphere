@@ -17,9 +17,11 @@ export function useDebts(userId: string | null) {
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(
-    async (filters?: { type?: DebtType; status?: DebtStatus }) => {
+    async (filters?: { type?: DebtType; status?: DebtStatus }, silent = false) => {
       if (!userId) return
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      }
       setError(null)
       try {
         const [data, sum] = await Promise.all([
@@ -38,12 +40,12 @@ export function useDebts(userId: string | null) {
   )
 
   useEffect(() => {
-    refresh()
+    refresh(undefined, false)
 
     const handleSync = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (!detail || !detail.table || detail.table === 'debts' || detail.type === 'full-pull') {
-        refresh()
+        refresh(undefined, true)
       }
     }
     window.addEventListener('worksphere-data-synced', handleSync)

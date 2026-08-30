@@ -16,35 +16,40 @@ export function useWishlist(userId: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    if (!userId) {
-      setItems([])
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const [list, sum] = await Promise.all([
-        wishlistService.getAllWishlists(userId),
-        wishlistService.getWishlistSummary(userId),
-      ])
-      setItems(list)
-      setSummary(sum)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal memuat wishlist')
-    } finally {
-      setLoading(false)
-    }
-  }, [userId])
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!userId) {
+        setItems([])
+        setLoading(false)
+        return
+      }
+      if (!silent) {
+        setLoading(true)
+      }
+      setError(null)
+      try {
+        const [list, sum] = await Promise.all([
+          wishlistService.getAllWishlists(userId),
+          wishlistService.getWishlistSummary(userId),
+        ])
+        setItems(list)
+        setSummary(sum)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Gagal memuat wishlist')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId]
+  )
 
   useEffect(() => {
-    refresh()
+    refresh(false)
 
     const handleSync = (e: Event) => {
       const detail = (e as CustomEvent).detail
-      if (!detail || !detail.table || detail.table === 'wishlists' || detail.type === 'full-pull') {
-        refresh()
+      if (!detail || !detail.table || detail.table === 'wishlist' || detail.type === 'full-pull') {
+        refresh(true)
       }
     }
     window.addEventListener('worksphere-data-synced', handleSync)
