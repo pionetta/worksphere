@@ -18,6 +18,18 @@ export interface DebtSummary {
   unpaidReceivableCount: number
 }
 
+export interface DebtGroupSummary {
+  groupName: string
+  totalAmount: number
+  totalPaid: number
+  totalRemaining: number
+  unpaidCount: number
+  paidCount: number
+  totalCount: number
+  debtType: DebtType | 'mixed'
+  items: Debt[]
+}
+
 export async function getDebts(
   userId: string,
   filters?: {
@@ -39,6 +51,7 @@ export async function createDebt(userId: string, input: CreateDebtInput): Promis
     user_id: userId,
     type: data.type,
     person_name: data.person_name,
+    group_name: data.group_name?.trim() || null,
     amount: data.amount,
     paid_amount: 0,
     due_date: data.due_date ?? null,
@@ -71,6 +84,7 @@ export async function updateDebt(id: string, input: UpdateDebtInput): Promise<vo
   return debtRepo.updateDebt(id, {
     ...(data.type !== undefined && { type: data.type }),
     ...(data.person_name !== undefined && { person_name: data.person_name }),
+    ...(data.group_name !== undefined && { group_name: data.group_name?.trim() || null }),
     ...(data.amount !== undefined && { amount: data.amount }),
     ...(data.due_date !== undefined && { due_date: data.due_date ?? null }),
     ...(data.is_installment !== undefined && { is_installment: data.is_installment }),
@@ -140,4 +154,58 @@ export async function getDebtSummary(userId: string): Promise<DebtSummary> {
     unpaidDebtCount,
     unpaidReceivableCount,
   }
+}
+
+/**
+ * Group debts by their designated group_name (e.g. "Shopee Paylater", "Bank BCA", "Teman"),
+ * or fallback to person_name if group_name is not provided.
+ */
+export function groupDebts(debts: Debt[]): DebtGroupSummary[] {
+  const map = new Map<string, DebtGroupSummary>()
+
+  for (const debt of debts) {
+    const groupName = debt.group_name?.trim() || debt.person_name.trim() || 'Lainnya'
+    const remaining = Math.max(0, debt.amount - debt.paid_amount)
+    const isPaid = debt.status === 'paid'
+
+    let current = map.get(groupName)
+    if (!current) {
+      current = {
+        groupName,
+        totalAmount: 0,
+        totalPaid: 0,
+        totalRemaining: 0,
+        unpaidCount: 0,
+        paidCount: 0,
+        totalCount: 0,
+        debtType: debt.type,
+        items: [],
+      }
+      map.set(groupName, current)
+    }
+
+    current.totalAmount += debt.amount
+    current.totalPaid += debt.paid_amount
+    current.totalRemaining += remaining
+    current.totalCount += 1
+    if (isPaid) {
+      current.paidCount += 1
+    } else {
+      current.unpaidCount += 1
+    }
+
+    if (current.debtType !== 'mixed' && current.debtType !== debt.type) {
+      current.debtType = 'mixed'
+    }
+
+    current.items.push(debt)
+  }
+
+  // Convert map to array sorted by total remaining descending, then total amount descending
+  return Array.from(map.values()).sort((a, b) => {
+    if (b.totalRemaining !== a.totalRemaining) {
+      return b.totalRemaining - a.totalRemaining
+    }
+    return b.totalAmount - a.totalAmount
+  })
 }

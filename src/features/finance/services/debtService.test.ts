@@ -142,4 +142,73 @@ describe('debtService', () => {
       expect(summary.unpaidReceivableCount).toBe(1)
     })
   })
+
+  describe('groupDebts', () => {
+    it('should group debts by group_name or person_name and compute correct group totals', () => {
+      const mockDebts = [
+        {
+          id: '1',
+          user_id: 'user-1',
+          type: 'debt' as const,
+          person_name: 'Beli HP',
+          group_name: 'Shopee Paylater',
+          amount: 3000000,
+          paid_amount: 1000000,
+          due_date: '2026-10-10',
+          status: 'partially_paid' as const,
+          note: null,
+          created_at: '2026-08-30T00:00:00Z',
+          updated_at: '2026-08-30T00:00:00Z',
+        },
+        {
+          id: '2',
+          user_id: 'user-1',
+          type: 'debt' as const,
+          person_name: 'Beli Sepatu',
+          group_name: 'Shopee Paylater',
+          amount: 500000,
+          paid_amount: 500000,
+          due_date: '2026-09-10',
+          status: 'paid' as const,
+          note: null,
+          created_at: '2026-08-30T00:00:00Z',
+          updated_at: '2026-08-30T00:00:00Z',
+        },
+        {
+          id: '3',
+          user_id: 'user-1',
+          type: 'debt' as const,
+          person_name: 'BCA KTA',
+          group_name: 'Bank BCA',
+          amount: 10000000,
+          paid_amount: 2000000,
+          due_date: '2026-12-10',
+          status: 'partially_paid' as const,
+          note: null,
+          created_at: '2026-08-30T00:00:00Z',
+          updated_at: '2026-08-30T00:00:00Z',
+        },
+      ]
+
+      const groups = debtService.groupDebts(mockDebts)
+      expect(groups).toHaveLength(2)
+
+      const bcaGroup = groups.find(g => g.groupName === 'Bank BCA')
+      expect(bcaGroup).toBeDefined()
+      expect(bcaGroup?.totalAmount).toBe(10000000)
+      expect(bcaGroup?.totalPaid).toBe(2000000)
+      expect(bcaGroup?.totalRemaining).toBe(8000000)
+      expect(bcaGroup?.totalCount).toBe(1)
+      expect(bcaGroup?.unpaidCount).toBe(1)
+
+      const shopeeGroup = groups.find(g => g.groupName === 'Shopee Paylater')
+      expect(shopeeGroup).toBeDefined()
+      expect(shopeeGroup?.totalAmount).toBe(3500000)
+      expect(shopeeGroup?.totalPaid).toBe(1500000)
+      expect(shopeeGroup?.totalRemaining).toBe(2000000)
+      expect(shopeeGroup?.totalCount).toBe(2)
+      expect(shopeeGroup?.unpaidCount).toBe(1)
+      expect(shopeeGroup?.paidCount).toBe(1)
+    })
+  })
 })

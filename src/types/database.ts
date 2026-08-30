@@ -152,6 +152,7 @@ export interface Debt {
   user_id: string
   type: DebtType
   person_name: string
+  group_name?: string | null
   amount: number // BIGINT
   paid_amount: number // BIGINT
   due_date: string | null // DATE

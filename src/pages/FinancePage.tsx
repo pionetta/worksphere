@@ -27,6 +27,7 @@ import { DebtCard } from '@/features/finance/components/DebtCard'
 import { DebtForm } from '@/features/finance/components/DebtForm'
 import { DebtPaymentModal } from '@/features/finance/components/DebtPaymentModal'
 import { useDebts } from '@/features/finance/hooks/useDebts'
+import { groupDebts } from '@/features/finance/services/debtService'
 import { IncomeExpenseChart } from '@/features/finance/components/IncomeExpenseChart'
 import { ExpenseByCategoryChart } from '@/features/finance/components/ExpenseByCategoryChart'
 import { Card } from '@/components/ui/Card'
@@ -54,6 +55,9 @@ import {
   HandCoins,
   FileDown,
   RefreshCw,
+  Layers,
+  ListFilter,
+  Building2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/utils/currency'
@@ -212,6 +216,9 @@ export function FinancePage() {
       return true
     })
   }, [debtsHook.debts, debtFilterType, debtFilterStatus])
+
+  const [debtViewMode, setDebtViewMode] = useState<'grouped' | 'flat'>('grouped')
+  const debtGroups = useMemo(() => groupDebts(filteredDebts), [filteredDebts])
 
   const [exportLoading, setExportLoading] = useState(false)
 
@@ -1161,7 +1168,10 @@ export function FinancePage() {
             {!showDebtForm && (
               <Button
                 size="sm"
-                onClick={() => setShowDebtForm(true)}
+                onClick={() => {
+                  setEditingDebtId(null)
+                  setShowDebtForm(true)
+                }}
                 icon={<Plus className="w-4 h-4" />}
               >
                 Catat Utang / Piutang
@@ -1171,8 +1181,42 @@ export function FinancePage() {
 
           <DebtSummary summary={debtsHook.summary} />
 
-          {/* Filters (Full Width) */}
+          {/* Filters & View Mode Switcher (Full Width) */}
           <div className="space-y-2 pt-1 w-full">
+            {/* Mode Tampilan: Dikelompokkan per Tempat vs Daftar Semua */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-primary-500" />
+                Tampilan Catatan:
+              </span>
+              <div className="flex items-center p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setDebtViewMode('grouped')}
+                  className={`py-1 px-2.5 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    debtViewMode === 'grouped'
+                      ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <Building2 className="w-3 h-3" />
+                  Per Tempat / Kelompok
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDebtViewMode('flat')}
+                  className={`py-1 px-2.5 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    debtViewMode === 'flat'
+                      ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-xs'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <ListFilter className="w-3 h-3" />
+                  Semua Daftar
+                </button>
+              </div>
+            </div>
+
             {/* Tipe Filter (Semua | Saya Berutang | Piutang) */}
             <div className="w-full grid grid-cols-3 gap-1 p-1 rounded-xl bg-gray-100/90 dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 text-xs shadow-xs">
               <button
@@ -1248,6 +1292,52 @@ export function FinancePage() {
             </div>
           </div>
 
+          {/* Overview Ringkasan per Kelompok / Tempat */}
+          {debtGroups.length > 1 && (
+            <div className="space-y-2 pt-1">
+              <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-primary-500" />
+                Ringkasan Total per Tempat / Kelompok:
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {debtGroups.map(grp => {
+                  const pct = grp.totalAmount > 0 ? Math.min(100, Math.round((grp.totalPaid / grp.totalAmount) * 100)) : 0
+                  return (
+                    <div
+                      key={grp.groupName}
+                      className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200/90 dark:border-gray-700/80 shadow-2xs space-y-1.5 hover:border-primary-300 dark:hover:border-primary-700 transition-all"
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">
+                          {grp.groupName}
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 shrink-0">
+                          {grp.totalCount} item
+                        </span>
+                      </div>
+                      <div className="flex items-baseline justify-between text-xs">
+                        <span className="text-gray-500 dark:text-gray-400 text-[11px]">Sisa Tagihan:</span>
+                        <span className="font-bold text-gray-900 dark:text-gray-100">
+                          {formatCurrency(grp.totalRemaining)}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-primary-500 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-gray-400">
+                        <span>Total: {formatCurrency(grp.totalAmount)}</span>
+                        <span>{pct}% lunas</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {debtsHook.loading ? (
             <LoadingState text="Memuat utang & piutang..." />
           ) : debtsHook.error ? (
@@ -1267,7 +1357,87 @@ export function FinancePage() {
                 </Button>
               }
             />
+          ) : debtViewMode === 'grouped' ? (
+            /* Grouped View */
+            <div className="space-y-5">
+              {debtGroups.map(group => {
+                const groupPct =
+                  group.totalAmount > 0
+                    ? Math.min(100, Math.round((group.totalPaid / group.totalAmount) * 100))
+                    : 0
+                return (
+                  <div
+                    key={group.groupName}
+                    className="p-4 rounded-2xl bg-gray-50/70 dark:bg-gray-850/60 border border-gray-200/80 dark:border-gray-700/70 space-y-3"
+                  >
+                    {/* Header Group */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-gray-200/70 dark:border-gray-700/70">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-xs">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                              {group.groupName}
+                            </h3>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-200/80 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                              {group.totalCount} catatan ({group.unpaidCount} belum lunas)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-xs">
+                          <span className="text-gray-500 dark:text-gray-400">Total Sisa: </span>
+                          <span className="font-bold text-primary-600 dark:text-primary-400">
+                            {formatCurrency(group.totalRemaining)}
+                          </span>
+                          <span className="text-gray-400 text-[11px] ml-1">
+                            / {formatCurrency(group.totalAmount)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar for Group */}
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${groupPct}%` }}
+                      />
+                    </div>
+
+                    {/* Items in this group */}
+                    <div className="space-y-2.5 pt-1">
+                      {group.items.map(debt => (
+                        <DebtCard
+                          key={debt.id}
+                          debt={debt}
+                          onPay={() => setPayingDebt(debt)}
+                          onEdit={() => {
+                            setEditingDebtId(debt.id)
+                            setShowDebtForm(true)
+                          }}
+                          onDelete={() => {
+                            setPendingDelete({
+                              message: `Apakah Anda yakin ingin menghapus catatan utang/piutang dengan "${debt.person_name}"?`,
+                              label: 'Hapus',
+                              onConfirm: async () => {
+                                await debtsHook.removeDebt(debt.id)
+                              },
+                            })
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           ) : (
+            /* Flat List View */
             filteredDebts.map(debt => (
               <DebtCard
                 key={debt.id}
@@ -2058,6 +2228,11 @@ export function FinancePage() {
             initialPersonName={
               editingDebtId
                 ? debtsHook.debts.find(d => d.id === editingDebtId)?.person_name
+                : ''
+            }
+            initialGroupName={
+              editingDebtId
+                ? (debtsHook.debts.find(d => d.id === editingDebtId)?.group_name ?? '')
                 : ''
             }
             initialAmount={

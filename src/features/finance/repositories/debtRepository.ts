@@ -48,10 +48,15 @@ export async function createDebt(
     user_id: data.user_id,
     type: data.type,
     person_name: data.person_name,
+    group_name: data.group_name ?? null,
     amount: data.amount,
     paid_amount: data.paid_amount,
     due_date: data.due_date,
     status: data.status,
+    is_installment: data.is_installment ?? false,
+    installment_count: data.installment_count ?? null,
+    installment_amount: data.installment_amount ?? null,
+    installment_due_day: data.installment_due_day ?? null,
     note: data.note,
     created_at: timestamp,
     updated_at: timestamp,
@@ -63,7 +68,21 @@ export async function createDebt(
 export async function updateDebt(
   id: string,
   data: Partial<
-    Pick<Debt, 'type' | 'person_name' | 'amount' | 'paid_amount' | 'due_date' | 'status' | 'note'>
+    Pick<
+      Debt,
+      | 'type'
+      | 'person_name'
+      | 'group_name'
+      | 'amount'
+      | 'paid_amount'
+      | 'due_date'
+      | 'status'
+      | 'is_installment'
+      | 'installment_count'
+      | 'installment_amount'
+      | 'installment_due_day'
+      | 'note'
+    >
   >
 ): Promise<void> {
   const debt = await db.debts.get(id)

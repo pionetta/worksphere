@@ -5,13 +5,26 @@ import { createDebtSchema } from '@/features/finance/schemas/debtSchema'
 import { DurationPicker } from '@/features/finance/components/DurationPicker'
 import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalculator'
 import { formatCurrency } from '@/utils/currency'
-import { Calculator, Calendar, CreditCard } from 'lucide-react'
+import { Calculator, Calendar, CreditCard, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DebtType } from '@/types'
+
+const GROUP_SUGGESTIONS = [
+  'Shopee Paylater',
+  'GoPay Later',
+  'Kredivo',
+  'Akulaku',
+  'Kartu Kredit',
+  'Bank / KTA',
+  'Keluarga',
+  'Teman / Rekan',
+  'Kantor / Tempat Kerja',
+]
 
 interface DebtFormProps {
   initialType?: DebtType
   initialPersonName?: string
+  initialGroupName?: string | null
   initialAmount?: number
   initialDueDate?: string
   initialNote?: string
@@ -22,6 +35,7 @@ interface DebtFormProps {
   onSubmit: (data: {
     type: DebtType
     person_name: string
+    group_name?: string | null
     amount: number
     due_date?: string | null
     is_installment?: boolean
@@ -37,6 +51,7 @@ interface DebtFormProps {
 export function DebtForm({
   initialType = 'debt',
   initialPersonName = '',
+  initialGroupName = '',
   initialAmount,
   initialDueDate = '',
   initialNote = '',
@@ -50,6 +65,7 @@ export function DebtForm({
 }: DebtFormProps) {
   const [type, setType] = useState<DebtType>(initialType)
   const [personName, setPersonName] = useState(initialPersonName)
+  const [groupName, setGroupName] = useState(initialGroupName || '')
   const [amount, setAmount] = useState(initialAmount ? String(initialAmount) : '')
   const [dueDate, setDueDate] = useState(initialDueDate)
   const [note, setNote] = useState(initialNote)
@@ -100,6 +116,7 @@ export function DebtForm({
     const result = createDebtSchema.safeParse({
       type,
       person_name: personName,
+      group_name: groupName.trim() || null,
       amount: parsedAmount,
       due_date: dueDate || null,
       is_installment: isInstallment,
@@ -128,6 +145,7 @@ export function DebtForm({
       await onSubmit({
         type: result.data.type,
         person_name: result.data.person_name,
+        group_name: result.data.group_name ?? null,
         amount: result.data.amount,
         due_date: result.data.due_date,
         is_installment: result.data.is_installment,
@@ -176,16 +194,48 @@ export function DebtForm({
         </div>
       </div>
 
+      {/* Nama Pihak */}
       <Input
-        label="Nama Pihak / Lembaga"
+        label="Nama Pihak / Judul Catatan"
         value={personName}
         onChange={e => {
           setPersonName(e.target.value)
           if (errors.person_name) setErrors(prev => ({ ...prev, person_name: '' }))
         }}
         error={errors.person_name}
-        placeholder={type === 'debt' ? 'Contoh: Teman, Bank, Pinjol/Paylater (Kredivo, Spaylater)' : 'Nama peminjam'}
+        placeholder={type === 'debt' ? 'Contoh: Beli Laptop, Pinjaman Modal, Budi Santoso' : 'Nama peminjam'}
       />
+
+      {/* Kelompok / Tempat Pinjaman */}
+      <div className="space-y-1.5">
+        <label className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+          <Layers className="w-3.5 h-3.5 text-primary-500" />
+          Kelompok / Tempat Pinjaman (Opsional)
+        </label>
+        <Input
+          value={groupName}
+          onChange={e => setGroupName(e.target.value)}
+          placeholder="Contoh: Shopee Paylater, Bank BCA, Kredivo, Keluarga"
+        />
+        {/* Suggestion Chips */}
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {GROUP_SUGGESTIONS.map(sug => (
+            <button
+              key={sug}
+              type="button"
+              onClick={() => setGroupName(sug)}
+              className={cn(
+                'text-[11px] py-1 px-2.5 rounded-lg border transition-all cursor-pointer',
+                groupName.toLowerCase() === sug.toLowerCase()
+                  ? 'bg-primary-500 text-white border-primary-500 shadow-2xs font-semibold'
+                  : 'bg-gray-50 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+              )}
+            >
+              {sug}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <Input
         label="Nominal Total"

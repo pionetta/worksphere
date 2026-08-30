@@ -16,6 +16,7 @@ export const createDebtSchema = z.object({
     .trim()
     .min(1, 'Nama pihak / orang wajib diisi.')
     .max(100, 'Nama terlalu panjang.'),
+  group_name: z.string().trim().max(100, 'Nama kelompok terlalu panjang.').nullable().optional(),
   amount: z
     .number()
     .int('Nominal harus berupa bilangan bulat.')
@@ -36,6 +37,7 @@ export const updateDebtSchema = z.object({
     .min(1, 'Nama pihak / orang wajib diisi.')
     .max(100, 'Nama terlalu panjang.')
     .optional(),
+  group_name: z.string().trim().max(100, 'Nama kelompok terlalu panjang.').nullable().optional(),
   amount: z
     .number()
     .int('Nominal harus berupa bilangan bulat.')

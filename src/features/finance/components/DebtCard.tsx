@@ -62,6 +62,11 @@ export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
               <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
                 {debt.person_name}
               </p>
+              {debt.group_name && (
+                <span className="text-[10px] font-medium py-0.5 px-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                  {debt.group_name}
+                </span>
+              )}
               <Badge variant={isDebt ? 'danger' : 'success'} className="text-[10px] py-0 px-1.5 whitespace-nowrap shrink-0">
                 {isDebt ? 'Saya Berutang' : 'Piutang'}
               </Badge>
