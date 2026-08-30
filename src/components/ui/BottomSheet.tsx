@@ -91,7 +91,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center animate-fade-in p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={title ?? 'Dialog'}
@@ -99,23 +99,20 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
         if (e.target === overlayRef.current) onClose()
       }}
     >
-      <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-xs" />
+      <div className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-xs" />
       <div
         ref={contentRef}
         tabIndex={-1}
         className={cn(
-          'relative w-full max-w-lg max-h-[90vh] sm:max-h-[85vh] flex flex-col',
-          'bg-white dark:bg-gray-900 rounded-t-[28px] sm:rounded-[28px]',
+          'relative w-full max-w-lg max-h-[88vh] flex flex-col',
+          'bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[28px]',
           'shadow-2xl border border-gray-100 dark:border-gray-800/80 outline-none',
-          'animate-slide-up sm:animate-scale-in',
+          'animate-scale-in',
           className
         )}
       >
-        {/* Mobile handle indicator */}
-        <div className="w-12 h-1.5 rounded-full bg-gray-300 dark:bg-gray-700 mx-auto mt-2.5 sm:hidden shrink-0" />
-
         {title && (
-          <div className="flex items-center justify-between px-5 pt-3.5 pb-3 border-b border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-t-[28px] shrink-0 z-10">
+          <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-t-[24px] sm:rounded-t-[28px] shrink-0 z-10">
             <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100 truncate pr-2">
               {title}
             </h2>
@@ -129,7 +126,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 pb-8 sm:pb-6">{children}</div>
+        <div className="flex-1 overflow-y-auto px-5 py-4 pb-6">{children}</div>
       </div>
     </div>
   )
