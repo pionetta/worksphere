@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/Input'
 import { DurationPicker } from '@/features/finance/components/DurationPicker'
 import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalculator'
 import { formatCurrency } from '@/utils/currency'
-import { Calculator } from 'lucide-react'
+import { Calculator, PiggyBank } from 'lucide-react'
 
 interface SavingsGoalFormProps {
   initialName?: string
@@ -69,6 +69,11 @@ export function SavingsGoalForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3.5">
+      <div className="flex items-center gap-2.5 p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40 text-xs text-emerald-800 dark:text-emerald-300">
+        <PiggyBank className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <span>Pencatatan tabungan dimulai dari <strong>Rp 0</strong> tanpa memotong atau menghitung aset dompet yang ada saat ini.</span>
+      </div>
+
       <Input
         label="Nama Tujuan"
         value={name}

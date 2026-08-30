@@ -129,9 +129,12 @@ export function SavingsGoalCard({
         />
 
         <div className="flex justify-between items-center text-sm">
-          <span className="font-semibold text-gray-900 dark:text-gray-100">
-            {formatCurrency(goal.current_amount)}
-          </span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-xs text-gray-500 dark:text-gray-400">Terkumpul:</span>
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              {formatCurrency(goal.current_amount)}
+            </span>
+          </div>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             Target: {formatCurrency(goal.target_amount)} ({progress}%)
           </span>
