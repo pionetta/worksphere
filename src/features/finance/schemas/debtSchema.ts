@@ -23,8 +23,11 @@ export const createDebtSchema = z.object({
     .min(1, 'Nominal harus lebih dari 0.'),
   due_date: dateStringSchema.nullable().optional(),
   is_installment: z.boolean().optional(),
+  is_flexible_installment: z.boolean().optional(),
   installment_count: z.number().int().min(1).max(120).nullable().optional(),
+  installment_paid_count: z.number().int().min(0).max(120).nullable().optional(),
   installment_amount: z.number().int().min(1).nullable().optional(),
+  current_bill_amount: z.number().int().min(1).nullable().optional(),
   installment_due_day: z.number().int().min(1).max(31).nullable().optional(),
   note: optionalNoteSchema,
 })
@@ -45,8 +48,11 @@ export const updateDebtSchema = z.object({
     .optional(),
   due_date: dateStringSchema.nullable().optional(),
   is_installment: z.boolean().optional(),
+  is_flexible_installment: z.boolean().optional(),
   installment_count: z.number().int().min(1).max(120).nullable().optional(),
+  installment_paid_count: z.number().int().min(0).max(120).nullable().optional(),
   installment_amount: z.number().int().min(1).nullable().optional(),
+  current_bill_amount: z.number().int().min(1).nullable().optional(),
   installment_due_day: z.number().int().min(1).max(31).nullable().optional(),
   note: optionalNoteSchema,
 })
@@ -56,6 +62,7 @@ export const payDebtSchema = z.object({
     .number()
     .int('Nominal pembayaran harus berupa bilangan bulat.')
     .min(1, 'Nominal pembayaran harus lebih dari 0.'),
+  increment_installment: z.boolean().optional(),
 })
 
 export type CreateDebtInput = z.infer<typeof createDebtSchema>

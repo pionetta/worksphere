@@ -5,7 +5,7 @@ import { createDebtSchema } from '@/features/finance/schemas/debtSchema'
 import { DurationPicker } from '@/features/finance/components/DurationPicker'
 import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalculator'
 import { formatCurrency } from '@/utils/currency'
-import { Calculator, Calendar, CreditCard, Layers } from 'lucide-react'
+import { Calculator, CreditCard, Layers, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DebtType } from '@/types'
 
@@ -29,8 +29,11 @@ interface DebtFormProps {
   initialDueDate?: string
   initialNote?: string
   initialIsInstallment?: boolean
+  initialIsFlexibleInstallment?: boolean
   initialInstallmentCount?: number | null
+  initialInstallmentPaidCount?: number | null
   initialInstallmentAmount?: number | null
+  initialCurrentBillAmount?: number | null
   initialInstallmentDueDay?: number | null
   onSubmit: (data: {
     type: DebtType
@@ -39,8 +42,11 @@ interface DebtFormProps {
     amount: number
     due_date?: string | null
     is_installment?: boolean
+    is_flexible_installment?: boolean
     installment_count?: number | null
+    installment_paid_count?: number | null
     installment_amount?: number | null
+    current_bill_amount?: number | null
     installment_due_day?: number | null
     note?: string
   }) => Promise<void> | void
@@ -56,8 +62,11 @@ export function DebtForm({
   initialDueDate = '',
   initialNote = '',
   initialIsInstallment = false,
+  initialIsFlexibleInstallment = false,
   initialInstallmentCount = null,
+  initialInstallmentPaidCount = null,
   initialInstallmentAmount = null,
+  initialCurrentBillAmount = null,
   initialInstallmentDueDay = null,
   onSubmit,
   onCancel,
@@ -72,11 +81,20 @@ export function DebtForm({
 
   // Installment state (Pinjol / Paylater / Cicilan)
   const [isInstallment, setIsInstallment] = useState(initialIsInstallment)
+  const [isFlexible, setIsFlexible] = useState(initialIsFlexibleInstallment)
   const [installmentCount, setInstallmentCount] = useState<string>(
     initialInstallmentCount ? String(initialInstallmentCount) : '6'
   )
+  const [installmentPaidCount, setInstallmentPaidCount] = useState<string>(
+    initialInstallmentPaidCount !== null && initialInstallmentPaidCount !== undefined
+      ? String(initialInstallmentPaidCount)
+      : '0'
+  )
   const [installmentAmount, setInstallmentAmount] = useState<string>(
     initialInstallmentAmount ? String(initialInstallmentAmount) : ''
+  )
+  const [currentBillAmount, setCurrentBillAmount] = useState<string>(
+    initialCurrentBillAmount ? String(initialCurrentBillAmount) : ''
   )
   const [installmentDueDay, setInstallmentDueDay] = useState<string>(
     initialInstallmentDueDay ? String(initialInstallmentDueDay) : '10'
@@ -95,13 +113,22 @@ export function DebtForm({
     return isNaN(val) || val <= 0 ? 1 : val
   }, [installmentCount])
 
-  // Auto-fill installment amount if empty and total amount is provided
+  const parsedPaidCount = useMemo(() => {
+    const val = parseInt(installmentPaidCount, 10)
+    return isNaN(val) || val < 0 ? 0 : Math.min(parsedCount, val)
+  }, [installmentPaidCount, parsedCount])
+
+  const remainingTenor = useMemo(() => {
+    return Math.max(0, parsedCount - parsedPaidCount)
+  }, [parsedCount, parsedPaidCount])
+
+  // Auto-fill installment amount if empty and total amount is provided (for fixed installment)
   useEffect(() => {
-    if (isInstallment && parsedAmount > 0 && !installmentAmount) {
+    if (isInstallment && parsedAmount > 0 && !installmentAmount && !isFlexible) {
       const perMonth = Math.ceil(parsedAmount / parsedCount)
       setInstallmentAmount(String(perMonth))
     }
-  }, [isInstallment, parsedAmount, parsedCount, installmentAmount])
+  }, [isInstallment, isFlexible, parsedAmount, parsedCount, installmentAmount])
 
   const breakdown = useMemo(() => {
     return calculateTargetBreakdown(parsedAmount, dueDate)
@@ -112,6 +139,7 @@ export function DebtForm({
 
     const parsedDueDay = parseInt(installmentDueDay, 10)
     const parsedInstAmount = parseInt(installmentAmount, 10)
+    const parsedBillAmount = parseInt(currentBillAmount, 10)
 
     const result = createDebtSchema.safeParse({
       type,
@@ -120,8 +148,11 @@ export function DebtForm({
       amount: parsedAmount,
       due_date: dueDate || null,
       is_installment: isInstallment,
+      is_flexible_installment: isInstallment ? isFlexible : false,
       installment_count: isInstallment ? parsedCount : null,
+      installment_paid_count: isInstallment ? parsedPaidCount : null,
       installment_amount: isInstallment && !isNaN(parsedInstAmount) ? parsedInstAmount : null,
+      current_bill_amount: isInstallment && !isNaN(parsedBillAmount) ? parsedBillAmount : null,
       installment_due_day:
         isInstallment && !isNaN(parsedDueDay) && parsedDueDay >= 1 && parsedDueDay <= 31
           ? parsedDueDay
@@ -149,8 +180,11 @@ export function DebtForm({
         amount: result.data.amount,
         due_date: result.data.due_date,
         is_installment: result.data.is_installment,
+        is_flexible_installment: result.data.is_flexible_installment,
         installment_count: result.data.installment_count,
+        installment_paid_count: result.data.installment_paid_count,
         installment_amount: result.data.installment_amount,
+        current_bill_amount: result.data.current_bill_amount,
         installment_due_day: result.data.installment_due_day,
         note: result.data.note ?? undefined,
       })
@@ -238,7 +272,7 @@ export function DebtForm({
       </div>
 
       <Input
-        label="Nominal Total"
+        label="Nominal Total Tagihan / Limit Terpakai"
         type="number"
         value={amount}
         onChange={e => {
@@ -258,10 +292,10 @@ export function DebtForm({
             </div>
             <div>
               <label htmlFor="is-installment-toggle" className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
-                Skema Cicilan Berjangka
+                Skema Cicilan / Paylater
               </label>
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                Untuk pinjol, paylater, kartu kredit, atau cicilan bulanan
+                Fitur angsuran, jatuh tempo bulanan, dan tagihan Paylater dinamis
               </p>
             </div>
           </div>
@@ -276,10 +310,40 @@ export function DebtForm({
 
         {isInstallment && (
           <div className="space-y-3 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 animate-fade-in">
+            {/* Model Tagihan: Tetap vs Fleksibel / Paylater */}
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-xs">
+              <button
+                type="button"
+                onClick={() => setIsFlexible(false)}
+                className={cn(
+                  'py-1.5 px-2 rounded-lg font-bold transition-all text-center cursor-pointer',
+                  !isFlexible
+                    ? 'bg-indigo-500 text-white shadow-2xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                )}
+              >
+                Cicilan Tetap
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFlexible(true)}
+                className={cn(
+                  'py-1.5 px-2 rounded-lg font-bold transition-all text-center cursor-pointer flex items-center justify-center gap-1',
+                  isFlexible
+                    ? 'bg-indigo-500 text-white shadow-2xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                )}
+              >
+                <RefreshCw className="w-3 h-3" />
+                Paylater (Fleksibel)
+              </button>
+            </div>
+
+            {/* Tenor & Jatuh Tempo */}
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
-                  Tenor / Jumlah Bulan
+                  Total Tenor (Jumlah Bulan)
                 </label>
                 <input
                   type="number"
@@ -307,28 +371,60 @@ export function DebtForm({
               </div>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
-                Nominal Angsuran per Bulan (Rp)
-              </label>
-              <input
-                type="number"
-                value={installmentAmount}
-                onChange={e => setInstallmentAmount(e.target.value)}
-                placeholder="Contoh: 350000"
-                className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-              />
+            {/* Sudah Dibayar Berapa Angsuran */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Angsuran yang Sudah Selesai
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={parsedCount}
+                  value={installmentPaidCount}
+                  onChange={e => setInstallmentPaidCount(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  {isFlexible ? 'Tagihan Bulan Ini (Rp)' : 'Angsuran per Bulan (Rp)'}
+                </label>
+                <input
+                  type="number"
+                  value={isFlexible ? currentBillAmount : installmentAmount}
+                  onChange={e => {
+                    if (isFlexible) {
+                      setCurrentBillAmount(e.target.value)
+                    } else {
+                      setInstallmentAmount(e.target.value)
+                    }
+                  }}
+                  placeholder={isFlexible ? 'Contoh: 450000' : 'Contoh: 350000'}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
             </div>
 
-            {installmentDueDay && installmentAmount && (
-              <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-900/50 flex items-center gap-2 text-xs text-indigo-900 dark:text-indigo-200">
-                <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span>
-                  Jatuh tempo setiap <strong>tanggal {installmentDueDay}</strong> sebesar{' '}
-                  <strong>{formatCurrency(parseInt(installmentAmount, 10) || 0)}</strong>/bulan (Tenor {parsedCount} bulan).
+            {/* Live Installment Status Card */}
+            <div className="p-3 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-900/60 space-y-1.5 text-xs text-indigo-900 dark:text-indigo-200">
+              <div className="flex items-center justify-between font-bold">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  Status Angsuran: {parsedPaidCount} / {parsedCount} Selesai
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                  Sisa {remainingTenor}x lagi
                 </span>
               </div>
-            )}
+              <p className="text-[11px] text-indigo-700 dark:text-indigo-300">
+                {isFlexible
+                  ? `Tagihan bulan ini: ${formatCurrency(parseInt(currentBillAmount, 10) || 0)} (Jatuh tempo setiap tgl ${installmentDueDay || 10})`
+                  : `Angsuran tetap: ${formatCurrency(parseInt(installmentAmount, 10) || 0)}/bulan (Jatuh tempo setiap tgl ${installmentDueDay || 10})`}
+              </p>
+            </div>
           </div>
         )}
       </div>

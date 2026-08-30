@@ -30,6 +30,51 @@ export interface DebtGroupSummary {
   items: Debt[]
 }
 
+export interface InstallmentProgress {
+  isInstallment: boolean
+  isFlexible: boolean
+  totalCount: number
+  paidCount: number
+  remainingCount: number
+  currentInstallmentIndex: number
+  progressPercent: number
+  isFullyPaid: boolean
+  currentBillAmount: number
+}
+
+export function getInstallmentProgress(debt: Debt): InstallmentProgress | null {
+  if (!debt.is_installment) return null
+
+  const totalCount = debt.installment_count || 1
+  const isFullyPaid = debt.status === 'paid'
+
+  let paidCount = debt.installment_paid_count ?? 0
+  if (isFullyPaid) {
+    paidCount = totalCount
+  } else if (paidCount === 0 && debt.installment_amount && debt.installment_amount > 0 && debt.paid_amount > 0) {
+    paidCount = Math.min(totalCount, Math.floor(debt.paid_amount / debt.installment_amount))
+  }
+
+  const remainingCount = Math.max(0, totalCount - paidCount)
+  const currentInstallmentIndex = isFullyPaid ? totalCount : Math.min(totalCount, paidCount + 1)
+  const progressPercent = Math.min(100, Math.round((paidCount / totalCount) * 100))
+
+  const remainingDebt = Math.max(0, debt.amount - debt.paid_amount)
+  const currentBillAmount = debt.current_bill_amount || debt.installment_amount || remainingDebt
+
+  return {
+    isInstallment: true,
+    isFlexible: Boolean(debt.is_flexible_installment),
+    totalCount,
+    paidCount,
+    remainingCount,
+    currentInstallmentIndex,
+    progressPercent,
+    isFullyPaid,
+    currentBillAmount,
+  }
+}
+
 export async function getDebts(
   userId: string,
   filters?: {
@@ -57,8 +102,11 @@ export async function createDebt(userId: string, input: CreateDebtInput): Promis
     due_date: data.due_date ?? null,
     status: 'unpaid',
     is_installment: data.is_installment ?? false,
+    is_flexible_installment: data.is_flexible_installment ?? false,
     installment_count: data.installment_count ?? null,
+    installment_paid_count: data.installment_paid_count ?? 0,
     installment_amount: data.installment_amount ?? null,
+    current_bill_amount: data.current_bill_amount ?? null,
     installment_due_day: data.installment_due_day ?? null,
     note: data.note ?? null,
   })
@@ -88,16 +136,35 @@ export async function updateDebt(id: string, input: UpdateDebtInput): Promise<vo
     ...(data.amount !== undefined && { amount: data.amount }),
     ...(data.due_date !== undefined && { due_date: data.due_date ?? null }),
     ...(data.is_installment !== undefined && { is_installment: data.is_installment }),
-    ...(data.installment_count !== undefined && { installment_count: data.installment_count ?? null }),
-    ...(data.installment_amount !== undefined && { installment_amount: data.installment_amount ?? null }),
-    ...(data.installment_due_day !== undefined && { installment_due_day: data.installment_due_day ?? null }),
+    ...(data.is_flexible_installment !== undefined && {
+      is_flexible_installment: data.is_flexible_installment,
+    }),
+    ...(data.installment_count !== undefined && {
+      installment_count: data.installment_count ?? null,
+    }),
+    ...(data.installment_paid_count !== undefined && {
+      installment_paid_count: data.installment_paid_count ?? null,
+    }),
+    ...(data.installment_amount !== undefined && {
+      installment_amount: data.installment_amount ?? null,
+    }),
+    ...(data.current_bill_amount !== undefined && {
+      current_bill_amount: data.current_bill_amount ?? null,
+    }),
+    ...(data.installment_due_day !== undefined && {
+      installment_due_day: data.installment_due_day ?? null,
+    }),
     ...(data.note !== undefined && { note: data.note ?? null }),
     status: newStatus,
   })
 }
 
-export async function payDebt(id: string, paymentAmount: number): Promise<void> {
-  const data = validate(payDebtSchema, { amount: paymentAmount })
+export async function payDebt(
+  id: string,
+  paymentAmount: number,
+  incrementInstallment = true
+): Promise<void> {
+  const data = validate(payDebtSchema, { amount: paymentAmount, increment_installment: incrementInstallment })
   const debt = await debtRepo.getDebtById(id)
   if (!debt) throw new Error('Data utang/piutang tidak ditemukan.')
 
@@ -109,9 +176,19 @@ export async function payDebt(id: string, paymentAmount: number): Promise<void> 
   const newPaidAmount = debt.paid_amount + data.amount
   const newStatus: DebtStatus = newPaidAmount >= debt.amount ? 'paid' : 'partially_paid'
 
+  let newPaidCount = debt.installment_paid_count ?? 0
+  if (debt.is_installment && debt.installment_count) {
+    if (newStatus === 'paid') {
+      newPaidCount = debt.installment_count
+    } else if (incrementInstallment) {
+      newPaidCount = Math.min(debt.installment_count, (debt.installment_paid_count ?? 0) + 1)
+    }
+  }
+
   return debtRepo.updateDebt(id, {
     paid_amount: newPaidAmount,
     status: newStatus,
+    ...(debt.is_installment && { installment_paid_count: newPaidCount }),
   })
 }
 

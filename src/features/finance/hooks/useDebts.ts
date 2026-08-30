@@ -71,8 +71,8 @@ export function useDebts(userId: string | null) {
   )
 
   const makePayment = useCallback(
-    async (id: string, amount: number) => {
-      await debtService.payDebt(id, amount)
+    async (id: string, amount: number, incrementInstallment = true) => {
+      await debtService.payDebt(id, amount, incrementInstallment)
       await refresh()
     },
     [refresh]

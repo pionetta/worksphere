@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '@/lib/db'
+import type { Debt } from '@/types'
 import * as debtService from './debtService'
 
 const userId = 'test-user-debt-service'
@@ -209,6 +210,100 @@ describe('debtService', () => {
       expect(shopeeGroup?.totalCount).toBe(2)
       expect(shopeeGroup?.unpaidCount).toBe(1)
       expect(shopeeGroup?.paidCount).toBe(1)
+    })
+  })
+
+  describe('getInstallmentProgress & Flexible Paylater', () => {
+    it('should calculate correct completed and remaining installment counters', () => {
+      const mockDebt: Debt = {
+        id: '10',
+        user_id: 'user-1',
+        type: 'debt',
+        person_name: 'Beli Kulkas',
+        group_name: 'Shopee Paylater',
+        amount: 6000000,
+        paid_amount: 2000000,
+        due_date: '2026-12-10',
+        status: 'partially_paid',
+        is_installment: true,
+        is_flexible_installment: false,
+        installment_count: 6,
+        installment_paid_count: 2,
+        installment_amount: 1000000,
+        current_bill_amount: 1000000,
+        installment_due_day: 10,
+        note: null,
+        created_at: '2026-08-30T00:00:00Z',
+        updated_at: '2026-08-30T00:00:00Z',
+      }
+
+      const progress = debtService.getInstallmentProgress(mockDebt)
+      expect(progress).not.toBeNull()
+      expect(progress?.isInstallment).toBe(true)
+      expect(progress?.isFlexible).toBe(false)
+      expect(progress?.totalCount).toBe(6)
+      expect(progress?.paidCount).toBe(2)
+      expect(progress?.remainingCount).toBe(4)
+      expect(progress?.currentInstallmentIndex).toBe(3)
+      expect(progress?.progressPercent).toBe(33)
+      expect(progress?.currentBillAmount).toBe(1000000)
+    })
+
+    it('should handle flexible paylater with custom variable bill amounts', () => {
+      const mockPaylater: Debt = {
+        id: '11',
+        user_id: 'user-1',
+        type: 'debt',
+        person_name: 'Tagihan SPaylater',
+        group_name: 'Shopee Paylater',
+        amount: 2500000,
+        paid_amount: 450000,
+        due_date: '2026-11-10',
+        status: 'partially_paid',
+        is_installment: true,
+        is_flexible_installment: true,
+        installment_count: 5,
+        installment_paid_count: 1,
+        installment_amount: null,
+        current_bill_amount: 320000,
+        installment_due_day: 5,
+        note: null,
+        created_at: '2026-08-30T00:00:00Z',
+        updated_at: '2026-08-30T00:00:00Z',
+      }
+
+      const progress = debtService.getInstallmentProgress(mockPaylater)
+      expect(progress).not.toBeNull()
+      expect(progress?.isFlexible).toBe(true)
+      expect(progress?.paidCount).toBe(1)
+      expect(progress?.remainingCount).toBe(4)
+      expect(progress?.currentBillAmount).toBe(320000)
+    })
+
+    it('should increment installment_paid_count when paying installment debt', async () => {
+      const debtId = await debtService.createDebt(userId, {
+        type: 'debt',
+        person_name: 'Pinjaman Modal',
+        amount: 3000000,
+        is_installment: true,
+        is_flexible_installment: true,
+        installment_count: 6,
+        installment_paid_count: 0,
+        current_bill_amount: 500000,
+        installment_due_day: 15,
+      })
+
+      // Pay 1st installment
+      await debtService.payDebt(debtId, 500000, true)
+      let debt = await db.debts.get(debtId)
+      expect(debt?.paid_amount).toBe(500000)
+      expect(debt?.installment_paid_count).toBe(1)
+
+      // Pay 2nd installment
+      await debtService.payDebt(debtId, 500000, true)
+      debt = await db.debts.get(debtId)
+      expect(debt?.paid_amount).toBe(1000000)
+      expect(debt?.installment_paid_count).toBe(2)
     })
   })
 })

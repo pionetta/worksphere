@@ -54,8 +54,11 @@ export async function createDebt(
     due_date: data.due_date,
     status: data.status,
     is_installment: data.is_installment ?? false,
+    is_flexible_installment: data.is_flexible_installment ?? false,
     installment_count: data.installment_count ?? null,
+    installment_paid_count: data.installment_paid_count ?? null,
     installment_amount: data.installment_amount ?? null,
+    current_bill_amount: data.current_bill_amount ?? null,
     installment_due_day: data.installment_due_day ?? null,
     note: data.note,
     created_at: timestamp,
@@ -78,8 +81,11 @@ export async function updateDebt(
       | 'due_date'
       | 'status'
       | 'is_installment'
+      | 'is_flexible_installment'
       | 'installment_count'
+      | 'installment_paid_count'
       | 'installment_amount'
+      | 'current_bill_amount'
       | 'installment_due_day'
       | 'note'
     >

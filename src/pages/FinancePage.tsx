@@ -1465,8 +1465,8 @@ export function FinancePage() {
             debt={payingDebt}
             open={payingDebt !== null}
             onClose={() => setPayingDebt(null)}
-            onPayment={async (debtId, amount) => {
-              await debtsHook.makePayment(debtId, amount)
+            onPayment={async (debtId, amount, incrementInstallment) => {
+              await debtsHook.makePayment(debtId, amount, incrementInstallment)
             }}
           />
         </div>
@@ -2250,14 +2250,29 @@ export function FinancePage() {
                 ? Boolean(debtsHook.debts.find(d => d.id === editingDebtId)?.is_installment)
                 : false
             }
+            initialIsFlexibleInstallment={
+              editingDebtId
+                ? Boolean(debtsHook.debts.find(d => d.id === editingDebtId)?.is_flexible_installment)
+                : false
+            }
             initialInstallmentCount={
               editingDebtId
                 ? debtsHook.debts.find(d => d.id === editingDebtId)?.installment_count
                 : null
             }
+            initialInstallmentPaidCount={
+              editingDebtId
+                ? debtsHook.debts.find(d => d.id === editingDebtId)?.installment_paid_count
+                : null
+            }
             initialInstallmentAmount={
               editingDebtId
                 ? debtsHook.debts.find(d => d.id === editingDebtId)?.installment_amount
+                : null
+            }
+            initialCurrentBillAmount={
+              editingDebtId
+                ? debtsHook.debts.find(d => d.id === editingDebtId)?.current_bill_amount
                 : null
             }
             initialInstallmentDueDay={

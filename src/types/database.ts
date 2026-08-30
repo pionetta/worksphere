@@ -158,9 +158,12 @@ export interface Debt {
   due_date: string | null // DATE
   status: DebtStatus
   is_installment?: boolean
-  installment_count?: number | null
-  installment_amount?: number | null
-  installment_due_day?: number | null
+  is_flexible_installment?: boolean // true for Paylater with variable monthly bills
+  installment_count?: number | null // total tenor in months
+  installment_paid_count?: number | null // number of completed installments
+  installment_amount?: number | null // standard monthly installment
+  current_bill_amount?: number | null // custom/variable bill amount for current month
+  installment_due_day?: number | null // day of month (1..31)
   note: string | null
   created_at: string
   updated_at: string

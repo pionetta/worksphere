@@ -1,10 +1,22 @@
 import { formatCurrency } from '@/utils/currency'
 import { formatDate } from '@/utils/date'
 import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalculator'
+import { getInstallmentProgress } from '@/features/finance/services/debtService'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/progress'
-import { Pencil, Trash2, Calendar, Coins, ArrowUpRight, ArrowDownLeft, Calculator, CreditCard } from 'lucide-react'
+import {
+  Pencil,
+  Trash2,
+  Calendar,
+  Coins,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Calculator,
+  CreditCard,
+  RefreshCw,
+  CheckCircle2,
+} from 'lucide-react'
 import type { Debt } from '@/types'
 
 interface DebtCardProps {
@@ -43,6 +55,7 @@ export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
   const isDebt = debt.type === 'debt'
   const deadlineInfo = debt.due_date ? getDeadlineInfo(debt.due_date) : null
   const breakdown = debt.due_date && remaining > 0 ? calculateTargetBreakdown(remaining, debt.due_date) : null
+  const inst = getInstallmentProgress(debt)
 
   return (
     <Card className="hover:border-primary-200 dark:hover:border-primary-800 transition-all duration-200 shadow-sm hover:shadow-md">
@@ -70,22 +83,29 @@ export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
               <Badge variant={isDebt ? 'danger' : 'success'} className="text-[10px] py-0 px-1.5 whitespace-nowrap shrink-0">
                 {isDebt ? 'Saya Berutang' : 'Piutang'}
               </Badge>
-              {debt.is_installment && (
-                <Badge variant="info" className="text-[10px] py-0 px-1.5 whitespace-nowrap shrink-0 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800">
-                  <CreditCard className="w-3 h-3" />
-                  Cicilan {debt.installment_count ? `${debt.installment_count}x` : 'Pinjol'}
+              {inst && (
+                <Badge variant="info" className="text-[10px] py-0.5 px-2 whitespace-nowrap shrink-0 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 font-semibold">
+                  {inst.isFlexible ? <RefreshCw className="w-3 h-3" /> : <CreditCard className="w-3 h-3" />}
+                  {inst.isFlexible ? 'Paylater' : 'Cicilan'} {inst.paidCount}/{inst.totalCount} Selesai
                 </Badge>
               )}
               {isPaid && <Badge variant="success" className="whitespace-nowrap shrink-0">Lunas</Badge>}
             </div>
 
             {/* Due Date & Installment Info */}
-            <div className="flex flex-wrap items-center gap-2 mt-1">
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              {inst && !isPaid && (
+                <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1 whitespace-nowrap bg-indigo-50/80 dark:bg-indigo-950/50 px-2 py-0.5 rounded-md border border-indigo-200/80 dark:border-indigo-900/50">
+                  <CheckCircle2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                  Sisa {inst.remainingCount}x angsuran lagi
+                </span>
+              )}
+
               {debt.is_installment && debt.installment_due_day && !isPaid && (
-                <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1 whitespace-nowrap bg-indigo-50/70 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-900/40">
-                  <Calendar className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1 whitespace-nowrap bg-gray-100/80 dark:bg-gray-800 px-2 py-0.5 rounded-md border border-gray-200 dark:border-gray-700">
+                  <Calendar className="w-3 h-3 text-primary-500" />
                   Jatuh tempo tiap tgl {debt.installment_due_day}
-                  {debt.installment_amount ? ` (${formatCurrency(debt.installment_amount)}/bln)` : ''}
+                  {inst?.currentBillAmount ? ` • ${inst.isFlexible ? 'Tagihan Bln Ini:' : 'Angsuran:'} ${formatCurrency(inst.currentBillAmount)}` : ''}
                 </span>
               )}
 
