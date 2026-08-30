@@ -7,6 +7,9 @@ const ENTITY_TABLE_MAP: Record<string, keyof Database['public']['Tables']> = {
   member: 'members',
   attendance: 'attendance',
   wallet: 'wallets',
+  wallet_member: 'wallet_members',
+  workspace: 'workspaces',
+  workspace_member: 'workspace_members',
   category: 'categories',
   transaction: 'transactions',
   budget: 'budgets',
@@ -23,8 +26,11 @@ const ENTITY_TABLE_MAP: Record<string, keyof Database['public']['Tables']> = {
 // Parent entities must sync before children
 
 const DEPENDENCY_ORDER = [
+  'workspace',
+  'workspace_member',
   'member',
   'wallet',
+  'wallet_member',
   'category',
   'task',
   'attendance',
@@ -403,8 +409,11 @@ export async function pullCloudData(userId: string): Promise<void> {
   const { db } = await import('@/lib/db')
 
   const tablesToSync = [
+    { table: 'workspaces', dexieKey: 'workspaces' as const },
+    { table: 'workspace_members', dexieKey: 'workspace_members' as const },
     { table: 'members', dexieKey: 'members' as const },
     { table: 'wallets', dexieKey: 'wallets' as const },
+    { table: 'wallet_members', dexieKey: 'wallet_members' as const },
     { table: 'categories', dexieKey: 'categories' as const },
     { table: 'tasks', dexieKey: 'tasks' as const },
     { table: 'subtasks', dexieKey: 'subtasks' as const },
@@ -424,7 +433,6 @@ export async function pullCloudData(userId: string): Promise<void> {
     try {
       const { data, error } = await (supabase.from(table) as any)
         .select('*')
-        .eq('user_id', userId)
 
       if (!error && data && Array.isArray(data) && data.length > 0) {
         for (const item of data) {
@@ -458,11 +466,14 @@ export function subscribeToUserRealtime(userId: string): () => void {
   if (typeof window === 'undefined' || !userId) return () => {}
 
   const tables = [
+    'workspaces',
+    'workspace_members',
     'tasks',
     'subtasks',
     'habits',
     'habit_logs',
     'wallets',
+    'wallet_members',
     'categories',
     'transactions',
     'recurring_transactions',

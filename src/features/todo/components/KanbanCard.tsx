@@ -1,5 +1,5 @@
 import { PriorityBadge } from './PriorityBadge'
-import { Calendar, Circle, ArrowLeft, ArrowRight, Check, ListChecks } from 'lucide-react'
+import { Calendar, Circle, ArrowLeft, ArrowRight, Check, ListChecks, User } from 'lucide-react'
 import { formatDate } from '@/utils/date'
 import { cn } from '@/lib/utils'
 import type { Task, TaskStatus, Subtask } from '@/types'
@@ -7,6 +7,7 @@ import type { Task, TaskStatus, Subtask } from '@/types'
 interface KanbanCardProps {
   task: Task
   subtasks?: Subtask[]
+  assigneeName?: string
   onSelect: (task: Task) => void
   onChangeStatus: (id: string, status: TaskStatus) => void
 }
@@ -14,6 +15,7 @@ interface KanbanCardProps {
 export function KanbanCard({
   task,
   subtasks = [],
+  assigneeName,
   onSelect,
   onChangeStatus,
 }: KanbanCardProps) {
@@ -42,7 +44,7 @@ export function KanbanCard({
     >
       {/* Top row: Priority, Timeframe & Category */}
       <div className="flex items-center justify-between gap-1.5 flex-wrap">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <PriorityBadge priority={task.priority} />
           {task.timeframe && task.timeframe !== 'daily' && (
             <span
@@ -54,6 +56,12 @@ export function KanbanCard({
               )}
             >
               {task.timeframe === 'weekly' ? 'Mingguan' : 'Tahunan'}
+            </span>
+          )}
+          {assigneeName && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded-md">
+              <User className="w-2.5 h-2.5" />
+              <span className="truncate max-w-[80px]">{assigneeName}</span>
             </span>
           )}
         </div>

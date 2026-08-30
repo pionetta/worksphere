@@ -1,6 +1,6 @@
 import { formatCurrency } from '@/utils/currency'
 import { Badge } from '@/components/ui/Badge'
-import { Wallet, Landmark, CreditCard, Banknote, HelpCircle, Trash2 } from 'lucide-react'
+import { Wallet, Landmark, CreditCard, Banknote, HelpCircle, Trash2, Users } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { WalletWithBalance, WalletType } from '@/types'
 
@@ -8,6 +8,8 @@ interface WalletCardProps {
   wallet: WalletWithBalance
   onSelect?: () => void
   onDeactivate?: (id: string) => void
+  onManageMembers?: () => void
+  memberCount?: number
   selected?: boolean
 }
 
@@ -32,7 +34,14 @@ const walletTypeColors: Record<WalletType, { bg: string; text: string }> = {
   other: { bg: 'bg-amber-500/10 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400' },
 }
 
-export function WalletCard({ wallet, onSelect, onDeactivate, selected }: WalletCardProps) {
+export function WalletCard({
+  wallet,
+  onSelect,
+  onDeactivate,
+  onManageMembers,
+  memberCount,
+  selected,
+}: WalletCardProps) {
   const Icon = walletTypeIcons[wallet.type] || Wallet
   const colors = walletTypeColors[wallet.type] || walletTypeColors.other
 
@@ -58,9 +67,17 @@ export function WalletCard({ wallet, onSelect, onDeactivate, selected }: WalletC
             <Icon className="w-5 h-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
-              {wallet.name}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+                {wallet.name}
+              </p>
+              {memberCount !== undefined && memberCount > 0 && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+                  <Users className="w-2.5 h-2.5" />
+                  <span>{memberCount + 1}</span>
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
                 {walletTypeLabels[wallet.type]}
@@ -86,6 +103,20 @@ export function WalletCard({ wallet, onSelect, onDeactivate, selected }: WalletC
               {wallet.is_active ? 'Aktif' : 'Nonaktif'}
             </Badge>
           </div>
+          {onManageMembers && (
+            <button
+              type="button"
+              onClick={e => {
+                e.stopPropagation()
+                onManageMembers()
+              }}
+              className="p-1.5 rounded-xl text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer"
+              title="Kelola Anggota Dompet"
+              aria-label={`Kelola anggota ${wallet.name}`}
+            >
+              <Users className="w-4 h-4" />
+            </button>
+          )}
           {onDeactivate && (
             <button
               type="button"

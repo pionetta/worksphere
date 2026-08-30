@@ -13,6 +13,8 @@ export const createTaskSchema = z.object({
   category: z.string().trim().max(50, 'Kategori terlalu panjang.').optional(),
   due_date: z.string().nullable().optional(),
   reminder_at: z.string().nullable().optional(),
+  workspace_id: z.string().nullable().optional(),
+  assignee_id: z.string().nullable().optional(),
 })
 
 export const updateTaskSchema = z.object({
@@ -29,6 +31,8 @@ export const updateTaskSchema = z.object({
   category: z.string().trim().max(50, 'Kategori terlalu panjang.').nullable().optional(),
   due_date: z.string().nullable().optional(),
   reminder_at: z.string().nullable().optional(),
+  workspace_id: z.string().nullable().optional(),
+  assignee_id: z.string().nullable().optional(),
 })
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>

@@ -58,6 +58,9 @@ export const ENTITY_NAMES = {
   subtask: 'subtask',
   habit: 'habit',
   habit_log: 'habit_log',
+  wallet_member: 'wallet_member',
+  workspace: 'workspace',
+  workspace_member: 'workspace_member',
 } as const
 
 // ─── Convenience Functions ────────────────────────────────────────────────────

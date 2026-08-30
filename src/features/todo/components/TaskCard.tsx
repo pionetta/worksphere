@@ -14,11 +14,13 @@ import {
   Circle,
   PlayCircle,
   XCircle,
+  User,
 } from 'lucide-react'
 
 interface TaskCardProps {
   task: Task
   subtasks?: Subtask[]
+  assigneeName?: string
   onClick?: () => void
   onStatusChange?: (status: TaskStatus) => void
 }
@@ -44,7 +46,13 @@ const statusBadge: Record<TaskStatus, 'default' | 'info' | 'success' | 'warning'
   cancelled: 'warning',
 }
 
-export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskCardProps) {
+export function TaskCard({
+  task,
+  subtasks = [],
+  assigneeName,
+  onClick,
+  onStatusChange,
+}: TaskCardProps) {
   const StatusIcon = statusIcons[task.status]
   const overdue = isOverdue(task)
   const progress = getSubtaskProgress(subtasks)
@@ -147,7 +155,14 @@ export function TaskCard({ task, subtasks = [], onClick, onStatusChange }: TaskC
             </div>
           )}
 
-          <div className="mt-2.5 flex items-center gap-3 flex-wrap">
+          <div className="mt-2.5 flex items-center gap-2.5 flex-wrap">
+            {assigneeName && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md">
+                <User className="w-3 h-3" />
+                <span className="truncate max-w-[120px]">{assigneeName}</span>
+              </span>
+            )}
+
             {task.category && (
               <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/80 px-2 py-0.5 rounded-full font-medium">
                 {task.category}

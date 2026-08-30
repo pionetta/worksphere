@@ -40,6 +40,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useRecurringTransactions } from '@/features/finance/hooks/useRecurringTransactions'
 import { RecurringCard } from '@/features/finance/components/RecurringCard'
 import { RecurringFormModal } from '@/features/finance/components/RecurringFormModal'
+import { useSharedWallets } from '@/features/finance/hooks/useSharedWallets'
+import { SharedWalletModal } from '@/features/finance/components/SharedWalletModal'
+import { WalletInvitationsBanner } from '@/features/finance/components/WalletInvitationsBanner'
 import {
   Plus,
   ArrowLeft,
@@ -54,7 +57,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/utils/currency'
-import type { Category, Transaction, Debt, RecurringTransaction } from '@/types'
+import type { Category, Transaction, Debt, RecurringTransaction, WalletWithBalance } from '@/types'
 import {
   useFilteredTransactions,
   DEFAULT_FILTERS,
@@ -87,9 +90,11 @@ export function FinancePage() {
   const debtsHook = useDebts(userId || null)
   const recurringHook = useRecurringTransactions(userId || null)
   const summaryHook = useFinanceSummary(userId || null, currentMonth, currentYear)
+  const sharedWalletsHook = useSharedWallets(userId || null, user?.email)
 
   const [showRecurringModal, setShowRecurringModal] = useState(false)
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null)
+  const [managingSharedWallet, setManagingSharedWallet] = useState<WalletWithBalance | null>(null)
 
   const [categories, setCategories] = useState<Category[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
@@ -280,6 +285,12 @@ export function FinancePage() {
 
   return (
     <div className="max-w-md mx-auto space-y-3.5 pb-8">
+      {/* ─── Pending Shared Wallet Invitations Banner ─── */}
+      <WalletInvitationsBanner
+        invitations={sharedWalletsHook.pendingInvitations}
+        onRespond={sharedWalletsHook.respondToInvitation}
+      />
+
       {/* ─── Modern Minimalist Tab Bar (4 Menu: Ringkasan, Anggaran, Tabungan, Utang) ─── */}
       <div className="w-full">
         <Tabs value={tab} onValueChange={val => setTab(val as Tab)}>
@@ -740,6 +751,15 @@ export function FinancePage() {
               <WalletCard
                 key={wallet.id}
                 wallet={wallet}
+                memberCount={
+                  sharedWalletsHook.membersMap[wallet.id]?.filter(
+                    m => m.status === 'accepted'
+                  ).length || 0
+                }
+                onManageMembers={() => {
+                  sharedWalletsHook.loadMembersForWallet(wallet.id)
+                  setManagingSharedWallet(wallet)
+                }}
                 onSelect={() => {
                   setEditingWalletId(wallet.id)
                   setShowWalletForm(true)
@@ -1997,6 +2017,41 @@ export function FinancePage() {
           } catch {
             toast.error('Gagal memperbarui transaksi rutin')
           }
+        }}
+      />
+
+      {/* ─── Popup: Kelola Anggota Dompet Bersama ─── */}
+      <SharedWalletModal
+        open={managingSharedWallet !== null}
+        onClose={() => setManagingSharedWallet(null)}
+        wallet={managingSharedWallet}
+        members={
+          managingSharedWallet
+            ? sharedWalletsHook.membersMap[managingSharedWallet.id] || []
+            : []
+        }
+        onInvite={async (email, role) => {
+          if (!managingSharedWallet) return
+          await sharedWalletsHook.inviteMember({
+            wallet_id: managingSharedWallet.id,
+            invited_email: email,
+            role,
+          })
+        }}
+        onUpdateRole={async (memberId, role) => {
+          if (!managingSharedWallet) return
+          await sharedWalletsHook.updateRole(
+            memberId,
+            role,
+            managingSharedWallet.id
+          )
+        }}
+        onRemoveMember={async memberId => {
+          if (!managingSharedWallet) return
+          await sharedWalletsHook.removeMember(
+            memberId,
+            managingSharedWallet.id
+          )
         }}
       />
     </div>

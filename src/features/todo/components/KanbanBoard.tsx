@@ -7,6 +7,7 @@ import type { Task, TaskStatus, Subtask } from '@/types'
 interface KanbanBoardProps {
   tasks: Task[]
   subtasksMap: Map<string, Subtask[]>
+  assigneeMap?: Map<string, string>
   onSelectTask: (task: Task) => void
   onChangeStatus: (id: string, status: TaskStatus) => void
   onAddTask?: (defaultStatus?: TaskStatus) => void
@@ -51,6 +52,7 @@ const COLUMNS: ColumnConfig[] = [
 export function KanbanBoard({
   tasks,
   subtasksMap,
+  assigneeMap = new Map(),
   onSelectTask,
   onChangeStatus,
   onAddTask,
@@ -142,6 +144,7 @@ export function KanbanBoard({
                   <KanbanCard
                     key={task.id}
                     task={task}
+                    assigneeName={task.assignee_id ? assigneeMap.get(task.assignee_id) : undefined}
                     subtasks={subtasksMap.get(task.id) || []}
                     onSelect={onSelectTask}
                     onChangeStatus={onChangeStatus}

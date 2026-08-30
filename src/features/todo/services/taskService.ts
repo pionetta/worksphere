@@ -14,6 +14,8 @@ export async function createTask(
     category?: string
     dueDate?: string | null
     reminderAt?: string | null
+    workspaceId?: string | null
+    assigneeId?: string | null
   }
 ): Promise<string> {
   const parsed = validate(createTaskSchema, {
@@ -24,6 +26,8 @@ export async function createTask(
     category: options?.category ?? undefined,
     due_date: options?.dueDate ?? null,
     reminder_at: options?.reminderAt ?? null,
+    workspace_id: options?.workspaceId ?? null,
+    assignee_id: options?.assigneeId ?? null,
   })
 
   return taskRepo.createTask({
@@ -36,6 +40,8 @@ export async function createTask(
     category: parsed.category || null,
     due_date: parsed.due_date || null,
     reminder_at: parsed.reminder_at || null,
+    workspace_id: parsed.workspace_id || null,
+    assignee_id: parsed.assignee_id || null,
     completed_at: null,
     deleted_at: null,
   })
@@ -52,6 +58,8 @@ export async function updateTask(
     category?: string | null
     dueDate?: string | null
     reminderAt?: string | null
+    workspaceId?: string | null
+    assigneeId?: string | null
   }
 ): Promise<void> {
   const parsed = validate(updateTaskSchema, {
@@ -63,6 +71,8 @@ export async function updateTask(
     category: data.category,
     due_date: data.dueDate,
     reminder_at: data.reminderAt,
+    workspace_id: data.workspaceId,
+    assignee_id: data.assigneeId,
   })
 
   const updatePayload: Partial<
@@ -76,6 +86,8 @@ export async function updateTask(
       | 'category'
       | 'due_date'
       | 'reminder_at'
+      | 'workspace_id'
+      | 'assignee_id'
       | 'completed_at'
     >
   > = {}
@@ -88,6 +100,8 @@ export async function updateTask(
   if (parsed.category !== undefined) updatePayload.category = parsed.category || null
   if (parsed.due_date !== undefined) updatePayload.due_date = parsed.due_date || null
   if (parsed.reminder_at !== undefined) updatePayload.reminder_at = parsed.reminder_at || null
+  if (parsed.workspace_id !== undefined) updatePayload.workspace_id = parsed.workspace_id || null
+  if (parsed.assignee_id !== undefined) updatePayload.assignee_id = parsed.assignee_id || null
 
   if (parsed.status === 'completed') {
     updatePayload.completed_at = new Date().toISOString()

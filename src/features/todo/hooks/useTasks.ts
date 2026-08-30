@@ -40,6 +40,8 @@ export function useTasks(userId: string | null) {
         category?: string
         dueDate?: string | null
         reminderAt?: string | null
+        workspaceId?: string | null
+        assigneeId?: string | null
       }
     ) => {
       if (!userId) return

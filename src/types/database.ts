@@ -164,6 +164,8 @@ export interface Debt {
 export interface Task {
   id: string
   user_id: string
+  workspace_id?: string | null
+  assignee_id?: string | null
   title: string
   description: string | null
   status: TaskStatus
@@ -265,6 +267,43 @@ export interface HabitLog {
   updated_at: string
 }
 
+export type WalletMemberRole = 'editor' | 'viewer'
+export type WalletMemberStatus = 'pending' | 'accepted' | 'declined'
+
+export interface WalletMember {
+  id: string
+  wallet_id: string
+  user_id: string | null
+  role: WalletMemberRole
+  status: WalletMemberStatus
+  invited_email: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type WorkspaceRole = 'admin' | 'member' | 'viewer'
+export type WorkspaceMemberStatus = 'pending' | 'accepted' | 'declined'
+
+export interface Workspace {
+  id: string
+  owner_id: string
+  name: string
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkspaceMember {
+  id: string
+  workspace_id: string
+  user_id: string | null
+  role: WorkspaceRole
+  status: WorkspaceMemberStatus
+  invited_email: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface SyncQueueRow {
   id: string
   user_id: string
@@ -304,6 +343,21 @@ export interface Database {
         Row: Wallet
         Insert: Partial<Wallet> & Pick<Wallet, 'user_id' | 'name' | 'type'>
         Update: Partial<Wallet>
+      }
+      wallet_members: {
+        Row: WalletMember
+        Insert: Partial<WalletMember> & Pick<WalletMember, 'wallet_id'>
+        Update: Partial<WalletMember>
+      }
+      workspaces: {
+        Row: Workspace
+        Insert: Partial<Workspace> & Pick<Workspace, 'owner_id' | 'name'>
+        Update: Partial<Workspace>
+      }
+      workspace_members: {
+        Row: WorkspaceMember
+        Insert: Partial<WorkspaceMember> & Pick<WorkspaceMember, 'workspace_id'>
+        Update: Partial<WorkspaceMember>
       }
       categories: {
         Row: Category

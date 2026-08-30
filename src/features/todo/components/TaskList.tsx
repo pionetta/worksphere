@@ -6,6 +6,7 @@ import { ListTodo } from 'lucide-react'
 interface TaskListProps {
   tasks: Task[]
   subtasksMap?: Map<string, Subtask[]>
+  assigneeMap?: Map<string, string>
   onTaskClick?: (task: Task) => void
   onStatusChange?: (taskId: string, status: TaskStatus) => void
   emptyTitle?: string
@@ -15,6 +16,7 @@ interface TaskListProps {
 export function TaskList({
   tasks,
   subtasksMap = new Map(),
+  assigneeMap = new Map(),
   onTaskClick,
   onStatusChange,
   emptyTitle = 'Belum ada tugas',
@@ -36,6 +38,7 @@ export function TaskList({
         <TaskCard
           key={task.id}
           task={task}
+          assigneeName={task.assignee_id ? assigneeMap.get(task.assignee_id) : undefined}
           subtasks={subtasksMap.get(task.id)}
           onClick={() => onTaskClick?.(task)}
           onStatusChange={status => onStatusChange?.(task.id, status)}

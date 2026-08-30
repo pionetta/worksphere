@@ -7,6 +7,10 @@ import { useTaskReminder } from '@/features/todo/hooks/useTaskReminder'
 import { useJournal } from '@/features/journal/hooks/useJournal'
 import { useWishlist } from '@/features/finance/hooks/useWishlist'
 import { useHabits } from '@/features/todo/hooks/useHabits'
+import { useWorkspaces } from '@/features/workspace/hooks/useWorkspaces'
+import { WorkspaceSwitcher } from '@/features/workspace/components/WorkspaceSwitcher'
+import { WorkspaceManagerModal } from '@/features/workspace/components/WorkspaceManagerModal'
+import { WorkspaceInvitationsBanner } from '@/features/workspace/components/WorkspaceInvitationsBanner'
 import * as subtaskService from '@/features/todo/services/subtaskService'
 import { TaskForm } from '@/features/todo/components/TaskForm'
 import { TaskList } from '@/features/todo/components/TaskList'
@@ -36,6 +40,7 @@ import {
   Gift,
   BookOpen,
   Flame,
+  Users,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -62,6 +67,38 @@ export function TodoPage() {
   const { user } = useAuth()
   const userId = user?.id ?? ''
   const { tasks, loading, addTask, editTask, removeTask, changeStatus } = useTasks(userId)
+  const workspaceHook = useWorkspaces(userId || null, user?.email)
+
+  const [showWorkspaceManager, setShowWorkspaceManager] = useState(false)
+  const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false)
+  const [workspaceAssigneeFilter, setWorkspaceAssigneeFilter] = useState<'all' | 'my_tasks'>('all')
+
+  // Filter tasks by active workspace and team assignee filter
+  const workspaceTasks = useMemo(() => {
+    return tasks.filter(task => {
+      if (workspaceHook.activeWorkspaceId === null) {
+        return !task.workspace_id
+      }
+      if (task.workspace_id !== workspaceHook.activeWorkspaceId) {
+        return false
+      }
+      if (workspaceAssigneeFilter === 'my_tasks') {
+        return task.assignee_id === userId || task.user_id === userId
+      }
+      return true
+    })
+  }, [tasks, workspaceHook.activeWorkspaceId, workspaceAssigneeFilter, userId])
+
+  const memberNameMap = useMemo(() => {
+    const map = new Map<string, string>()
+    workspaceHook.members.forEach(m => {
+      const name = m.invited_email ? m.invited_email.split('@')[0] : 'Member'
+      if (m.user_id) map.set(m.user_id, name)
+      map.set(m.id, name)
+    })
+    return map
+  }, [workspaceHook.members])
+
   const {
     filters,
     filteredTasks,
@@ -75,7 +112,7 @@ export function TodoPage() {
     setOverdueOnly,
     setSort,
     resetFilters,
-  } = useTaskFilters(tasks)
+  } = useTaskFilters(workspaceTasks)
   const { checkAndRequestPermission, scheduleAllReminders } = useTaskReminder()
   const journalHook = useJournal(userId || null)
   const wishlistHook = useWishlist(userId || null)
@@ -152,6 +189,7 @@ export function TodoPage() {
     category?: string
     dueDate?: string
     reminderAt?: string
+    assigneeId?: string | null
   }) => {
     try {
       if (data.reminderAt) {
@@ -164,11 +202,42 @@ export function TodoPage() {
         category: data.category,
         dueDate: data.dueDate,
         reminderAt: data.reminderAt,
+        workspaceId: workspaceHook.activeWorkspaceId,
+        assigneeId: data.assigneeId,
       })
       toast.success(`Tugas "${data.title}" berhasil dibuat!`)
       setShowForm(false)
     } catch {
       toast.error('Gagal membuat tugas')
+    }
+  }
+
+  const handleUpdateTask = async (data: {
+    title: string
+    description?: string
+    priority: TaskPriority
+    timeframe?: TaskTimeframe
+    category?: string
+    dueDate?: string
+    reminderAt?: string
+    assigneeId?: string | null
+  }) => {
+    if (!selectedTask) return
+    try {
+      await editTask(selectedTask.id, {
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        timeframe: data.timeframe,
+        category: data.category,
+        dueDate: data.dueDate,
+        reminderAt: data.reminderAt,
+        assigneeId: data.assigneeId,
+      })
+      toast.success('Tugas berhasil diperbarui!')
+      handleCloseDetail()
+    } catch {
+      toast.error('Gagal memperbarui tugas')
     }
   }
 
@@ -203,52 +272,20 @@ export function TodoPage() {
     }
   }
 
-  const handleUpdateTask = async (data: {
-    title: string
-    description?: string
-    priority: TaskPriority
-    timeframe?: TaskTimeframe
-    category?: string
-    dueDate?: string
-    reminderAt?: string
-  }) => {
-    if (!selectedTask) return
-    try {
-      await editTask(selectedTask.id, {
-        title: data.title,
-        description: data.description ?? null,
-        status: selectedTask.status,
-        priority: data.priority,
-        timeframe: data.timeframe,
-        category: data.category ?? null,
-        dueDate: data.dueDate ?? null,
-        reminderAt: data.reminderAt ?? null,
-      })
-      setSelectedTask({
-        ...selectedTask,
-        title: data.title,
-        description: data.description ?? null,
-        priority: data.priority,
-        timeframe: data.timeframe,
-        category: data.category ?? null,
-        due_date: data.dueDate ?? null,
-        reminder_at: data.reminderAt ?? null,
-      })
-      toast.success('Tugas berhasil diperbarui')
-      handleCloseDetail()
-    } catch {
-      toast.error('Gagal memperbarui tugas')
-    }
-  }
-
   return (
     <div className="max-w-md mx-auto space-y-3.5 pb-8">
+      {/* ─── Pending Workspace Invitations Banner ─── */}
+      <WorkspaceInvitationsBanner
+        invitations={workspaceHook.pendingInvitations}
+        onRespond={workspaceHook.respondToInvitation}
+      />
+
       {/* Header */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-1 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <div
             className={cn(
-              'w-8 h-8 rounded-xl flex items-center justify-center transition-colors',
+              'w-8 h-8 rounded-xl flex items-center justify-center transition-colors shrink-0',
               viewMode === 'habits'
                 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                 : viewMode === 'wishlist'
@@ -268,7 +305,7 @@ export function TodoPage() {
               <ListTodo className="w-5 h-5" />
             )}
           </div>
-          <h1 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100">
+          <h1 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100 truncate">
             {viewMode === 'habits'
               ? 'Kebiasaan & Streak'
               : viewMode === 'wishlist'
@@ -279,51 +316,108 @@ export function TodoPage() {
           </h1>
         </div>
 
-        {/* Dynamic Top Action Button */}
-        {viewMode === 'habits' ? (
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingHabit(null)
-              setShowHabitForm(true)
-            }}
-            icon={<Plus className="w-3.5 h-3.5" />}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
-          >
-            Kebiasaan
-          </Button>
-        ) : viewMode === 'wishlist' ? (
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingWishlist(null)
-              setShowWishlistForm(true)
-            }}
-            icon={<Plus className="w-3.5 h-3.5" />}
-            className="bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
-          >
-            Wishlist
-          </Button>
-        ) : viewMode === 'list' || viewMode === 'kanban' ? (
-          <Button
-            size="sm"
-            onClick={() => setShowForm(!showForm)}
-            icon={<Plus className="w-3.5 h-3.5" />}
-            className="font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
-          >
-            {showForm ? 'Tutup' : 'Tugas Baru'}
-          </Button>
-        ) : null}
+        {/* Workspace Switcher & Dynamic Top Action Button */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {(viewMode === 'list' || viewMode === 'kanban') && (
+            <WorkspaceSwitcher
+              workspaces={workspaceHook.workspaces}
+              activeWorkspace={workspaceHook.activeWorkspace}
+              onSelectWorkspace={workspaceHook.setActiveWorkspaceId}
+              onOpenManager={() => {
+                setIsCreatingWorkspace(false)
+                setShowWorkspaceManager(true)
+              }}
+              onCreateNew={() => {
+                setIsCreatingWorkspace(true)
+                setShowWorkspaceManager(true)
+              }}
+            />
+          )}
+
+          {viewMode === 'habits' ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingHabit(null)
+                setShowHabitForm(true)
+              }}
+              icon={<Plus className="w-3.5 h-3.5" />}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
+            >
+              Kebiasaan
+            </Button>
+          ) : viewMode === 'wishlist' ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingWishlist(null)
+                setShowWishlistForm(true)
+              }}
+              icon={<Plus className="w-3.5 h-3.5" />}
+              className="bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
+            >
+              Wishlist
+            </Button>
+          ) : viewMode === 'list' || viewMode === 'kanban' ? (
+            <Button
+              size="sm"
+              onClick={() => setShowForm(!showForm)}
+              icon={<Plus className="w-3.5 h-3.5" />}
+              className="font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
+            >
+              {showForm ? 'Tutup' : 'Tugas Baru'}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
+      {/* Team Workspace Sub-filter Bar (if in team workspace) */}
+      {workspaceHook.activeWorkspace && (viewMode === 'list' || viewMode === 'kanban') && (
+        <div className="flex items-center justify-between p-1.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 shadow-xs">
+          <div className="flex items-center gap-1.5 px-2 min-w-0">
+            <Users className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span className="text-xs font-bold text-indigo-950 dark:text-indigo-200 truncate">
+              {workspaceHook.activeWorkspace.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setWorkspaceAssigneeFilter('all')}
+              className={cn(
+                'px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer',
+                workspaceAssigneeFilter === 'all'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+              )}
+            >
+              Semua Tim
+            </button>
+            <button
+              type="button"
+              onClick={() => setWorkspaceAssigneeFilter('my_tasks')}
+              className={cn(
+                'px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer',
+                workspaceAssigneeFilter === 'my_tasks'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900'
+              )}
+            >
+              Tugas Saya
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Analytics Card (Always visible across all tabs) */}
-      <TaskAnalyticsCard tasks={tasks} />
+      <TaskAnalyticsCard tasks={workspaceTasks} />
 
       {/* Task Creation Form Inline (if open in task view) */}
       {showForm && (viewMode === 'list' || viewMode === 'kanban') && (
         <div className="animate-fade-in-up">
           <TaskForm
             categories={categories}
+            workspaceMembers={workspaceHook.members}
             onSubmit={handleCreateTask}
             onCancel={() => setShowForm(false)}
             submitLabel="Buat Tugas"
@@ -760,6 +854,7 @@ export function TodoPage() {
             <KanbanBoard
               tasks={filteredTasks}
               subtasksMap={subtasksMap}
+              assigneeMap={memberNameMap}
               onSelectTask={handleTaskClick}
               onChangeStatus={handleStatusChange}
               onAddTask={() => setShowForm(true)}
@@ -768,6 +863,7 @@ export function TodoPage() {
             <TaskList
               tasks={filteredTasks}
               subtasksMap={subtasksMap}
+              assigneeMap={memberNameMap}
               onTaskClick={handleTaskClick}
               onStatusChange={handleStatusChange}
               emptyTitle={
@@ -814,6 +910,8 @@ export function TodoPage() {
               initialCategory={selectedTask.category ?? ''}
               initialDueDate={selectedTask.due_date?.slice(0, 16) ?? ''}
               initialReminderAt={selectedTask.reminder_at?.slice(0, 16) ?? ''}
+              initialAssigneeId={selectedTask.assignee_id}
+              workspaceMembers={workspaceHook.members}
               categories={categories}
               onSubmit={handleUpdateTask}
               submitLabel="Simpan Perubahan"
@@ -862,6 +960,38 @@ export function TodoPage() {
         title="Hapus Tugas"
         message={`Apakah Anda yakin ingin menghapus "${selectedTask?.title}"?`}
         confirmLabel="Hapus"
+      />
+
+      {/* Workspace Manager & Creator Modal */}
+      <WorkspaceManagerModal
+        open={showWorkspaceManager}
+        onClose={() => setShowWorkspaceManager(false)}
+        workspace={workspaceHook.activeWorkspace}
+        members={workspaceHook.members}
+        isCreating={isCreatingWorkspace}
+        onCreateWorkspace={async (name, desc) => {
+          await workspaceHook.addWorkspace({ name, description: desc })
+        }}
+        onUpdateWorkspace={async (name, desc) => {
+          if (!workspaceHook.activeWorkspace) return
+          await workspaceHook.editWorkspace(workspaceHook.activeWorkspace.id, {
+            name,
+            description: desc,
+          })
+        }}
+        onDeleteWorkspace={async () => {
+          if (!workspaceHook.activeWorkspace) return
+          await workspaceHook.removeWorkspace(workspaceHook.activeWorkspace.id)
+        }}
+        onInviteMember={async (email, role) => {
+          await workspaceHook.inviteMember(email, role)
+        }}
+        onUpdateRole={async (memberId, role) => {
+          await workspaceHook.updateRole(memberId, role)
+        }}
+        onRemoveMember={async memberId => {
+          await workspaceHook.removeMember(memberId)
+        }}
       />
     </div>
   )

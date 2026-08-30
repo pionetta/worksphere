@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { cn } from '@/lib/utils'
 import { Sun, Calendar, Target } from 'lucide-react'
-import type { TaskPriority, TaskTimeframe } from '@/types'
+import type { TaskPriority, TaskTimeframe, WorkspaceMember } from '@/types'
 
 interface TaskFormProps {
   initialTitle?: string
@@ -14,6 +14,8 @@ interface TaskFormProps {
   initialCategory?: string
   initialDueDate?: string
   initialReminderAt?: string
+  initialAssigneeId?: string | null
+  workspaceMembers?: WorkspaceMember[]
   categories?: string[]
   onSubmit: (data: {
     title: string
@@ -23,6 +25,7 @@ interface TaskFormProps {
     category?: string
     dueDate?: string
     reminderAt?: string
+    assigneeId?: string | null
   }) => Promise<void>
   onCancel?: () => void
   submitLabel?: string
@@ -36,6 +39,8 @@ export function TaskForm({
   initialCategory = '',
   initialDueDate = '',
   initialReminderAt = '',
+  initialAssigneeId = null,
+  workspaceMembers = [],
   categories = [],
   onSubmit,
   onCancel,
@@ -48,6 +53,7 @@ export function TaskForm({
   const [category, setCategory] = useState(initialCategory)
   const [dueDate, setDueDate] = useState(initialDueDate)
   const [reminderAt, setReminderAt] = useState(initialReminderAt)
+  const [assigneeId, setAssigneeId] = useState<string | null>(initialAssigneeId)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -70,6 +76,7 @@ export function TaskForm({
         category: category.trim() || undefined,
         dueDate: dueDate || undefined,
         reminderAt: reminderAt || undefined,
+        assigneeId: assigneeId || undefined,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan.')
@@ -124,6 +131,27 @@ export function TaskForm({
           error={error && !title.trim() ? error : undefined}
           required
         />
+
+        {/* Assignee Selector (Team Workspace) */}
+        {workspaceMembers.length > 0 && (
+          <div>
+            <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+              Penugasan Anggota Tim (Assignee)
+            </label>
+            <select
+              value={assigneeId || ''}
+              onChange={e => setAssigneeId(e.target.value || null)}
+              className="block w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors cursor-pointer"
+            >
+              <option value="">Belum Ditugaskan (Umum)</option>
+              {workspaceMembers.map(m => (
+                <option key={m.id} value={m.user_id || m.id}>
+                  {m.invited_email || 'Anggota Tim'} ({m.role})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="w-full">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
