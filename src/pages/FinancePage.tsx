@@ -55,9 +55,16 @@ import {
   HandCoins,
   FileDown,
   RefreshCw,
-  Layers,
   ListFilter,
   Building2,
+  Filter,
+  Clock,
+  DollarSign,
+  Tag,
+  ArrowUpDown,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/utils/currency'
@@ -174,8 +181,6 @@ export function FinancePage() {
   const [showDebtForm, setShowDebtForm] = useState(false)
   const [editingDebtId, setEditingDebtId] = useState<string | null>(null)
   const [payingDebt, setPayingDebt] = useState<Debt | null>(null)
-  const [debtFilterType, setDebtFilterType] = useState<'all' | 'debt' | 'receivable'>('all')
-  const [debtFilterStatus, setDebtFilterStatus] = useState<'all' | 'unpaid' | 'paid'>('all')
 
   const [pendingDelete, setPendingDelete] = useState<{
     message: string
@@ -208,14 +213,129 @@ export function FinancePage() {
     return map
   }, [transactionsHook.transactions, currentMonth, currentYear])
 
+  const [debtFilterType, setDebtFilterType] = useState<'all' | 'debt' | 'receivable'>('all')
+  const [debtFilterStatus, setDebtFilterStatus] = useState<'all' | 'unpaid' | 'paid'>('all')
+  const [debtTimeFilter, setDebtTimeFilter] = useState<'all' | 'this_month' | 'next_7_days' | 'overdue'>('all')
+  const [debtAmountFilter, setDebtAmountFilter] = useState<'all' | 'under_500k' | '500k_2m' | 'above_2m'>('all')
+  const [debtCategoryFilter, setDebtCategoryFilter] = useState<'all' | 'paylater' | 'bank' | 'personal'>('all')
+  const [debtSortFilter, setDebtSortFilter] = useState<'remaining_desc' | 'remaining_asc' | 'due_date_asc' | 'total_desc' | 'newest'>('remaining_desc')
+  const [showDebtFilters, setShowDebtFilters] = useState(false)
+
+  const activeDebtFiltersCount = useMemo(() => {
+    let count = 0
+    if (debtFilterType !== 'all') count++
+    if (debtFilterStatus !== 'all') count++
+    if (debtTimeFilter !== 'all') count++
+    if (debtAmountFilter !== 'all') count++
+    if (debtCategoryFilter !== 'all') count++
+    if (debtSortFilter !== 'remaining_desc') count++
+    return count
+  }, [debtFilterType, debtFilterStatus, debtTimeFilter, debtAmountFilter, debtCategoryFilter, debtSortFilter])
+
   const filteredDebts = useMemo(() => {
-    return debtsHook.debts.filter(d => {
-      if (debtFilterType !== 'all' && d.type !== debtFilterType) return false
-      if (debtFilterStatus === 'unpaid' && d.status === 'paid') return false
-      if (debtFilterStatus === 'paid' && d.status !== 'paid') return false
-      return true
-    })
-  }, [debtsHook.debts, debtFilterType, debtFilterStatus])
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+    return debtsHook.debts
+      .filter(d => {
+        // 1. Tipe (Utang / Piutang)
+        if (debtFilterType !== 'all' && d.type !== debtFilterType) return false
+        // 2. Status (Lunas / Belum Lunas)
+        if (debtFilterStatus === 'unpaid' && d.status === 'paid') return false
+        if (debtFilterStatus === 'paid' && d.status !== 'paid') return false
+
+        const remaining = Math.max(0, d.amount - d.paid_amount)
+
+        // 3. Filter Nominal
+        if (debtAmountFilter === 'under_500k' && remaining >= 500000) return false
+        if (debtAmountFilter === '500k_2m' && (remaining < 500000 || remaining > 2000000)) return false
+        if (debtAmountFilter === 'above_2m' && remaining <= 2000000) return false
+
+        // 4. Filter Waktu
+        if (debtTimeFilter === 'this_month') {
+          const isDueThisMonth =
+            (d.due_date && d.due_date.startsWith(currentMonthStr)) ||
+            (d.is_installment && d.installment_due_day != null)
+          if (!isDueThisMonth) return false
+        } else if (debtTimeFilter === 'next_7_days') {
+          if (!d.due_date) {
+            if (!d.is_installment || !d.installment_due_day) return false
+            const dueDay = d.installment_due_day
+            const todayDay = now.getDate()
+            const diff = dueDay - todayDay
+            if (diff < 0 || diff > 7) return false
+          } else {
+            const dueDate = new Date(d.due_date)
+            dueDate.setHours(0, 0, 0, 0)
+            const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+            if (diffDays < 0 || diffDays > 7) return false
+          }
+        } else if (debtTimeFilter === 'overdue') {
+          if (d.status === 'paid') return false
+          if (!d.due_date) return false
+          const dueDate = new Date(d.due_date)
+          dueDate.setHours(0, 0, 0, 0)
+          if (dueDate.getTime() >= now.getTime()) return false
+        }
+
+        // 5. Filter Kategori / Tempat
+        if (debtCategoryFilter !== 'all') {
+          const grp = (d.group_name || '').toLowerCase()
+          if (debtCategoryFilter === 'paylater') {
+            const isPaylater =
+              d.is_flexible_installment ||
+              grp.includes('paylater') ||
+              grp.includes('kredivo') ||
+              grp.includes('akulaku')
+            if (!isPaylater) return false
+          } else if (debtCategoryFilter === 'bank') {
+            const isBank =
+              grp.includes('bank') ||
+              grp.includes('kta') ||
+              grp.includes('kartu kredit') ||
+              grp.includes('bca') ||
+              grp.includes('mandiri') ||
+              grp.includes('bni') ||
+              grp.includes('bri')
+            if (!isBank) return false
+          } else if (debtCategoryFilter === 'personal') {
+            const isPersonal =
+              grp.includes('teman') ||
+              grp.includes('keluarga') ||
+              grp.includes('rekan') ||
+              grp.includes('kantor') ||
+              !d.group_name
+            if (!isPersonal) return false
+          }
+        }
+
+        return true
+      })
+      .sort((a, b) => {
+        const remA = Math.max(0, a.amount - a.paid_amount)
+        const remB = Math.max(0, b.amount - b.paid_amount)
+
+        if (debtSortFilter === 'remaining_desc') return remB - remA
+        if (debtSortFilter === 'remaining_asc') return remA - remB
+        if (debtSortFilter === 'total_desc') return b.amount - a.amount
+        if (debtSortFilter === 'due_date_asc') {
+          if (!a.due_date) return 1
+          if (!b.due_date) return -1
+          return a.due_date.localeCompare(b.due_date)
+        }
+        // newest
+        return b.created_at.localeCompare(a.created_at)
+      })
+  }, [
+    debtsHook.debts,
+    debtFilterType,
+    debtFilterStatus,
+    debtTimeFilter,
+    debtAmountFilter,
+    debtSortFilter,
+    debtCategoryFilter,
+  ])
 
   const [debtViewMode, setDebtViewMode] = useState<'grouped' | 'flat'>('grouped')
   const [selectedDebtGroup, setSelectedDebtGroup] = useState<string | null>(null)
@@ -1196,13 +1316,9 @@ export function FinancePage() {
           <DebtSummary summary={debtsHook.summary} />
 
           {/* Filters & View Mode Switcher (Full Width) */}
-          <div className="space-y-2 pt-1 w-full">
-            {/* Mode Tampilan: Dikelompokkan per Tempat vs Daftar Semua */}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-primary-500" />
-                Tampilan Catatan:
-              </span>
+          <div className="space-y-2.5 pt-1 w-full">
+            {/* Mode Tampilan: Dikelompokkan per Tempat vs Daftar Semua & Toggle Filter Lanjutan */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs">
                 <button
                   type="button"
@@ -1214,7 +1330,7 @@ export function FinancePage() {
                   }`}
                 >
                   <Building2 className="w-3 h-3" />
-                  Per Tempat / Kelompok
+                  Per Tempat
                 </button>
                 <button
                   type="button"
@@ -1229,106 +1345,235 @@ export function FinancePage() {
                   Semua Daftar
                 </button>
               </div>
-            </div>
 
-            {/* Tipe Filter (Semua | Saya Berutang | Piutang) */}
-            <div className="w-full grid grid-cols-3 gap-1 p-1 rounded-xl bg-gray-100/90 dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 text-xs shadow-xs">
+              {/* Filter Toolbar Button */}
               <button
                 type="button"
-                onClick={() => setDebtFilterType('all')}
-                className={`py-1.5 px-2 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
-                  debtFilterType === 'all'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-xs'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                onClick={() => setShowDebtFilters(prev => !prev)}
+                className={`py-1 px-2.5 rounded-lg font-bold text-xs border transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeDebtFiltersCount > 0 || showDebtFilters
+                    ? 'bg-primary-50 dark:bg-primary-950/50 border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300 shadow-xs'
+                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750'
                 }`}
               >
-                Semua
-              </button>
-              <button
-                type="button"
-                onClick={() => setDebtFilterType('debt')}
-                className={`py-1.5 px-2 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
-                  debtFilterType === 'debt'
-                    ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-              >
-                Saya Berutang
-              </button>
-              <button
-                type="button"
-                onClick={() => setDebtFilterType('receivable')}
-                className={`py-1.5 px-2 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
-                  debtFilterType === 'receivable'
-                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-              >
-                Piutang (Orang)
+                <Filter className="w-3.5 h-3.5" />
+                Filter & Urutkan
+                {activeDebtFiltersCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-primary-500 text-white text-[10px] flex items-center justify-center font-extrabold">
+                    {activeDebtFiltersCount}
+                  </span>
+                )}
+                {showDebtFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
             </div>
 
-            {/* Status Filter (Semua Status | Belum Lunas | Lunas) */}
-            <div className="w-full grid grid-cols-3 gap-1 p-1 rounded-xl bg-gray-100/90 dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 text-xs shadow-xs">
-              <button
-                type="button"
-                onClick={() => setDebtFilterStatus('all')}
-                className={`py-1.5 px-2 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
-                  debtFilterStatus === 'all'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-xs'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-              >
-                Semua Status
-              </button>
-              <button
-                type="button"
-                onClick={() => setDebtFilterStatus('unpaid')}
-                className={`py-1.5 px-2 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
-                  debtFilterStatus === 'unpaid'
-                    ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-xs'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-              >
-                Belum Lunas
-              </button>
-              <button
-                type="button"
-                onClick={() => setDebtFilterStatus('paid')}
-                className={`py-1.5 px-2 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
-                  debtFilterStatus === 'paid'
-                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-              >
-                Lunas
-              </button>
+            {/* Quick Status / Type Filter Row */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Tipe Filter (Semua | Utang | Piutang) */}
+              <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-gray-100/90 dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 text-xs shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setDebtFilterType('all')}
+                  className={`py-1 px-1.5 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
+                    debtFilterType === 'all'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-xs'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Semua
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDebtFilterType('debt')}
+                  className={`py-1 px-1.5 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
+                    debtFilterType === 'debt'
+                      ? 'bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400 shadow-xs'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Utang
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDebtFilterType('receivable')}
+                  className={`py-1 px-1.5 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
+                    debtFilterType === 'receivable'
+                      ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Piutang
+                </button>
+              </div>
+
+              {/* Status Filter (Semua Status | Belum Lunas | Lunas) */}
+              <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-gray-100/90 dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 text-xs shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setDebtFilterStatus('all')}
+                  className={`py-1 px-1.5 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
+                    debtFilterStatus === 'all'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-xs'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Semua
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDebtFilterStatus('unpaid')}
+                  className={`py-1 px-1.5 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
+                    debtFilterStatus === 'unpaid'
+                      ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-xs'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Belum Lunas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDebtFilterStatus('paid')}
+                  className={`py-1 px-1.5 rounded-lg font-bold transition-all text-center justify-center cursor-pointer truncate ${
+                    debtFilterStatus === 'paid'
+                      ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Lunas
+                </button>
+              </div>
             </div>
+
+            {/* Advanced Filters Panel (Waktu, Nominal, Kategori, Urutkan) */}
+            {showDebtFilters && (
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-gray-850 border border-primary-200 dark:border-primary-800 shadow-xs space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
+                  <span className="text-xs font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-primary-500" />
+                    Filter Lanjutan (Waktu, Nominal & Kategori)
+                  </span>
+                  {activeDebtFiltersCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDebtFilterType('all')
+                        setDebtFilterStatus('all')
+                        setDebtTimeFilter('all')
+                        setDebtAmountFilter('all')
+                        setDebtCategoryFilter('all')
+                        setDebtSortFilter('remaining_desc')
+                        setSelectedDebtGroup(null)
+                      }}
+                      className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <X className="w-3 h-3" />
+                      Reset Filter
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  {/* 1. Filter Waktu */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-indigo-500" />
+                      Waktu Jatuh Tempo:
+                    </label>
+                    <select
+                      value={debtTimeFilter}
+                      onChange={e => setDebtTimeFilter(e.target.value as any)}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-primary-500"
+                    >
+                      <option value="all">Semua Waktu</option>
+                      <option value="this_month">Jatuh Tempo Bulan Ini</option>
+                      <option value="next_7_days">7 Hari ke Depan</option>
+                      <option value="overdue">Lewat Jatuh Tempo (Overdue)</option>
+                    </select>
+                  </div>
+
+                  {/* 2. Filter Nominal */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      <DollarSign className="w-3 h-3 text-emerald-500" />
+                      Rentang Sisa Nominal:
+                    </label>
+                    <select
+                      value={debtAmountFilter}
+                      onChange={e => setDebtAmountFilter(e.target.value as any)}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-primary-500"
+                    >
+                      <option value="all">Semua Nominal</option>
+                      <option value="under_500k">&lt; Rp 500.000</option>
+                      <option value="500k_2m">Rp 500.000 - Rp 2.000.000</option>
+                      <option value="above_2m">&gt; Rp 2.000.000</option>
+                    </select>
+                  </div>
+
+                  {/* 3. Filter Kategori */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      <Tag className="w-3 h-3 text-amber-500" />
+                      Kategori / Sumber:
+                    </label>
+                    <select
+                      value={debtCategoryFilter}
+                      onChange={e => setDebtCategoryFilter(e.target.value as any)}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-primary-500"
+                    >
+                      <option value="all">Semua Kategori</option>
+                      <option value="paylater">Paylater &amp; Pinjol</option>
+                      <option value="bank">Bank &amp; Kartu Kredit</option>
+                      <option value="personal">Pribadi / Teman / Keluarga</option>
+                    </select>
+                  </div>
+
+                  {/* 4. Urutkan */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      <ArrowUpDown className="w-3 h-3 text-primary-500" />
+                      Urutkan Berdasarkan:
+                    </label>
+                    <select
+                      value={debtSortFilter}
+                      onChange={e => setDebtSortFilter(e.target.value as any)}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-primary-500"
+                    >
+                      <option value="remaining_desc">Sisa Terbesar</option>
+                      <option value="remaining_asc">Sisa Terkecil</option>
+                      <option value="due_date_asc">Jatuh Tempo Terdekat</option>
+                      <option value="total_desc">Total Nominal Terbesar</option>
+                      <option value="newest">Terbaru Ditambahkan</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Overview Ringkasan per Kelompok / Tempat */}
+          {/* Overview Ringkasan per Kelompok / Tempat (Ultra Compact Sleek Layout) */}
           {debtGroups.length > 1 && (
-            <div className="space-y-2 pt-1">
+            <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-primary-500" />
-                  Ringkasan Total per Tempat / Kelompok:
-                  <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400 hidden sm:inline">
-                    (Klik untuk melihat tagihan kelompok)
+                  Ringkasan Kelompok:
+                  <span className="text-[10px] font-normal text-gray-400">
+                    (Klik untuk filter)
                   </span>
                 </h3>
                 {selectedDebtGroup && (
                   <button
                     type="button"
                     onClick={() => setSelectedDebtGroup(null)}
-                    className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline cursor-pointer flex items-center gap-1"
+                    className="text-[11px] font-bold text-primary-600 dark:text-primary-400 hover:underline cursor-pointer flex items-center gap-1"
                   >
                     ✕ Tampilkan Semua ({debtGroups.length})
                   </button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {/* Compact Responsive Card Grid (2 cols on mobile, 3/4 on larger screens) */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                 {debtGroups.map(grp => {
                   const isSelected = selectedDebtGroup?.toLowerCase() === grp.groupName.toLowerCase()
                   const pct = grp.totalAmount > 0 ? Math.min(100, Math.round((grp.totalPaid / grp.totalAmount) * 100)) : 0
@@ -1337,44 +1582,35 @@ export function FinancePage() {
                       key={grp.groupName}
                       type="button"
                       onClick={() => setSelectedDebtGroup(prev => prev?.toLowerCase() === grp.groupName.toLowerCase() ? null : grp.groupName)}
-                      className={`w-full text-left p-3.5 rounded-2xl transition-all cursor-pointer space-y-2 relative border ${
+                      className={`w-full text-left p-2.5 rounded-xl transition-all cursor-pointer space-y-1.5 border relative ${
                         isSelected
-                          ? 'bg-primary-50/90 dark:bg-primary-950/60 border-primary-500 dark:border-primary-600 shadow-md ring-2 ring-primary-500/40'
-                          : 'bg-white dark:bg-gray-800 border-gray-200/90 dark:border-gray-700/80 shadow-2xs hover:border-primary-400 dark:hover:border-primary-600 hover:shadow-sm'
+                          ? 'bg-primary-50/95 dark:bg-primary-950/70 border-primary-500 shadow-xs ring-1 ring-primary-500'
+                          : 'bg-white dark:bg-gray-800 border-gray-200/90 dark:border-gray-700/80 shadow-2xs hover:border-primary-400 dark:hover:border-primary-600 hover:shadow-xs'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={`text-xs font-bold truncate ${isSelected ? 'text-primary-700 dark:text-primary-300 font-extrabold' : 'text-gray-900 dark:text-gray-100'}`}>
-                            {grp.groupName}
-                          </span>
-                          {isSelected && (
-                            <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0 animate-pulse" />
-                          )}
-                        </div>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                      <div className="flex items-center justify-between gap-1">
+                        <span className={`text-[11px] font-bold truncate ${isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-gray-100'}`}>
+                          {grp.groupName}
+                        </span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md shrink-0 ${
                           isSelected
                             ? 'bg-primary-500 text-white'
-                            : 'bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                         }`}>
-                          {grp.totalCount} item
+                          {grp.totalCount}
                         </span>
                       </div>
-                      <div className="flex items-baseline justify-between text-xs">
-                        <span className="text-gray-500 dark:text-gray-400 text-[11px]">Sisa Tagihan:</span>
+                      <div className="flex items-baseline justify-between text-[11px]">
+                        <span className="text-[10px] text-gray-400">Sisa:</span>
                         <span className={`font-extrabold ${isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-gray-100'}`}>
                           {formatCurrency(grp.totalRemaining)}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                      <div className="w-full bg-gray-100 dark:bg-gray-700 h-1 rounded-full overflow-hidden">
                         <div
                           className="bg-primary-500 h-full rounded-full transition-all duration-300"
                           style={{ width: `${pct}%` }}
                         />
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-gray-400">
-                        <span>Total: {formatCurrency(grp.totalAmount)}</span>
-                        <span>{pct}% lunas</span>
                       </div>
                     </button>
                   )
@@ -1383,17 +1619,17 @@ export function FinancePage() {
 
               {/* Active Filter Indicator */}
               {selectedDebtGroup && (
-                <div className="p-2.5 rounded-xl bg-primary-50/70 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-800 flex items-center justify-between text-xs text-primary-900 dark:text-primary-200 animate-fade-in">
-                  <span className="font-semibold flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                    Menampilkan tagihan untuk kelompok: <strong>{selectedDebtGroup}</strong> ({displayedDebts.length} item)
+                <div className="p-2 rounded-xl bg-primary-50/70 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-800 flex items-center justify-between text-xs text-primary-900 dark:text-primary-200 animate-fade-in">
+                  <span className="font-semibold flex items-center gap-1.5 truncate">
+                    <Building2 className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400 shrink-0" />
+                    <span className="truncate">Kelompok: <strong>{selectedDebtGroup}</strong> ({displayedDebts.length} tagihan)</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setSelectedDebtGroup(null)}
-                    className="text-[11px] font-bold text-primary-700 dark:text-primary-300 hover:underline px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-700 cursor-pointer shadow-2xs"
+                    className="text-[10px] font-bold text-primary-700 dark:text-primary-300 hover:underline px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-700 cursor-pointer shadow-2xs shrink-0 ml-2"
                   >
-                    ✕ Tampilkan Semua
+                    ✕ Reset
                   </button>
                 </div>
               )}
