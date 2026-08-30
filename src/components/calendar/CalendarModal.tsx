@@ -11,8 +11,8 @@ interface CalendarModalProps {
 
 export function CalendarModal({ open, onClose, userId, onEventClick }: CalendarModalProps) {
   return (
-    <BottomSheet open={open} onClose={onClose} title="Kalender Terpadu">
-      <div className="pb-6 max-h-[80vh] overflow-y-auto">
+    <BottomSheet open={open} onClose={onClose} title="Kalender Terpadu 📅">
+      <div className="space-y-4">
         <MasterCalendar
           userId={userId}
           onEventClick={ev => {

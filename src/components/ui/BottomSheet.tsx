@@ -91,7 +91,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center animate-fade-in"
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center animate-fade-in p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label={title ?? 'Dialog'}
@@ -99,31 +99,37 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
         if (e.target === overlayRef.current) onClose()
       }}
     >
-      <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-xs" />
+      <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-xs" />
       <div
         ref={contentRef}
         tabIndex={-1}
         className={cn(
-          'relative w-full max-w-lg max-h-[85vh] overflow-y-auto',
-          'bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl',
-          'shadow-xl outline-none',
+          'relative w-full max-w-lg max-h-[90vh] sm:max-h-[85vh] flex flex-col',
+          'bg-white dark:bg-gray-900 rounded-t-[28px] sm:rounded-[28px]',
+          'shadow-2xl border border-gray-100 dark:border-gray-800/80 outline-none',
           'animate-slide-up sm:animate-scale-in',
           className
         )}
       >
+        {/* Mobile handle indicator */}
+        <div className="w-12 h-1.5 rounded-full bg-gray-300 dark:bg-gray-700 mx-auto mt-2.5 sm:hidden shrink-0" />
+
         {title && (
-          <div className="flex items-center justify-between px-4 pt-4 pb-2 sticky top-0 bg-white dark:bg-gray-900 z-10">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+          <div className="flex items-center justify-between px-5 pt-3.5 pb-3 border-b border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-t-[28px] shrink-0 z-10">
+            <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100 truncate pr-2">
+              {title}
+            </h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer shrink-0"
               aria-label="Tutup"
             >
-              <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         )}
-        <div className="px-4 pb-8 pt-2">{children}</div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 pb-8 sm:pb-6">{children}</div>
       </div>
     </div>
   )

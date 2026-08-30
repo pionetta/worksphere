@@ -7,6 +7,8 @@ import {
   Users,
   ListTodo,
   Filter,
+  Clock,
+  Sparkles,
 } from 'lucide-react'
 import {
   getCalendarEventsForMonth,
@@ -112,7 +114,7 @@ export function MasterCalendar({ userId, onEventClick }: MasterCalendarProps) {
     }
 
     // Next month filler days (fill up to 35 or 42 grid cells)
-    const remaining = 35 - days.length
+    const remaining = (days.length <= 35 ? 35 : 42) - days.length
     if (remaining > 0) {
       for (let i = 1; i <= remaining; i++) {
         const nextMonth = month === 12 ? 1 : month + 1
@@ -148,6 +150,21 @@ export function MasterCalendar({ userId, onEventClick }: MasterCalendarProps) {
     return eventsByDate.get(selectedDate) || []
   }, [eventsByDate, selectedDate])
 
+  const formattedSelectedDate = useMemo(() => {
+    try {
+      const [y, m, d] = selectedDate.split('-').map(Number)
+      const dateObj = new Date(y, m - 1, d)
+      return dateObj.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    } catch {
+      return selectedDate
+    }
+  }, [selectedDate])
+
   const handlePrevMonth = () => {
     setCurrentDate(new Date(year, month - 2, 1))
   }
@@ -163,35 +180,35 @@ export function MasterCalendar({ userId, onEventClick }: MasterCalendarProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       {/* Calendar Header & Month Switcher */}
-      <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-white/85 dark:bg-gray-800/85 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 flex items-center justify-center">
+      <div className="flex items-center justify-between p-3 sm:p-4 rounded-2xl bg-white/90 dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-2xs">
             <CalendarIcon className="w-5 h-5" />
           </div>
-          <div>
-            <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white">
+          <div className="min-w-0">
+            <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white truncate">
               {MONTH_NAMES[month - 1]} {year}
             </h3>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              {events.length} Agenda Terjadwal
+              {events.length} Agenda Bulan Ini
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
             onClick={handleToday}
-            className="px-2.5 py-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 rounded-lg transition-colors"
+            className="px-2.5 py-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 rounded-lg transition-colors cursor-pointer"
           >
             Hari Ini
           </button>
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700/60"
+            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors cursor-pointer"
             aria-label="Bulan sebelumnya"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -199,7 +216,7 @@ export function MasterCalendar({ userId, onEventClick }: MasterCalendarProps) {
           <button
             type="button"
             onClick={handleNextMonth}
-            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700/60"
+            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors cursor-pointer"
             aria-label="Bulan berikutnya"
           >
             <ChevronRight className="w-4 h-4" />
@@ -211,9 +228,9 @@ export function MasterCalendar({ userId, onEventClick }: MasterCalendarProps) {
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
         {(
           [
-            { id: 'all', label: 'Semua Agenda', icon: <Filter className="w-3.5 h-3.5" /> },
+            { id: 'all', label: 'Semua', icon: <Filter className="w-3.5 h-3.5" /> },
             { id: 'todo', label: 'Tugas', icon: <ListTodo className="w-3.5 h-3.5" /> },
-            { id: 'finance', label: 'Keuangan & Tagihan', icon: <Wallet className="w-3.5 h-3.5" /> },
+            { id: 'finance', label: 'Keuangan', icon: <Wallet className="w-3.5 h-3.5" /> },
             { id: 'attendance', label: 'Presensi', icon: <Users className="w-3.5 h-3.5" /> },
           ] as const
         ).map(tab => (
@@ -235,14 +252,14 @@ export function MasterCalendar({ userId, onEventClick }: MasterCalendarProps) {
       </div>
 
       {/* ─── Month Calendar Grid ─── */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-white/85 dark:bg-gray-800/85 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md">
+      <div className="p-3 sm:p-4 rounded-2xl bg-white/90 dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md">
         {/* Weekday headers */}
         <div className="grid grid-cols-7 gap-1 text-center mb-2">
           {DAY_NAMES.map((day, idx) => (
             <span
               key={day}
               className={cn(
-                'text-[11px] font-extrabold py-1',
+                'text-[11px] font-extrabold py-0.5',
                 idx === 0 ? 'text-rose-500' : 'text-gray-400 dark:text-gray-500'
               )}
             >
@@ -263,36 +280,36 @@ export function MasterCalendar({ userId, onEventClick }: MasterCalendarProps) {
                 type="button"
                 onClick={() => setSelectedDate(cell.dateStr)}
                 className={cn(
-                  'h-12 sm:h-14 p-1 rounded-xl flex flex-col items-center justify-between transition-all cursor-pointer select-none',
+                  'min-h-[46px] sm:min-h-[52px] p-1 rounded-xl flex flex-col items-center justify-between transition-all cursor-pointer select-none',
                   cell.isCurrentMonth
                     ? 'text-gray-800 dark:text-gray-200 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30'
-                    : 'text-gray-300 dark:text-gray-600 opacity-40',
+                    : 'text-gray-300 dark:text-gray-600 opacity-30',
                   cell.isSelected &&
-                    'ring-2 ring-indigo-600 dark:ring-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/50 font-bold',
+                    'ring-2 ring-indigo-600 dark:ring-indigo-400 bg-indigo-50/90 dark:bg-indigo-950/60 font-bold shadow-2xs',
                   cell.isToday && !cell.isSelected && 'bg-gray-100 dark:bg-gray-700/40 font-bold'
                 )}
               >
                 <span
                   className={cn(
                     'text-xs w-6 h-6 flex items-center justify-center rounded-full',
-                    cell.isToday && 'bg-indigo-600 text-white font-bold'
+                    cell.isToday ? 'bg-indigo-600 text-white font-bold' : ''
                   )}
                 >
                   {cell.dayNum}
                 </span>
 
-                {/* Event Dots */}
-                <div className="flex items-center gap-0.5 max-w-full overflow-hidden px-0.5 pb-0.5">
+                {/* Event Dots Container */}
+                <div className="flex items-center gap-0.5 max-w-full overflow-hidden px-0.5 pb-0.5 h-2">
                   {hasEvents &&
                     dayEvents.slice(0, 3).map(ev => (
                       <span
                         key={ev.id}
-                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        className="w-1.5 h-1.5 rounded-full shrink-0 shadow-2xs"
                         style={{ backgroundColor: ev.color }}
                       />
                     ))}
                   {dayEvents.length > 3 && (
-                    <span className="text-[9px] font-extrabold text-indigo-500 leading-none">
+                    <span className="text-[9px] font-black text-indigo-500 leading-none">
                       +
                     </span>
                   )}
@@ -304,31 +321,39 @@ export function MasterCalendar({ userId, onEventClick }: MasterCalendarProps) {
       </div>
 
       {/* ─── Selected Day Agenda Panel ─── */}
-      <div className="p-4 rounded-2xl bg-white/85 dark:bg-gray-800/85 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
-          <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
-            Agenda Tanggal: {selectedDate}
-          </h4>
-          <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">
-            {selectedDateEvents.length} Item
-          </span>
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-white/90 dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md space-y-3">
+        <div className="flex items-center justify-between pb-2.5 border-b border-gray-100 dark:border-gray-800">
+          <div className="min-w-0 pr-2">
+            <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white capitalize truncate">
+              {formattedSelectedDate}
+            </h4>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              {selectedDateEvents.length} Agenda Terdaftar
+            </p>
+          </div>
+          {selectedDateEvents.length > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 shrink-0">
+              {selectedDateEvents.length} Item
+            </span>
+          )}
         </div>
 
         {selectedDateEvents.length === 0 ? (
-          <div className="py-6 text-center text-xs text-gray-400 dark:text-gray-500">
-            Tidak ada agenda atau jadwal jatuh tempo pada tanggal ini.
+          <div className="py-6 text-center text-xs text-gray-400 dark:text-gray-500 flex flex-col items-center justify-center gap-1.5">
+            <Sparkles className="w-5 h-5 text-gray-300 dark:text-gray-600" />
+            <span>Tidak ada agenda atau jadwal jatuh tempo pada tanggal ini.</span>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2 max-h-[35vh] overflow-y-auto pr-0.5">
             {selectedDateEvents.map(ev => (
               <div
                 key={ev.id}
                 onClick={() => onEventClick?.(ev)}
-                className="flex items-center justify-between p-3 rounded-xl bg-gray-50/80 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800/80 hover:border-indigo-200 transition-all cursor-pointer"
+                className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-gray-50/80 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800/80 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all cursor-pointer shadow-2xs"
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0"
+                    className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0"
                     style={{ backgroundColor: `${ev.color}15` }}
                   >
                     <span>{ev.icon || '📌'}</span>
@@ -339,7 +364,12 @@ export function MasterCalendar({ userId, onEventClick }: MasterCalendarProps) {
                     </p>
                     <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
                       <span className="capitalize font-semibold">{ev.type}</span>
-                      {ev.time && <span>• {ev.time}</span>}
+                      {ev.time && (
+                        <span className="flex items-center gap-0.5">
+                          <Clock className="w-3 h-3 text-gray-400" />
+                          <span>{ev.time}</span>
+                        </span>
+                      )}
                       {ev.amount !== undefined && (
                         <span className="font-bold text-gray-700 dark:text-gray-300">
                           • {formatCurrency(ev.amount)}

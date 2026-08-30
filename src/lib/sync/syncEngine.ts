@@ -440,7 +440,7 @@ export async function pullCloudData(userId: string): Promise<void> {
           if (
             !local ||
             !local.updated_at ||
-            new Date(item.updated_at).getTime() >= new Date(local.updated_at).getTime()
+            new Date(item.updated_at).getTime() > new Date(local.updated_at).getTime()
           ) {
             await (db[dexieKey] as any).put(item)
             hasUpdates = true
