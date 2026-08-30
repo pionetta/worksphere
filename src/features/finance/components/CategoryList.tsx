@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { BottomSheet } from '@/components/ui/BottomSheet'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CategoryForm } from './CategoryForm'
 import { Tags, Plus, Pencil, Trash2 } from 'lucide-react'
@@ -17,6 +18,8 @@ interface CategoryListProps {
 export function CategoryList({ categories, loading, onAdd, onEdit, onRemove }: CategoryListProps) {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+
+  const editingCategory = categories.find(c => c.id === editingId)
 
   if (categories.length === 0 && !loading && !showForm) {
     return (
@@ -36,6 +39,23 @@ export function CategoryList({ categories, loading, onAdd, onEdit, onRemove }: C
             </Button>
           }
         />
+
+        {/* Modal Form Tambah Kategori */}
+        <BottomSheet
+          open={showForm}
+          onClose={() => setShowForm(false)}
+          title="Tambah Kategori Baru"
+        >
+          <div className="pb-4">
+            <CategoryForm
+              onSubmit={async (name, type, icon) => {
+                await onAdd(name, type, icon)
+                setShowForm(false)
+              }}
+              onCancel={() => setShowForm(false)}
+            />
+          </div>
+        </BottomSheet>
       </div>
     )
   }
@@ -43,15 +63,54 @@ export function CategoryList({ categories, loading, onAdd, onEdit, onRemove }: C
   return (
     <div>
       <div className="flex justify-end mb-4">
-        {!showForm && (
-          <Button onClick={() => setShowForm(true)} icon={<Plus className="w-4 h-4" />} size="sm">
-            Tambah Kategori
-          </Button>
-        )}
+        <Button onClick={() => setShowForm(true)} icon={<Plus className="w-4 h-4" />} size="sm">
+          Tambah Kategori
+        </Button>
       </div>
 
-      {showForm && (
-        <div className="mb-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+      <div className="space-y-2">
+        {categories.map(category => (
+          <div
+            key={category.id}
+            className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {category.name}
+                </p>
+                <Badge variant={category.type === 'income' ? 'success' : 'danger'}>
+                  {category.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+                </Badge>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 ml-2">
+              <button
+                onClick={() => setEditingId(category.id)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                aria-label="Edit kategori"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onRemove(category.id)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-danger hover:bg-danger-light dark:hover:bg-red-900/30 transition-colors cursor-pointer"
+                aria-label="Hapus kategori"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Modal Form Tambah Kategori */}
+      <BottomSheet
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="Tambah Kategori Baru"
+      >
+        <div className="pb-4">
           <CategoryForm
             onSubmit={async (name, type, icon) => {
               await onAdd(name, type, icon)
@@ -60,61 +119,41 @@ export function CategoryList({ categories, loading, onAdd, onEdit, onRemove }: C
             onCancel={() => setShowForm(false)}
           />
         </div>
-      )}
+      </BottomSheet>
 
-      <div className="space-y-2">
-        {categories.map(category => (
-          <div
-            key={category.id}
-            className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-          >
-            {editingId === category.id ? (
-              <div className="flex-1 mr-2">
-                <CategoryForm
-                  initialName={category.name}
-                  initialType={category.type}
-                  initialIcon={category.icon ?? ''}
-                  onSubmit={async (name, type, icon) => {
-                    await onEdit(category.id, { name, type, icon })
-                    setEditingId(null)
-                  }}
-                  onCancel={() => setEditingId(null)}
-                  submitLabel="Update"
-                />
-              </div>
-            ) : (
-              <>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {category.name}
-                    </p>
-                    <Badge variant={category.type === 'income' ? 'success' : 'danger'}>
-                      {category.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 ml-2">
-                  <button
-                    onClick={() => setEditingId(category.id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-700 transition-colors"
-                    aria-label="Edit kategori"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => onRemove(category.id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-danger hover:bg-danger-light dark:hover:bg-red-900/30 transition-colors"
-                    aria-label="Hapus kategori"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        ))}
-      </div>
+      {/* Modal Form Edit Kategori */}
+      <BottomSheet
+        open={editingId !== null}
+        onClose={() => setEditingId(null)}
+        title={`Edit Kategori: ${editingCategory?.name || ''}`}
+        onDelete={
+          editingCategory
+            ? async () => {
+                const id = editingCategory.id
+                setEditingId(null)
+                await onRemove(id)
+              }
+            : undefined
+        }
+        deleteLabel="Hapus Kategori"
+      >
+        <div className="pb-4">
+          {editingCategory && (
+            <CategoryForm
+              key={editingCategory.id}
+              initialName={editingCategory.name}
+              initialType={editingCategory.type}
+              initialIcon={editingCategory.icon ?? ''}
+              onSubmit={async (name, type, icon) => {
+                await onEdit(editingCategory.id, { name, type, icon })
+                setEditingId(null)
+              }}
+              onCancel={() => setEditingId(null)}
+              submitLabel="Simpan Perubahan"
+            />
+          )}
+        </div>
+      </BottomSheet>
     </div>
   )
 }

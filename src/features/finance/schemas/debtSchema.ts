@@ -21,6 +21,10 @@ export const createDebtSchema = z.object({
     .int('Nominal harus berupa bilangan bulat.')
     .min(1, 'Nominal harus lebih dari 0.'),
   due_date: dateStringSchema.nullable().optional(),
+  is_installment: z.boolean().optional(),
+  installment_count: z.number().int().min(1).max(120).nullable().optional(),
+  installment_amount: z.number().int().min(1).nullable().optional(),
+  installment_due_day: z.number().int().min(1).max(31).nullable().optional(),
   note: optionalNoteSchema,
 })
 
@@ -38,6 +42,10 @@ export const updateDebtSchema = z.object({
     .min(1, 'Nominal harus lebih dari 0.')
     .optional(),
   due_date: dateStringSchema.nullable().optional(),
+  is_installment: z.boolean().optional(),
+  installment_count: z.number().int().min(1).max(120).nullable().optional(),
+  installment_amount: z.number().int().min(1).nullable().optional(),
+  installment_due_day: z.number().int().min(1).max(31).nullable().optional(),
   note: optionalNoteSchema,
 })
 

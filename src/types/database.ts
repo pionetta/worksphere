@@ -156,6 +156,10 @@ export interface Debt {
   paid_amount: number // BIGINT
   due_date: string | null // DATE
   status: DebtStatus
+  is_installment?: boolean
+  installment_count?: number | null
+  installment_amount?: number | null
+  installment_due_day?: number | null
   note: string | null
   created_at: string
   updated_at: string

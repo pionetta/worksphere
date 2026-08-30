@@ -94,21 +94,38 @@ export async function getCalendarEventsForMonth(
     .toArray()
 
   for (const d of debts) {
-    if (d.status === 'paid' || !d.due_date) continue
-    if (!d.due_date.startsWith(prefix)) continue
+    if (d.status === 'paid') continue
 
-    events.push({
-      id: `debt-${d.id}`,
-      rawId: d.id,
-      module: 'finance',
-      type: 'debt',
-      title: `${d.type === 'debt' ? 'Bayar Utang ke' : 'Tagih Piutang dari'} ${d.person_name}`,
-      date: d.due_date,
-      amount: d.amount - d.paid_amount,
-      status: d.status,
-      color: d.type === 'debt' ? '#DC2626' : '#2563EB',
-      icon: '💸',
-    })
+    // If installment with monthly due day, add monthly event
+    if (d.is_installment && d.installment_due_day) {
+      const dayStr = String(d.installment_due_day).padStart(2, '0')
+      const installmentDate = `${prefix}-${dayStr}`
+      events.push({
+        id: `debt-inst-${d.id}-${installmentDate}`,
+        rawId: d.id,
+        module: 'finance',
+        type: 'debt',
+        title: `Cicilan ${d.person_name} (Tgl ${d.installment_due_day})`,
+        date: installmentDate,
+        amount: d.installment_amount || (d.amount - d.paid_amount),
+        status: d.status,
+        color: d.type === 'debt' ? '#DC2626' : '#2563EB',
+        icon: '💳',
+      })
+    } else if (d.due_date && d.due_date.startsWith(prefix)) {
+      events.push({
+        id: `debt-${d.id}`,
+        rawId: d.id,
+        module: 'finance',
+        type: 'debt',
+        title: `${d.type === 'debt' ? 'Bayar Utang ke' : 'Tagih Piutang dari'} ${d.person_name}`,
+        date: d.due_date,
+        amount: d.amount - d.paid_amount,
+        status: d.status,
+        color: d.type === 'debt' ? '#DC2626' : '#2563EB',
+        icon: '💸',
+      })
+    }
   }
 
   // 4. Fetch Savings Goals (Target Tabungan)

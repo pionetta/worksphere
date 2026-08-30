@@ -412,18 +412,7 @@ export function TodoPage() {
       {/* Analytics Card (Always visible across all tabs) */}
       <TaskAnalyticsCard tasks={workspaceTasks} />
 
-      {/* Task Creation Form Inline (if open in task view) */}
-      {showForm && (viewMode === 'list' || viewMode === 'kanban') && (
-        <div className="animate-fade-in-up">
-          <TaskForm
-            categories={categories}
-            workspaceMembers={workspaceHook.members}
-            onSubmit={handleCreateTask}
-            onCancel={() => setShowForm(false)}
-            submitLabel="Buat Tugas"
-          />
-        </div>
-      )}
+
 
       {/* View Mode Segmented Switcher (Daftar | Kanban | Kebiasaan | Wishlist | Catatan) */}
       <div className="flex items-center justify-between p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs gap-1">
@@ -991,6 +980,23 @@ export function TodoPage() {
           await workspaceHook.removeMember(memberId)
         }}
       />
+
+      {/* ─── Popup: Form Buat Tugas Baru ─── */}
+      <BottomSheet
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="Buat Tugas Baru"
+      >
+        <div className="pb-4">
+          <TaskForm
+            categories={categories}
+            workspaceMembers={workspaceHook.members}
+            onSubmit={handleCreateTask}
+            onCancel={() => setShowForm(false)}
+            submitLabel="Buat Tugas"
+          />
+        </div>
+      </BottomSheet>
     </div>
   )
 }

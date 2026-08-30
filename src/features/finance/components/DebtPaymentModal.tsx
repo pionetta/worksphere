@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatCurrency } from '@/utils/currency'
 import { payDebtSchema } from '@/features/finance/schemas/debtSchema'
-import { Coins, CheckCircle2 } from 'lucide-react'
+import { Coins, CheckCircle2, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Debt } from '@/types'
 
@@ -24,6 +24,7 @@ export function DebtPaymentModal({ debt, open, onClose, onPayment }: DebtPayment
 
   const remaining = Math.max(0, debt.amount - debt.paid_amount)
   const isDebt = debt.type === 'debt'
+  const oneInstallment = debt.installment_amount ? Math.min(remaining, debt.installment_amount) : 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,6 +66,13 @@ export function DebtPaymentModal({ debt, open, onClose, onPayment }: DebtPayment
     setError('')
   }
 
+  const handlePayInstallment = () => {
+    if (oneInstallment > 0) {
+      setAmount(String(oneInstallment))
+      setError('')
+    }
+  }
+
   return (
     <BottomSheet
       open={open}
@@ -80,6 +88,12 @@ export function DebtPaymentModal({ debt, open, onClose, onPayment }: DebtPayment
               {debt.person_name}
             </span>
           </div>
+          {debt.is_installment && debt.installment_due_day && (
+            <div className="flex justify-between text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+              <span>Skema Cicilan:</span>
+              <span>Jatuh tempo tiap tgl {debt.installment_due_day}</span>
+            </div>
+          )}
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>Total Tagihan:</span>
             <span className="font-medium text-gray-900 dark:text-gray-100">
@@ -114,16 +128,31 @@ export function DebtPaymentModal({ debt, open, onClose, onPayment }: DebtPayment
             placeholder="0"
           />
 
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="w-full"
-            onClick={handlePayFull}
-            icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
-          >
-            Lunasi Semua ({formatCurrency(remaining)})
-          </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            {debt.is_installment && oneInstallment > 0 && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="w-full text-xs font-bold"
+                onClick={handlePayInstallment}
+                icon={<CreditCard className="w-4 h-4 text-indigo-500" />}
+              >
+                Bayar 1x Cicilan ({formatCurrency(oneInstallment)})
+              </Button>
+            )}
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className={`w-full text-xs font-bold ${!debt.is_installment ? 'sm:col-span-2' : ''}`}
+              onClick={handlePayFull}
+              icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+            >
+              Lunasi Semua ({formatCurrency(remaining)})
+            </Button>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">

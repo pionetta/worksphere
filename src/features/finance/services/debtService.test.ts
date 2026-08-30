@@ -41,6 +41,26 @@ describe('debtService', () => {
       expect(queue).toHaveLength(1)
       expect(queue[0].operation).toBe('create')
     })
+
+    it('should create an installment debt with tenor and monthly due day', async () => {
+      const id = await debtService.createDebt(userId, {
+        type: 'debt',
+        person_name: 'Pinjol Kredivo',
+        amount: 3000000,
+        is_installment: true,
+        installment_count: 6,
+        installment_amount: 550000,
+        installment_due_day: 10,
+        note: 'Beli laptop',
+      })
+
+      const debt = await db.debts.get(id)
+      expect(debt).toBeDefined()
+      expect(debt?.is_installment).toBe(true)
+      expect(debt?.installment_count).toBe(6)
+      expect(debt?.installment_amount).toBe(550000)
+      expect(debt?.installment_due_day).toBe(10)
+    })
   })
 
   describe('payDebt', () => {

@@ -1015,65 +1015,21 @@ export function FinancePage() {
         </Card>
       )}
 
-      {/* Budgets Tab */}
-      {tab === 'budgets' && (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={() => setShowBudgetForm(true)}
-              icon={<Plus className="w-4 h-4" />}
-            >
-              Tambah Anggaran
-            </Button>
-          </div>
-
-          {showBudgetForm && (
-            <Card>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                {editingBudgetId ? 'Edit Anggaran' : 'Tambah Anggaran'}
-              </h3>
-              <BudgetForm
-                key={editingBudgetId ?? 'new-budget'}
-                categories={categories}
-                initialCategoryId={
-                  editingBudgetId
-                    ? budgetsHook.budgets.find(b => b.id === editingBudgetId)?.category_id
-                    : ''
-                }
-                initialAmount={
-                  editingBudgetId
-                    ? budgetsHook.budgets.find(b => b.id === editingBudgetId)?.amount
-                    : undefined
-                }
-                initialNote={
-                  editingBudgetId
-                    ? (budgetsHook.budgets.find(b => b.id === editingBudgetId)?.note ?? '')
-                    : ''
-                }
-                onSubmit={async (categoryId, amount, note) => {
-                  try {
-                    if (editingBudgetId) {
-                      await budgetsHook.editBudget(editingBudgetId, { amount, note })
-                      toast.success('Anggaran berhasil diperbarui')
-                      setEditingBudgetId(null)
-                    } else {
-                      await budgetsHook.addBudget(categoryId, amount, note ?? undefined)
-                      toast.success('Anggaran baru berhasil disimpan')
-                    }
-                    setShowBudgetForm(false)
-                  } catch {
-                    toast.error('Gagal menyimpan anggaran')
-                  }
-                }}
-                onCancel={() => {
-                  setShowBudgetForm(false)
-                  setEditingBudgetId(null)
-                }}
-                submitLabel={editingBudgetId ? 'Update' : 'Simpan'}
-              />
-            </Card>
-          )}
+          {/* Budgets Tab */}
+          {tab === 'budgets' && (
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingBudgetId(null)
+                    setShowBudgetForm(true)
+                  }}
+                  icon={<Plus className="w-4 h-4" />}
+                >
+                  Tambah Anggaran
+                </Button>
+              </div>
 
           {budgetsHook.loading ? (
             <LoadingState text="Memuat anggaran..." />
@@ -1132,164 +1088,15 @@ export function FinancePage() {
           <div className="flex justify-end">
             <Button
               size="sm"
-              onClick={() => setShowSavingsForm(true)}
+              onClick={() => {
+                setEditingSavingsId(null)
+                setShowSavingsForm(true)
+              }}
               icon={<Plus className="w-4 h-4" />}
             >
               Tambah Tujuan
             </Button>
           </div>
-
-          {showSavingsForm && (
-            <Card>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                {editingSavingsId ? 'Edit Tujuan Tabungan' : 'Tambah Tujuan Tabungan'}
-              </h3>
-              <SavingsGoalForm
-                key={editingSavingsId ?? 'new-savings'}
-                initialName={
-                  editingSavingsId
-                    ? savingsHook.goals.find(g => g.id === editingSavingsId)?.name
-                    : ''
-                }
-                initialTarget={
-                  editingSavingsId
-                    ? savingsHook.goals.find(g => g.id === editingSavingsId)?.target_amount
-                    : undefined
-                }
-                initialDeadline={
-                  editingSavingsId
-                    ? (savingsHook.goals.find(g => g.id === editingSavingsId)?.deadline ?? '')
-                    : ''
-                }
-                initialNote={
-                  editingSavingsId
-                    ? (savingsHook.goals.find(g => g.id === editingSavingsId)?.note ?? '')
-                    : ''
-                }
-                onSubmit={async (name, target, deadline, note) => {
-                  try {
-                    if (editingSavingsId) {
-                      await savingsHook.editGoal(editingSavingsId, {
-                        name,
-                        target_amount: target,
-                        deadline,
-                        note,
-                      })
-                      toast.success(`Target tabungan "${name}" diperbarui`)
-                      setEditingSavingsId(null)
-                    } else {
-                      await savingsHook.addGoal(
-                        name,
-                        target,
-                        deadline ?? undefined,
-                        note ?? undefined
-                      )
-                      toast.success(`Target tabungan "${name}" berhasil dibuat`)
-                    }
-                    setShowSavingsForm(false)
-                  } catch {
-                    toast.error('Gagal menyimpan target tabungan')
-                  }
-                }}
-                onCancel={() => {
-                  setShowSavingsForm(false)
-                  setEditingSavingsId(null)
-                }}
-                submitLabel={editingSavingsId ? 'Update' : 'Simpan'}
-              />
-            </Card>
-          )}
-
-          {addSavingsToId && (
-            <Card>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                Setor / Tambah Saldo Tabungan (
-                {savingsHook.goals.find(g => g.id === addSavingsToId)?.name})
-              </h3>
-              <div className="space-y-3">
-                <input
-                  type="number"
-                  value={addAmount}
-                  onChange={e => setAddAmount(e.target.value)}
-                  placeholder="Nominal setoran"
-                  className="block w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setAddSavingsToId(null)
-                      setAddAmount('')
-                    }}
-                  >
-                    Batal
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      await handleAddSavings()
-                      toast.success('Setoran tabungan berhasil dicatat!')
-                    }}
-                    disabled={!addAmount || parseInt(addAmount, 10) <= 0}
-                  >
-                    Simpan Setoran
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {withdrawSavingsFromId && (
-            <Card>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
-                Tarik / Kurangi Saldo Tabungan (
-                {savingsHook.goals.find(g => g.id === withdrawSavingsFromId)?.name})
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Maksimal penarikan:{' '}
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {formatCurrency(
-                    savingsHook.goals.find(g => g.id === withdrawSavingsFromId)?.current_amount ?? 0
-                  )}
-                </span>
-              </p>
-              <div className="space-y-3">
-                <input
-                  type="number"
-                  value={withdrawAmount}
-                  onChange={e => setWithdrawAmount(e.target.value)}
-                  placeholder="Nominal penarikan"
-                  className="block w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setWithdrawSavingsFromId(null)
-                      setWithdrawAmount('')
-                    }}
-                  >
-                    Batal
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleWithdrawSavings}
-                    disabled={
-                      !withdrawAmount ||
-                      parseInt(withdrawAmount, 10) <= 0 ||
-                      parseInt(withdrawAmount, 10) >
-                        (savingsHook.goals.find(g => g.id === withdrawSavingsFromId)
-                          ?.current_amount ?? 0)
-                    }
-                  >
-                    Tarik Saldo
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          )}
 
           {savingsHook.loading ? (
             <LoadingState text="Memuat tabungan..." />
@@ -1440,59 +1247,6 @@ export function FinancePage() {
               </button>
             </div>
           </div>
-
-          {showDebtForm && (
-            <Card>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                {editingDebtId ? 'Edit Utang / Piutang' : 'Tambah Utang / Piutang Baru'}
-              </h3>
-              <DebtForm
-                initialType={
-                  editingDebtId ? debtsHook.debts.find(d => d.id === editingDebtId)?.type : 'debt'
-                }
-                initialPersonName={
-                  editingDebtId
-                    ? debtsHook.debts.find(d => d.id === editingDebtId)?.person_name
-                    : ''
-                }
-                initialAmount={
-                  editingDebtId
-                    ? debtsHook.debts.find(d => d.id === editingDebtId)?.amount
-                    : undefined
-                }
-                initialDueDate={
-                  editingDebtId
-                    ? (debtsHook.debts.find(d => d.id === editingDebtId)?.due_date ?? '')
-                    : ''
-                }
-                initialNote={
-                  editingDebtId
-                    ? (debtsHook.debts.find(d => d.id === editingDebtId)?.note ?? '')
-                    : ''
-                }
-                onSubmit={async data => {
-                  try {
-                    if (editingDebtId) {
-                      await debtsHook.editDebt(editingDebtId, data)
-                      toast.success('Data utang/piutang berhasil diperbarui')
-                      setEditingDebtId(null)
-                    } else {
-                      await debtsHook.addDebt(data)
-                      toast.success('Utang/piutang berhasil dicatat')
-                    }
-                    setShowDebtForm(false)
-                  } catch {
-                    toast.error('Gagal menyimpan data utang/piutang')
-                  }
-                }}
-                onCancel={() => {
-                  setShowDebtForm(false)
-                  setEditingDebtId(null)
-                }}
-                submitLabel={editingDebtId ? 'Update' : 'Simpan'}
-              />
-            </Card>
-          )}
 
           {debtsHook.loading ? (
             <LoadingState text="Memuat utang & piutang..." />
@@ -2054,6 +1808,316 @@ export function FinancePage() {
           )
         }}
       />
+
+      {/* ─── Popup: Form Tambah / Edit Anggaran ─── */}
+      <BottomSheet
+        open={showBudgetForm}
+        onClose={() => {
+          setShowBudgetForm(false)
+          setEditingBudgetId(null)
+        }}
+        title={editingBudgetId ? 'Edit Anggaran' : 'Tambah Anggaran'}
+      >
+        <div className="pb-4">
+          <BudgetForm
+            key={editingBudgetId ?? 'new-budget'}
+            categories={categories}
+            initialCategoryId={
+              editingBudgetId
+                ? budgetsHook.budgets.find(b => b.id === editingBudgetId)?.category_id
+                : ''
+            }
+            initialAmount={
+              editingBudgetId
+                ? budgetsHook.budgets.find(b => b.id === editingBudgetId)?.amount
+                : undefined
+            }
+            initialNote={
+              editingBudgetId
+                ? (budgetsHook.budgets.find(b => b.id === editingBudgetId)?.note ?? '')
+                : ''
+            }
+            onSubmit={async (categoryId, amount, note) => {
+              try {
+                if (editingBudgetId) {
+                  await budgetsHook.editBudget(editingBudgetId, { amount, note })
+                  toast.success('Anggaran berhasil diperbarui')
+                  setEditingBudgetId(null)
+                } else {
+                  await budgetsHook.addBudget(categoryId, amount, note ?? undefined)
+                  toast.success('Anggaran baru berhasil disimpan')
+                }
+                setShowBudgetForm(false)
+              } catch {
+                toast.error('Gagal menyimpan anggaran')
+              }
+            }}
+            onCancel={() => {
+              setShowBudgetForm(false)
+              setEditingBudgetId(null)
+            }}
+            submitLabel={editingBudgetId ? 'Update' : 'Simpan'}
+          />
+        </div>
+      </BottomSheet>
+
+      {/* ─── Popup: Form Tambah / Edit Target Tabungan ─── */}
+      <BottomSheet
+        open={showSavingsForm}
+        onClose={() => {
+          setShowSavingsForm(false)
+          setEditingSavingsId(null)
+        }}
+        title={editingSavingsId ? 'Edit Target Tabungan' : 'Tambah Target Tabungan'}
+      >
+        <div className="pb-4">
+          <SavingsGoalForm
+            key={editingSavingsId ?? 'new-savings'}
+            initialName={
+              editingSavingsId
+                ? savingsHook.goals.find(g => g.id === editingSavingsId)?.name
+                : ''
+            }
+            initialTarget={
+              editingSavingsId
+                ? savingsHook.goals.find(g => g.id === editingSavingsId)?.target_amount
+                : undefined
+            }
+            initialDeadline={
+              editingSavingsId
+                ? (savingsHook.goals.find(g => g.id === editingSavingsId)?.deadline ?? '')
+                : ''
+            }
+            initialNote={
+              editingSavingsId
+                ? (savingsHook.goals.find(g => g.id === editingSavingsId)?.note ?? '')
+                : ''
+            }
+            onSubmit={async (name, target, deadline, note) => {
+              try {
+                if (editingSavingsId) {
+                  await savingsHook.editGoal(editingSavingsId, {
+                    name,
+                    target_amount: target,
+                    deadline,
+                    note,
+                  })
+                  toast.success(`Target tabungan "${name}" diperbarui`)
+                  setEditingSavingsId(null)
+                } else {
+                  await savingsHook.addGoal(
+                    name,
+                    target,
+                    deadline ?? undefined,
+                    note ?? undefined
+                  )
+                  toast.success(`Target tabungan "${name}" berhasil dibuat`)
+                }
+                setShowSavingsForm(false)
+              } catch {
+                toast.error('Gagal menyimpan target tabungan')
+              }
+            }}
+            onCancel={() => {
+              setShowSavingsForm(false)
+              setEditingSavingsId(null)
+            }}
+            submitLabel={editingSavingsId ? 'Update' : 'Simpan'}
+          />
+        </div>
+      </BottomSheet>
+
+      {/* ─── Popup: Form Setor Saldo Tabungan ─── */}
+      <BottomSheet
+        open={!!addSavingsToId}
+        onClose={() => {
+          setAddSavingsToId(null)
+          setAddAmount('')
+        }}
+        title={`Setor Saldo: ${savingsHook.goals.find(g => g.id === addSavingsToId)?.name || ''}`}
+      >
+        <div className="space-y-4 pb-2">
+          <div className="p-3.5 rounded-xl bg-primary-50/70 dark:bg-primary-950/40 border border-primary-100 dark:border-primary-900/40 text-xs text-primary-800 dark:text-primary-300">
+            Target Tabungan: <strong>{formatCurrency(savingsHook.goals.find(g => g.id === addSavingsToId)?.target_amount || 0)}</strong> • Terkumpul saat ini: <strong>{formatCurrency(savingsHook.goals.find(g => g.id === addSavingsToId)?.current_amount || 0)}</strong>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+              Nominal Setoran (Rp)
+            </label>
+            <input
+              type="number"
+              value={addAmount}
+              onChange={e => setAddAmount(e.target.value)}
+              placeholder="Contoh: 100000"
+              autoFocus
+              className="block w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setAddSavingsToId(null)
+                setAddAmount('')
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              size="sm"
+              onClick={async () => {
+                await handleAddSavings()
+                toast.success('Setoran tabungan berhasil dicatat!')
+              }}
+              disabled={!addAmount || parseInt(addAmount, 10) <= 0}
+            >
+              Simpan Setoran
+            </Button>
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* ─── Popup: Form Tarik Saldo Tabungan ─── */}
+      <BottomSheet
+        open={!!withdrawSavingsFromId}
+        onClose={() => {
+          setWithdrawSavingsFromId(null)
+          setWithdrawAmount('')
+        }}
+        title={`Tarik Saldo: ${savingsHook.goals.find(g => g.id === withdrawSavingsFromId)?.name || ''}`}
+      >
+        <div className="space-y-4 pb-2">
+          <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 text-xs text-amber-800 dark:text-amber-300">
+            Maksimal penarikan:{' '}
+            <strong>
+              {formatCurrency(
+                savingsHook.goals.find(g => g.id === withdrawSavingsFromId)?.current_amount ?? 0
+              )}
+            </strong>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+              Nominal Penarikan (Rp)
+            </label>
+            <input
+              type="number"
+              value={withdrawAmount}
+              onChange={e => setWithdrawAmount(e.target.value)}
+              placeholder="Contoh: 50000"
+              autoFocus
+              className="block w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setWithdrawSavingsFromId(null)
+                setWithdrawAmount('')
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleWithdrawSavings}
+              disabled={
+                !withdrawAmount ||
+                parseInt(withdrawAmount, 10) <= 0 ||
+                parseInt(withdrawAmount, 10) >
+                  (savingsHook.goals.find(g => g.id === withdrawSavingsFromId)?.current_amount ?? 0)
+              }
+            >
+              Tarik Saldo
+            </Button>
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* ─── Popup: Form Tambah / Edit Utang & Piutang ─── */}
+      <BottomSheet
+        open={showDebtForm}
+        onClose={() => {
+          setShowDebtForm(false)
+          setEditingDebtId(null)
+        }}
+        title={editingDebtId ? 'Edit Utang / Piutang' : 'Catat Utang / Piutang'}
+      >
+        <div className="pb-4">
+          <DebtForm
+            key={editingDebtId ?? 'new-debt'}
+            initialType={
+              editingDebtId ? debtsHook.debts.find(d => d.id === editingDebtId)?.type : 'debt'
+            }
+            initialPersonName={
+              editingDebtId
+                ? debtsHook.debts.find(d => d.id === editingDebtId)?.person_name
+                : ''
+            }
+            initialAmount={
+              editingDebtId
+                ? debtsHook.debts.find(d => d.id === editingDebtId)?.amount
+                : undefined
+            }
+            initialDueDate={
+              editingDebtId
+                ? (debtsHook.debts.find(d => d.id === editingDebtId)?.due_date ?? '')
+                : ''
+            }
+            initialIsInstallment={
+              editingDebtId
+                ? Boolean(debtsHook.debts.find(d => d.id === editingDebtId)?.is_installment)
+                : false
+            }
+            initialInstallmentCount={
+              editingDebtId
+                ? debtsHook.debts.find(d => d.id === editingDebtId)?.installment_count
+                : null
+            }
+            initialInstallmentAmount={
+              editingDebtId
+                ? debtsHook.debts.find(d => d.id === editingDebtId)?.installment_amount
+                : null
+            }
+            initialInstallmentDueDay={
+              editingDebtId
+                ? debtsHook.debts.find(d => d.id === editingDebtId)?.installment_due_day
+                : null
+            }
+            initialNote={
+              editingDebtId
+                ? (debtsHook.debts.find(d => d.id === editingDebtId)?.note ?? '')
+                : ''
+            }
+            onSubmit={async data => {
+              try {
+                if (editingDebtId) {
+                  await debtsHook.editDebt(editingDebtId, data)
+                  toast.success('Data utang/piutang berhasil diperbarui')
+                  setEditingDebtId(null)
+                } else {
+                  await debtsHook.addDebt(data)
+                  toast.success('Utang/piutang berhasil dicatat')
+                }
+                setShowDebtForm(false)
+              } catch {
+                toast.error('Gagal menyimpan data utang/piutang')
+              }
+            }}
+            onCancel={() => {
+              setShowDebtForm(false)
+              setEditingDebtId(null)
+            }}
+            submitLabel={editingDebtId ? 'Update' : 'Simpan'}
+          />
+        </div>
+      </BottomSheet>
     </div>
   )
 }

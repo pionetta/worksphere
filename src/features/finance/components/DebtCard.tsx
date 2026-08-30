@@ -4,7 +4,7 @@ import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalcul
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/progress'
-import { Pencil, Trash2, Calendar, Coins, ArrowUpRight, ArrowDownLeft, Calculator } from 'lucide-react'
+import { Pencil, Trash2, Calendar, Coins, ArrowUpRight, ArrowDownLeft, Calculator, CreditCard } from 'lucide-react'
 import type { Debt } from '@/types'
 
 interface DebtCardProps {
@@ -65,21 +65,38 @@ export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
               <Badge variant={isDebt ? 'danger' : 'success'} className="text-[10px] py-0 px-1.5 whitespace-nowrap shrink-0">
                 {isDebt ? 'Saya Berutang' : 'Piutang'}
               </Badge>
+              {debt.is_installment && (
+                <Badge variant="info" className="text-[10px] py-0 px-1.5 whitespace-nowrap shrink-0 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800">
+                  <CreditCard className="w-3 h-3" />
+                  Cicilan {debt.installment_count ? `${debt.installment_count}x` : 'Pinjol'}
+                </Badge>
+              )}
               {isPaid && <Badge variant="success" className="whitespace-nowrap shrink-0">Lunas</Badge>}
             </div>
-            {debt.due_date && (
-              <div className="flex flex-wrap items-center gap-2 mt-1">
+
+            {/* Due Date & Installment Info */}
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              {debt.is_installment && debt.installment_due_day && !isPaid && (
+                <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1 whitespace-nowrap bg-indigo-50/70 dark:bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-900/40">
+                  <Calendar className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                  Jatuh tempo tiap tgl {debt.installment_due_day}
+                  {debt.installment_amount ? ` (${formatCurrency(debt.installment_amount)}/bln)` : ''}
+                </span>
+              )}
+
+              {debt.due_date && (
                 <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 whitespace-nowrap">
                   <Calendar className="w-3.5 h-3.5 shrink-0" />
-                  {formatDate(debt.due_date)}
+                  Target: {formatDate(debt.due_date)}
                 </span>
-                {deadlineInfo && !isPaid && (
-                  <Badge variant={deadlineInfo.variant} className="text-[11px] font-semibold py-0.5 px-2.5 whitespace-nowrap shrink-0">
-                    {deadlineInfo.label}
-                  </Badge>
-                )}
-              </div>
-            )}
+              )}
+
+              {deadlineInfo && !isPaid && (
+                <Badge variant={deadlineInfo.variant} className="text-[11px] font-semibold py-0.5 px-2.5 whitespace-nowrap shrink-0">
+                  {deadlineInfo.label}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
 
@@ -127,7 +144,7 @@ export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
         <div className="flex justify-between items-center text-sm">
           <div>
             <span className="text-xs text-gray-500 dark:text-gray-400">Sisa: </span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">
+            <span className="font-bold text-gray-900 dark:text-gray-100">
               {formatCurrency(remaining)}
             </span>
           </div>
@@ -136,8 +153,8 @@ export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
           </span>
         </div>
 
-        {/* Automated Target Repayment Calculator Breakdown */}
-        {breakdown && !breakdown.isExpired && !isPaid && (
+        {/* Automated Target Repayment Calculator Breakdown (non-installment) */}
+        {breakdown && !breakdown.isExpired && !isPaid && !debt.is_installment && (
           <div className="pt-2 border-t border-gray-100 dark:border-gray-800 space-y-1">
             <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1 font-medium text-rose-600 dark:text-rose-400">

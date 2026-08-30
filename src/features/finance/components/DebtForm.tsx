@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createDebtSchema } from '@/features/finance/schemas/debtSchema'
 import { DurationPicker } from '@/features/finance/components/DurationPicker'
 import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalculator'
 import { formatCurrency } from '@/utils/currency'
-import { Calculator } from 'lucide-react'
+import { Calculator, Calendar, CreditCard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DebtType } from '@/types'
 
@@ -15,11 +15,19 @@ interface DebtFormProps {
   initialAmount?: number
   initialDueDate?: string
   initialNote?: string
+  initialIsInstallment?: boolean
+  initialInstallmentCount?: number | null
+  initialInstallmentAmount?: number | null
+  initialInstallmentDueDay?: number | null
   onSubmit: (data: {
     type: DebtType
     person_name: string
     amount: number
     due_date?: string | null
+    is_installment?: boolean
+    installment_count?: number | null
+    installment_amount?: number | null
+    installment_due_day?: number | null
     note?: string
   }) => Promise<void> | void
   onCancel: () => void
@@ -32,6 +40,10 @@ export function DebtForm({
   initialAmount,
   initialDueDate = '',
   initialNote = '',
+  initialIsInstallment = false,
+  initialInstallmentCount = null,
+  initialInstallmentAmount = null,
+  initialInstallmentDueDay = null,
   onSubmit,
   onCancel,
   submitLabel = 'Simpan',
@@ -41,6 +53,19 @@ export function DebtForm({
   const [amount, setAmount] = useState(initialAmount ? String(initialAmount) : '')
   const [dueDate, setDueDate] = useState(initialDueDate)
   const [note, setNote] = useState(initialNote)
+
+  // Installment state (Pinjol / Paylater / Cicilan)
+  const [isInstallment, setIsInstallment] = useState(initialIsInstallment)
+  const [installmentCount, setInstallmentCount] = useState<string>(
+    initialInstallmentCount ? String(initialInstallmentCount) : '6'
+  )
+  const [installmentAmount, setInstallmentAmount] = useState<string>(
+    initialInstallmentAmount ? String(initialInstallmentAmount) : ''
+  )
+  const [installmentDueDay, setInstallmentDueDay] = useState<string>(
+    initialInstallmentDueDay ? String(initialInstallmentDueDay) : '10'
+  )
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -49,6 +74,19 @@ export function DebtForm({
     return isNaN(val) ? 0 : val
   }, [amount])
 
+  const parsedCount = useMemo(() => {
+    const val = parseInt(installmentCount, 10)
+    return isNaN(val) || val <= 0 ? 1 : val
+  }, [installmentCount])
+
+  // Auto-fill installment amount if empty and total amount is provided
+  useEffect(() => {
+    if (isInstallment && parsedAmount > 0 && !installmentAmount) {
+      const perMonth = Math.ceil(parsedAmount / parsedCount)
+      setInstallmentAmount(String(perMonth))
+    }
+  }, [isInstallment, parsedAmount, parsedCount, installmentAmount])
+
   const breakdown = useMemo(() => {
     return calculateTargetBreakdown(parsedAmount, dueDate)
   }, [parsedAmount, dueDate])
@@ -56,11 +94,21 @@ export function DebtForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    const parsedDueDay = parseInt(installmentDueDay, 10)
+    const parsedInstAmount = parseInt(installmentAmount, 10)
+
     const result = createDebtSchema.safeParse({
       type,
       person_name: personName,
       amount: parsedAmount,
       due_date: dueDate || null,
+      is_installment: isInstallment,
+      installment_count: isInstallment ? parsedCount : null,
+      installment_amount: isInstallment && !isNaN(parsedInstAmount) ? parsedInstAmount : null,
+      installment_due_day:
+        isInstallment && !isNaN(parsedDueDay) && parsedDueDay >= 1 && parsedDueDay <= 31
+          ? parsedDueDay
+          : null,
       note: note || undefined,
     })
 
@@ -82,6 +130,10 @@ export function DebtForm({
         person_name: result.data.person_name,
         amount: result.data.amount,
         due_date: result.data.due_date,
+        is_installment: result.data.is_installment,
+        installment_count: result.data.installment_count,
+        installment_amount: result.data.installment_amount,
+        installment_due_day: result.data.installment_due_day,
         note: result.data.note ?? undefined,
       })
     } finally {
@@ -125,14 +177,14 @@ export function DebtForm({
       </div>
 
       <Input
-        label="Nama Pihak / Orang"
+        label="Nama Pihak / Lembaga"
         value={personName}
         onChange={e => {
           setPersonName(e.target.value)
           if (errors.person_name) setErrors(prev => ({ ...prev, person_name: '' }))
         }}
         error={errors.person_name}
-        placeholder={type === 'debt' ? 'Nama pemberi pinjaman' : 'Nama peminjam'}
+        placeholder={type === 'debt' ? 'Contoh: Teman, Bank, Pinjol/Paylater (Kredivo, Spaylater)' : 'Nama peminjam'}
       />
 
       <Input
@@ -147,16 +199,100 @@ export function DebtForm({
         placeholder="0"
       />
 
+      {/* Skema Cicilan / Pinjaman Berjangka Toggle */}
+      <div className="p-3.5 rounded-2xl bg-gray-50/90 dark:bg-gray-800/60 border border-gray-200/80 dark:border-gray-700/60 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <CreditCard className="w-4 h-4" />
+            </div>
+            <div>
+              <label htmlFor="is-installment-toggle" className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
+                Skema Cicilan Berjangka
+              </label>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                Untuk pinjol, paylater, kartu kredit, atau cicilan bulanan
+              </p>
+            </div>
+          </div>
+          <input
+            id="is-installment-toggle"
+            type="checkbox"
+            checked={isInstallment}
+            onChange={e => setIsInstallment(e.target.checked)}
+            className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+          />
+        </div>
+
+        {isInstallment && (
+          <div className="space-y-3 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 animate-fade-in">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Tenor / Jumlah Bulan
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={installmentCount}
+                  onChange={e => setInstallmentCount(e.target.value)}
+                  placeholder="6"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                  Jatuh Tempo Setiap Tgl
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={installmentDueDay}
+                  onChange={e => setInstallmentDueDay(e.target.value)}
+                  placeholder="10"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                Nominal Angsuran per Bulan (Rp)
+              </label>
+              <input
+                type="number"
+                value={installmentAmount}
+                onChange={e => setInstallmentAmount(e.target.value)}
+                placeholder="Contoh: 350000"
+                className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            {installmentDueDay && installmentAmount && (
+              <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-900/50 flex items-center gap-2 text-xs text-indigo-900 dark:text-indigo-200">
+                <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span>
+                  Jatuh tempo setiap <strong>tanggal {installmentDueDay}</strong> sebesar{' '}
+                  <strong>{formatCurrency(parseInt(installmentAmount, 10) || 0)}</strong>/bulan (Tenor {parsedCount} bulan).
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Target Duration Picker (Presets, Custom Days/Weeks/Months, or Calendar) */}
       <DurationPicker
         deadline={dueDate}
         onChangeDeadline={setDueDate}
-        label="Target Waktu Jatuh Tempo (Opsional)"
+        label="Target Pelunasan Akhir (Opsional)"
         accentColor="rose"
       />
 
       {/* Live Auto-Calculator Breakdown */}
-      {breakdown && !breakdown.isExpired && (
+      {breakdown && !breakdown.isExpired && !isInstallment && (
         <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/50 space-y-2 animate-fade-in">
           <div className="flex items-center justify-between text-xs text-rose-900 dark:text-rose-200 font-semibold">
             <span className="flex items-center gap-1.5">

@@ -43,6 +43,10 @@ export async function createDebt(userId: string, input: CreateDebtInput): Promis
     paid_amount: 0,
     due_date: data.due_date ?? null,
     status: 'unpaid',
+    is_installment: data.is_installment ?? false,
+    installment_count: data.installment_count ?? null,
+    installment_amount: data.installment_amount ?? null,
+    installment_due_day: data.installment_due_day ?? null,
     note: data.note ?? null,
   })
 }
@@ -69,6 +73,10 @@ export async function updateDebt(id: string, input: UpdateDebtInput): Promise<vo
     ...(data.person_name !== undefined && { person_name: data.person_name }),
     ...(data.amount !== undefined && { amount: data.amount }),
     ...(data.due_date !== undefined && { due_date: data.due_date ?? null }),
+    ...(data.is_installment !== undefined && { is_installment: data.is_installment }),
+    ...(data.installment_count !== undefined && { installment_count: data.installment_count ?? null }),
+    ...(data.installment_amount !== undefined && { installment_amount: data.installment_amount ?? null }),
+    ...(data.installment_due_day !== undefined && { installment_due_day: data.installment_due_day ?? null }),
     ...(data.note !== undefined && { note: data.note ?? null }),
     status: newStatus,
   })

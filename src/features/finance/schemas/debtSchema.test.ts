@@ -59,19 +59,29 @@ describe('updateDebtSchema', () => {
     })
     expect(result.success).toBe(true)
   })
+
+  it('should validate installment updates', () => {
+    const result = updateDebtSchema.safeParse({
+      is_installment: true,
+      installment_count: 6,
+      installment_amount: 350000,
+      installment_due_day: 10,
+    })
+    expect(result.success).toBe(true)
+  })
 })
 
 describe('payDebtSchema', () => {
-  it('should validate positive payment amount', () => {
-    const result = payDebtSchema.safeParse({ amount: 150000 })
+  it('should validate valid payment amount', () => {
+    const result = payDebtSchema.safeParse({ amount: 100000 })
     expect(result.success).toBe(true)
   })
 
-  it('should fail when payment amount is <= 0', () => {
+  it('should fail when payment amount is 0 or negative', () => {
     const resultZero = payDebtSchema.safeParse({ amount: 0 })
     expect(resultZero.success).toBe(false)
 
-    const resultNeg = payDebtSchema.safeParse({ amount: -10000 })
+    const resultNeg = payDebtSchema.safeParse({ amount: -5000 })
     expect(resultNeg.success).toBe(false)
   })
 })
