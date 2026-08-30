@@ -15,6 +15,8 @@ const ENTITY_TABLE_MAP: Record<string, keyof Database['public']['Tables']> = {
   task: 'tasks',
   subtask: 'subtasks',
   recurring_transaction: 'recurring_transactions' as any,
+  habit: 'habits',
+  habit_log: 'habit_logs',
 }
 
 // ─── Dependency ordering ──────────────────────────────────────────────────────
@@ -32,6 +34,8 @@ const DEPENDENCY_ORDER = [
   'savings_goal',
   'debt',
   'subtask',
+  'habit',
+  'habit_log',
 ]
 
 // ─── Sync Queue Item Type ─────────────────────────────────────────────────────
@@ -404,6 +408,8 @@ export async function pullCloudData(userId: string): Promise<void> {
     { table: 'categories', dexieKey: 'categories' as const },
     { table: 'tasks', dexieKey: 'tasks' as const },
     { table: 'subtasks', dexieKey: 'subtasks' as const },
+    { table: 'habits', dexieKey: 'habits' as const },
+    { table: 'habit_logs', dexieKey: 'habit_logs' as const },
     { table: 'attendance', dexieKey: 'attendance' as const },
     { table: 'transactions', dexieKey: 'transactions' as const },
     { table: 'recurring_transactions', dexieKey: 'recurring_transactions' as const },
@@ -454,6 +460,8 @@ export function subscribeToUserRealtime(userId: string): () => void {
   const tables = [
     'tasks',
     'subtasks',
+    'habits',
+    'habit_logs',
     'wallets',
     'categories',
     'transactions',

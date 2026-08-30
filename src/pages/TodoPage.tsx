@@ -6,6 +6,7 @@ import { useTaskFilters } from '@/features/todo/hooks/useTaskFilters'
 import { useTaskReminder } from '@/features/todo/hooks/useTaskReminder'
 import { useJournal } from '@/features/journal/hooks/useJournal'
 import { useWishlist } from '@/features/finance/hooks/useWishlist'
+import { useHabits } from '@/features/todo/hooks/useHabits'
 import * as subtaskService from '@/features/todo/services/subtaskService'
 import { TaskForm } from '@/features/todo/components/TaskForm'
 import { TaskList } from '@/features/todo/components/TaskList'
@@ -18,6 +19,9 @@ import { TaskAnalyticsCard } from '@/features/todo/components/TaskAnalyticsCard'
 import { JournalSection } from '@/features/journal/components/JournalSection'
 import { WishlistCard } from '@/features/finance/components/WishlistCard'
 import { WishlistForm } from '@/features/finance/components/WishlistForm'
+import { HabitCard } from '@/features/todo/components/HabitCard'
+import { HabitFormModal } from '@/features/todo/components/HabitFormModal'
+import { HabitHeatmap } from '@/features/todo/components/HabitHeatmap'
 import { Button } from '@/components/ui/Button'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { BottomSheet } from '@/components/ui/BottomSheet'
@@ -31,6 +35,7 @@ import {
   List,
   Gift,
   BookOpen,
+  Flame,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -43,6 +48,7 @@ import type {
   Subtask,
   WishlistItem,
   WishlistPeriod,
+  Habit,
 } from '@/types'
 
 const STATUS_TABS: { value: TaskStatus | 'all'; label: string }[] = [
@@ -78,7 +84,12 @@ export function TodoPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'wishlist' | 'journal'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'habits' | 'wishlist' | 'journal'>('list')
+
+  // Habit states
+  const habitsHook = useHabits(userId || null)
+  const [showHabitForm, setShowHabitForm] = useState(false)
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
 
   // Wishlist states
   const [showWishlistForm, setShowWishlistForm] = useState(false)
@@ -238,14 +249,18 @@ export function TodoPage() {
           <div
             className={cn(
               'w-8 h-8 rounded-xl flex items-center justify-center transition-colors',
-              viewMode === 'wishlist'
+              viewMode === 'habits'
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                : viewMode === 'wishlist'
                 ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400'
                 : viewMode === 'journal'
                   ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                   : 'bg-blue-500/10 text-[#2563EB] dark:text-blue-400'
             )}
           >
-            {viewMode === 'wishlist' ? (
+            {viewMode === 'habits' ? (
+              <Flame className="w-5 h-5 text-amber-500 fill-amber-500" />
+            ) : viewMode === 'wishlist' ? (
               <Gift className="w-5 h-5" />
             ) : viewMode === 'journal' ? (
               <BookOpen className="w-5 h-5" />
@@ -254,7 +269,9 @@ export function TodoPage() {
             )}
           </div>
           <h1 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100">
-            {viewMode === 'wishlist'
+            {viewMode === 'habits'
+              ? 'Kebiasaan & Streak'
+              : viewMode === 'wishlist'
               ? 'Wishlist Impian'
               : viewMode === 'journal'
                 ? 'Catatan & Jurnal'
@@ -263,7 +280,19 @@ export function TodoPage() {
         </div>
 
         {/* Dynamic Top Action Button */}
-        {viewMode === 'wishlist' ? (
+        {viewMode === 'habits' ? (
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditingHabit(null)
+              setShowHabitForm(true)
+            }}
+            icon={<Plus className="w-3.5 h-3.5" />}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
+          >
+            Kebiasaan
+          </Button>
+        ) : viewMode === 'wishlist' ? (
           <Button
             size="sm"
             onClick={() => {
@@ -302,7 +331,7 @@ export function TodoPage() {
         </div>
       )}
 
-      {/* View Mode Segmented Switcher (Daftar | Kanban | Wishlist | Catatan & Win) */}
+      {/* View Mode Segmented Switcher (Daftar | Kanban | Kebiasaan | Wishlist | Catatan) */}
       <div className="flex items-center justify-between p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs gap-1">
         <button
           type="button"
@@ -334,6 +363,20 @@ export function TodoPage() {
 
         <button
           type="button"
+          onClick={() => setViewMode('habits')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
+            viewMode === 'habits'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+          )}
+        >
+          <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+          <span>Habit</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setViewMode('wishlist')}
           className={cn(
             'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
@@ -361,8 +404,113 @@ export function TodoPage() {
         </button>
       </div>
 
-      {/* ─── 1. Wishlist View ─── */}
-      {viewMode === 'wishlist' ? (
+      {/* ─── 0. Habit Tracker View ─── */}
+      {viewMode === 'habits' ? (
+        <div className="space-y-4 animate-fade-in-up">
+          {/* Summary Stat Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+                Total Kebiasaan
+              </p>
+              <p className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">
+                {habitsHook.totalHabits}
+              </p>
+              <span className="text-[10px] text-gray-400 font-medium">Aktif dipantau</span>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+                Selesai Hari Ini
+              </p>
+              <p className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
+                {habitsHook.totalCompletedToday} / {habitsHook.totalHabits}
+              </p>
+              <span className="text-[10px] text-gray-400 font-medium">
+                {habitsHook.totalHabits > 0
+                  ? `${Math.round((habitsHook.totalCompletedToday / habitsHook.totalHabits) * 100)}% tercapai`
+                  : '0%'}
+              </span>
+            </div>
+
+            <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs flex flex-col justify-between">
+              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+                Total Check-in
+              </p>
+              <p className="text-lg sm:text-xl font-black text-indigo-600 dark:text-indigo-400">
+                {habitsHook.logs.length}
+              </p>
+              <span className="text-[10px] text-gray-400 font-medium">Log tercatat</span>
+            </div>
+          </div>
+
+          {/* Consistency Heatmap */}
+          {habitsHook.logs.length > 0 && (
+            <HabitHeatmap logs={habitsHook.logs} daysCount={49} />
+          )}
+
+          {habitsHook.loading ? (
+            <LoadingState text="Memuat kebiasaan..." />
+          ) : habitsHook.habits.length === 0 ? (
+            <EmptyState
+              icon={<Flame className="w-8 h-8 text-amber-500" />}
+              title="Belum Ada Kebiasaan"
+              description="Mulai bangun kebiasaan positif harian seperti olahraga, membaca, atau minum air putih dan raih streak terbaikmu!"
+              action={
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingHabit(null)
+                    setShowHabitForm(true)
+                  }}
+                  icon={<Plus className="w-4 h-4" />}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                >
+                  Buat Kebiasaan Baru
+                </Button>
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {habitsHook.habitsWithStats.map(item => (
+                <HabitCard
+                  key={item.habit.id}
+                  item={item}
+                  onToggle={async (habitId, dateStr) => {
+                    await habitsHook.toggleToday(habitId, dateStr)
+                  }}
+                  onEdit={habit => {
+                    setEditingHabit(habit)
+                    setShowHabitForm(true)
+                  }}
+                  onDelete={async habitId => {
+                    await habitsHook.removeHabit(habitId)
+                    toast.success('Kebiasaan berhasil dihapus')
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Habit Form Modal */}
+          <HabitFormModal
+            open={showHabitForm}
+            onClose={() => {
+              setShowHabitForm(false)
+              setEditingHabit(null)
+            }}
+            initialData={editingHabit}
+            onSubmit={async data => {
+              await habitsHook.addHabit(data)
+              toast.success('Kebiasaan baru berhasil dibuat! 🎯')
+            }}
+            onUpdate={async (id, data) => {
+              await habitsHook.editHabit(id, data)
+              toast.success('Kebiasaan berhasil diperbarui!')
+            }}
+          />
+        </div>
+      ) : viewMode === 'wishlist' ? (
         <div className="space-y-4 animate-fade-in-up">
           {/* Wishlist Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">

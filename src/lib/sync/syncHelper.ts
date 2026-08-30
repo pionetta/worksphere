@@ -56,6 +56,8 @@ export const ENTITY_NAMES = {
   debt: 'debt',
   task: 'task',
   subtask: 'subtask',
+  habit: 'habit',
+  habit_log: 'habit_log',
 } as const
 
 // ─── Convenience Functions ────────────────────────────────────────────────────

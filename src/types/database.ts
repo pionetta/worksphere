@@ -29,6 +29,8 @@ export type WishlistPeriod = 'weekly' | 'monthly' | 'yearly'
 
 export type RecurringFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
+export type HabitFrequency = 'daily' | 'weekly' | 'custom'
+
 export type UserRole = 'admin' | 'user'
 
 export interface UserPermissions {
@@ -237,6 +239,32 @@ export interface RecurringTransaction {
   updated_at: string
 }
 
+export interface Habit {
+  id: string
+  user_id: string
+  title: string
+  description: string | null
+  icon: string
+  color: string
+  frequency: HabitFrequency
+  target_days: number[] // 1=Mon, 7=Sun
+  target_per_day: number
+  is_archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface HabitLog {
+  id: string
+  user_id: string
+  habit_id: string
+  completed_date: string // YYYY-MM-DD
+  count: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface SyncQueueRow {
   id: string
   user_id: string
@@ -313,6 +341,16 @@ export interface Database {
         Row: Subtask
         Insert: Partial<Subtask> & Pick<Subtask, 'task_id' | 'user_id' | 'title'>
         Update: Partial<Subtask>
+      }
+      habits: {
+        Row: Habit
+        Insert: Partial<Habit> & Pick<Habit, 'user_id' | 'title'>
+        Update: Partial<Habit>
+      }
+      habit_logs: {
+        Row: HabitLog
+        Insert: Partial<HabitLog> & Pick<HabitLog, 'user_id' | 'habit_id' | 'completed_date'>
+        Update: Partial<HabitLog>
       }
       sync_queue: {
         Row: SyncQueueRow
