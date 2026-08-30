@@ -183,6 +183,28 @@ export function DebtForm({
     }
   }, [isInstallment, isFlexible, isCustomSchedule, parsedAmount, parsedCount, installmentAmount])
 
+  // Calculate estimated already-paid amount from installment_paid_count
+  const estimatedPaidAmount = useMemo(() => {
+    if (!isInstallment || parsedPaidCount <= 0) return 0
+    if (isCustomSchedule && schedules.length > 0) {
+      let sum = 0
+      for (let i = 0; i < Math.min(parsedPaidCount, schedules.length); i++) {
+        const v = parseInt(schedules[i], 10)
+        sum += isNaN(v) ? 0 : v
+      }
+      return sum
+    }
+    const instAmt = parseInt(installmentAmount, 10)
+    if (!isNaN(instAmt) && instAmt > 0) {
+      return Math.min(parsedAmount || instAmt * parsedCount, parsedPaidCount * instAmt)
+    }
+    if (parsedAmount > 0 && parsedCount > 0) {
+      const perMonth = Math.round(parsedAmount / parsedCount)
+      return Math.min(parsedAmount, parsedPaidCount * perMonth)
+    }
+    return 0
+  }, [isInstallment, parsedPaidCount, isCustomSchedule, schedules, installmentAmount, parsedAmount, parsedCount])
+
   const breakdown = useMemo(() => {
     return calculateTargetBreakdown(parsedAmount, dueDate)
   }, [parsedAmount, dueDate])
@@ -476,6 +498,21 @@ export function DebtForm({
                 />
               </div>
             </div>
+
+            {/* Calculated Initial Paid Summary Callout */}
+            {parsedPaidCount > 0 && (
+              <div className="p-2.5 rounded-xl bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-900/60 text-xs text-indigo-900 dark:text-indigo-200 flex items-center justify-between animate-fade-in">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span>
+                    <strong>{parsedPaidCount}x angsuran</strong> sudah lunas ({formatCurrency(estimatedPaidAmount)})
+                  </span>
+                </span>
+                <span className="font-bold text-indigo-700 dark:text-indigo-300 shrink-0 ml-2">
+                  Sisa: {formatCurrency(Math.max(0, (parsedAmount || (parseInt(installmentAmount, 10) * parsedCount) || 0) - estimatedPaidAmount))}
+                </span>
+              </div>
+            )}
 
             {/* Pilihan Rincian Cicilan: Bagi Rata vs Kustom per Bulan */}
             <div className="pt-2 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2.5">

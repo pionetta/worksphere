@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatCurrency } from '@/utils/currency'
 import { formatDate } from '@/utils/date'
-import { getInstallmentProgress } from '@/features/finance/services/debtService'
+import { getInstallmentProgress, getEffectivePaidAmount } from '@/features/finance/services/debtService'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/progress'
@@ -51,10 +51,11 @@ function getDeadlineInfo(dueDate: string) {
 
 export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
   const [showScheduleDetails, setShowScheduleDetails] = useState(false)
-  const remaining = Math.max(0, debt.amount - debt.paid_amount)
+  const effectivePaid = getEffectivePaidAmount(debt)
+  const remaining = Math.max(0, debt.amount - effectivePaid)
   const progress =
-    debt.amount > 0 ? Math.min(100, Math.round((debt.paid_amount / debt.amount) * 100)) : 0
-  const isPaid = debt.status === 'paid'
+    debt.amount > 0 ? Math.min(100, Math.round((effectivePaid / debt.amount) * 100)) : 0
+  const isPaid = debt.status === 'paid' || remaining === 0
   const isDebt = debt.type === 'debt'
   const deadlineInfo = debt.due_date ? getDeadlineInfo(debt.due_date) : null
   const inst = getInstallmentProgress(debt)

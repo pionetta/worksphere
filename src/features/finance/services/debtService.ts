@@ -43,24 +43,54 @@ export interface InstallmentProgress {
   schedule?: number[] | null
 }
 
+/**
+ * Calculates effective paid amount.
+ * If debt is installment and has installment_paid_count > 0 but paid_amount is 0 (or was recorded before),
+ * auto-computes paid portion based on schedule or installment_amount.
+ */
+export function getEffectivePaidAmount(debt: Debt): number {
+  if (debt.paid_amount > 0) return debt.paid_amount
+
+  if (debt.is_installment && (debt.installment_paid_count ?? 0) > 0) {
+    const paidCount = debt.installment_paid_count!
+    if (debt.installment_schedule && debt.installment_schedule.length > 0) {
+      let sum = 0
+      for (let i = 0; i < Math.min(paidCount, debt.installment_schedule.length); i++) {
+        sum += debt.installment_schedule[i] || 0
+      }
+      return Math.min(debt.amount, sum)
+    }
+    if (debt.installment_amount && debt.installment_amount > 0) {
+      return Math.min(debt.amount, paidCount * debt.installment_amount)
+    }
+    if (debt.installment_count && debt.installment_count > 0) {
+      const perMonth = Math.round(debt.amount / debt.installment_count)
+      return Math.min(debt.amount, paidCount * perMonth)
+    }
+  }
+
+  return 0
+}
+
 export function getInstallmentProgress(debt: Debt): InstallmentProgress | null {
   if (!debt.is_installment) return null
 
   const totalCount = debt.installment_count || 1
   const isFullyPaid = debt.status === 'paid'
 
+  const effectivePaid = getEffectivePaidAmount(debt)
   let paidCount = debt.installment_paid_count ?? 0
   if (isFullyPaid) {
     paidCount = totalCount
-  } else if (paidCount === 0 && debt.installment_amount && debt.installment_amount > 0 && debt.paid_amount > 0) {
-    paidCount = Math.min(totalCount, Math.floor(debt.paid_amount / debt.installment_amount))
+  } else if (paidCount === 0 && debt.installment_amount && debt.installment_amount > 0 && effectivePaid > 0) {
+    paidCount = Math.min(totalCount, Math.floor(effectivePaid / debt.installment_amount))
   }
 
   const remainingCount = Math.max(0, totalCount - paidCount)
   const currentInstallmentIndex = isFullyPaid ? totalCount : Math.min(totalCount, paidCount + 1)
   const progressPercent = Math.min(100, Math.round((paidCount / totalCount) * 100))
 
-  const remainingDebt = Math.max(0, debt.amount - debt.paid_amount)
+  const remainingDebt = Math.max(0, debt.amount - effectivePaid)
   
   // If debt has a custom monthly schedule, pick the active month's nominal
   let scheduledBill: number | undefined
@@ -104,15 +134,38 @@ export async function getDebtById(id: string): Promise<Debt | undefined> {
 export async function createDebt(userId: string, input: CreateDebtInput): Promise<string> {
   const data = validate(createDebtSchema, input)
 
+  // Auto-calculate initial paid_amount if user specifies installment_paid_count > 0
+  let initialPaidAmount = 0
+  const paidCount = data.installment_paid_count ?? 0
+  if (data.is_installment && paidCount > 0) {
+    if (data.installment_schedule && data.installment_schedule.length > 0) {
+      for (let i = 0; i < Math.min(paidCount, data.installment_schedule.length); i++) {
+        initialPaidAmount += data.installment_schedule[i] || 0
+      }
+    } else if (data.installment_amount && data.installment_amount > 0) {
+      initialPaidAmount = Math.min(data.amount, paidCount * data.installment_amount)
+    } else if (data.installment_count && data.installment_count > 0) {
+      const perMonth = Math.round(data.amount / data.installment_count)
+      initialPaidAmount = Math.min(data.amount, paidCount * perMonth)
+    }
+  }
+
+  const initialStatus: DebtStatus =
+    initialPaidAmount >= data.amount && data.amount > 0
+      ? 'paid'
+      : initialPaidAmount > 0
+      ? 'partially_paid'
+      : 'unpaid'
+
   return debtRepo.createDebt({
     user_id: userId,
     type: data.type,
     person_name: data.person_name,
     group_name: data.group_name?.trim() || null,
     amount: data.amount,
-    paid_amount: 0,
+    paid_amount: initialPaidAmount,
     due_date: data.due_date ?? null,
-    status: 'unpaid',
+    status: initialStatus,
     is_installment: data.is_installment ?? false,
     is_flexible_installment: data.is_flexible_installment ?? false,
     installment_count: data.installment_count ?? null,
@@ -132,11 +185,42 @@ export async function updateDebt(id: string, input: UpdateDebtInput): Promise<vo
 
   const newAmount = data.amount !== undefined ? data.amount : existing.amount
 
-  // Recalculate status based on new amount
-  let newStatus = existing.status
-  if (existing.paid_amount >= newAmount) {
+  // If installment_paid_count was updated or paid_amount was 0 with paid_count > 0, recalculate paid_amount
+  let newPaidAmount = existing.paid_amount
+  const paidCount = data.installment_paid_count !== undefined ? data.installment_paid_count : existing.installment_paid_count
+
+  if (
+    (data.installment_paid_count !== undefined && data.installment_paid_count !== existing.installment_paid_count) ||
+    (existing.paid_amount === 0 && (paidCount ?? 0) > 0)
+  ) {
+    if (paidCount && paidCount > 0) {
+      const sched = data.installment_schedule !== undefined ? data.installment_schedule : existing.installment_schedule
+      if (sched && sched.length > 0) {
+        let schedSum = 0
+        for (let i = 0; i < Math.min(paidCount, sched.length); i++) {
+          schedSum += sched[i] || 0
+        }
+        newPaidAmount = Math.min(newAmount, schedSum)
+      } else {
+        const instAmount = data.installment_amount !== undefined ? data.installment_amount : existing.installment_amount
+        const instCount = data.installment_count !== undefined ? data.installment_count : existing.installment_count
+        if (instAmount && instAmount > 0) {
+          newPaidAmount = Math.min(newAmount, paidCount * instAmount)
+        } else if (instCount && instCount > 0) {
+          const perMonth = Math.round(newAmount / instCount)
+          newPaidAmount = Math.min(newAmount, paidCount * perMonth)
+        }
+      }
+    } else if (paidCount === 0) {
+      newPaidAmount = 0
+    }
+  }
+
+  // Recalculate status based on new amount and paid_amount
+  let newStatus: DebtStatus = existing.status
+  if (newPaidAmount >= newAmount && newAmount > 0) {
     newStatus = 'paid'
-  } else if (existing.paid_amount > 0) {
+  } else if (newPaidAmount > 0) {
     newStatus = 'partially_paid'
   } else {
     newStatus = 'unpaid'
@@ -171,6 +255,7 @@ export async function updateDebt(id: string, input: UpdateDebtInput): Promise<vo
       installment_due_day: data.installment_due_day ?? null,
     }),
     ...(data.note !== undefined && { note: data.note ?? null }),
+    paid_amount: newPaidAmount,
     status: newStatus,
   })
 }
@@ -184,12 +269,13 @@ export async function payDebt(
   const debt = await debtRepo.getDebtById(id)
   if (!debt) throw new Error('Data utang/piutang tidak ditemukan.')
 
-  const remaining = Math.max(0, debt.amount - debt.paid_amount)
+  const effectiveCurrentPaid = getEffectivePaidAmount(debt)
+  const remaining = Math.max(0, debt.amount - effectiveCurrentPaid)
   if (data.amount > remaining) {
     throw new Error('Nominal pembayaran melebihi sisa tagihan.')
   }
 
-  const newPaidAmount = debt.paid_amount + data.amount
+  const newPaidAmount = effectiveCurrentPaid + data.amount
   const newStatus: DebtStatus = newPaidAmount >= debt.amount ? 'paid' : 'partially_paid'
 
   let newPaidCount = debt.installment_paid_count ?? 0
@@ -223,17 +309,20 @@ export async function getDebtSummary(userId: string): Promise<DebtSummary> {
   let unpaidReceivableCount = 0
 
   for (const d of allDebts) {
-    const remaining = Math.max(0, d.amount - d.paid_amount)
+    const effectivePaid = getEffectivePaidAmount(d)
+    const remaining = Math.max(0, d.amount - effectivePaid)
+    const isPaid = d.status === 'paid' || remaining === 0
+
     if (d.type === 'debt') {
       totalDebt += d.amount
       totalDebtRemaining += remaining
-      if (d.status !== 'paid') {
+      if (!isPaid) {
         unpaidDebtCount++
       }
     } else {
       totalReceivable += d.amount
       totalReceivableRemaining += remaining
-      if (d.status !== 'paid') {
+      if (!isPaid) {
         unpaidReceivableCount++
       }
     }
@@ -258,8 +347,9 @@ export function groupDebts(debts: Debt[]): DebtGroupSummary[] {
 
   for (const debt of debts) {
     const groupName = debt.group_name?.trim() || debt.person_name.trim() || 'Lainnya'
-    const remaining = Math.max(0, debt.amount - debt.paid_amount)
-    const isPaid = debt.status === 'paid'
+    const effectivePaid = getEffectivePaidAmount(debt)
+    const remaining = Math.max(0, debt.amount - effectivePaid)
+    const isPaid = debt.status === 'paid' || remaining === 0
 
     let current = map.get(groupName)
     if (!current) {
@@ -278,7 +368,7 @@ export function groupDebts(debts: Debt[]): DebtGroupSummary[] {
     }
 
     current.totalAmount += debt.amount
-    current.totalPaid += debt.paid_amount
+    current.totalPaid += effectivePaid
     current.totalRemaining += remaining
     current.totalCount += 1
     if (isPaid) {

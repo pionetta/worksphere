@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatCurrency } from '@/utils/currency'
 import { payDebtSchema } from '@/features/finance/schemas/debtSchema'
-import { getInstallmentProgress } from '@/features/finance/services/debtService'
+import { getInstallmentProgress, getEffectivePaidAmount } from '@/features/finance/services/debtService'
 import { Coins, CheckCircle2, CreditCard, RefreshCw, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Debt } from '@/types'
@@ -22,7 +22,8 @@ export function DebtPaymentModal({ debt, open, onClose, onPayment }: DebtPayment
   const [loading, setLoading] = useState(false)
 
   const inst = debt ? getInstallmentProgress(debt) : null
-  const remaining = debt ? Math.max(0, debt.amount - debt.paid_amount) : 0
+  const effectivePaid = debt ? getEffectivePaidAmount(debt) : 0
+  const remaining = debt ? Math.max(0, debt.amount - effectivePaid) : 0
   const isDebt = debt?.type === 'debt'
   const monthlyBill = inst ? Math.min(remaining, inst.currentBillAmount) : 0
 
@@ -131,7 +132,7 @@ export function DebtPaymentModal({ debt, open, onClose, onPayment }: DebtPayment
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>Sudah Dibayar:</span>
             <span className="font-medium text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(debt.paid_amount)}
+              {formatCurrency(effectivePaid)}
             </span>
           </div>
           <div className="flex justify-between text-sm font-semibold pt-1 border-t border-gray-200 dark:border-gray-700">

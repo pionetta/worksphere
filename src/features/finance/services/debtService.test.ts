@@ -338,5 +338,35 @@ describe('debtService', () => {
       expect(progress?.paidCount).toBe(1)
       expect(progress?.remainingCount).toBe(5)
     })
+
+    it('should automatically calculate paid_amount when creating debt with already paid installments', async () => {
+      const debtId = await debtService.createDebt(userId, {
+        type: 'debt',
+        person_name: 'Kredivo HP',
+        amount: 2470590,
+        is_installment: true,
+        installment_count: 9,
+        installment_paid_count: 4,
+        installment_amount: 274510,
+        installment_due_day: 9,
+      })
+
+      const debt = await db.debts.get(debtId)
+      expect(debt).toBeDefined()
+      // 4 * 274510 = 1098040
+      expect(debt?.paid_amount).toBe(1098040)
+      expect(debt?.status).toBe('partially_paid')
+
+      const effectivePaid = debtService.getEffectivePaidAmount(debt!)
+      expect(effectivePaid).toBe(1098040)
+
+      const remaining = debt!.amount - effectivePaid
+      expect(remaining).toBe(1372550)
+
+      const progress = debtService.getInstallmentProgress(debt!)
+      expect(progress?.paidCount).toBe(4)
+      expect(progress?.remainingCount).toBe(5)
+      expect(progress?.progressPercent).toBe(44) // 4/9 = 44%
+    })
   })
 })
