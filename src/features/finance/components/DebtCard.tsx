@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { formatCurrency } from '@/utils/currency'
 import { formatDate } from '@/utils/date'
 import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalculator'
@@ -16,7 +17,11 @@ import {
   CreditCard,
   RefreshCw,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { Debt } from '@/types'
 
 interface DebtCardProps {
@@ -48,6 +53,7 @@ function getDeadlineInfo(dueDate: string) {
 }
 
 export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
+  const [showScheduleDetails, setShowScheduleDetails] = useState(false)
   const remaining = Math.max(0, debt.amount - debt.paid_amount)
   const progress =
     debt.amount > 0 ? Math.min(100, Math.round((debt.paid_amount / debt.amount) * 100)) : 0
@@ -56,6 +62,7 @@ export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
   const deadlineInfo = debt.due_date ? getDeadlineInfo(debt.due_date) : null
   const breakdown = debt.due_date && remaining > 0 ? calculateTargetBreakdown(remaining, debt.due_date) : null
   const inst = getInstallmentProgress(debt)
+  const hasCustomSchedule = Boolean(debt.installment_schedule && debt.installment_schedule.length > 0)
 
   return (
     <Card className="hover:border-primary-200 dark:hover:border-primary-800 transition-all duration-200 shadow-sm hover:shadow-md">
@@ -177,6 +184,62 @@ export function DebtCard({ debt, onPay, onEdit, onDelete }: DebtCardProps) {
             Total: {formatCurrency(debt.amount)} ({progress}% terbayar)
           </span>
         </div>
+
+        {/* Custom Schedule Details Dropdown */}
+        {hasCustomSchedule && debt.installment_schedule && (
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+            <button
+              type="button"
+              onClick={() => setShowScheduleDetails(prev => !prev)}
+              className="w-full flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 py-1 cursor-pointer transition-colors"
+            >
+              <span className="flex items-center gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Rincian Jadwal Cicilan per Bulan ({debt.installment_schedule.length} bulan)
+              </span>
+              {showScheduleDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showScheduleDetails && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pt-2 animate-fade-in">
+                {debt.installment_schedule.map((nom, idx) => {
+                  const monthNum = idx + 1
+                  const paidCount = debt.installment_paid_count ?? 0
+                  const isDone = isPaid || monthNum <= paidCount
+                  const isCurrent = !isPaid && monthNum === paidCount + 1
+
+                  return (
+                    <div
+                      key={monthNum}
+                      className={cn(
+                        'p-2 rounded-lg border text-xs space-y-0.5',
+                        isDone
+                          ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                          : isCurrent
+                          ? 'bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-700 text-indigo-900 dark:text-indigo-200 ring-1 ring-indigo-400/50'
+                          : 'bg-gray-50/80 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                      )}
+                    >
+                      <div className="flex items-center justify-between text-[10px] font-bold">
+                        <span>Bulan {monthNum}</span>
+                        {isDone ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">✓ Lunas</span>
+                        ) : isCurrent ? (
+                          <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">Bulan Ini</span>
+                        ) : (
+                          <span>Mendatang</span>
+                        )}
+                      </div>
+                      <p className="font-bold text-xs">
+                        {formatCurrency(nom)}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Automated Target Repayment Calculator Breakdown (non-installment) */}
         {breakdown && !breakdown.isExpired && !isPaid && !debt.is_installment && (

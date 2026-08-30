@@ -58,6 +58,7 @@ export async function createDebt(
     installment_count: data.installment_count ?? null,
     installment_paid_count: data.installment_paid_count ?? null,
     installment_amount: data.installment_amount ?? null,
+    installment_schedule: data.installment_schedule ?? null,
     current_bill_amount: data.current_bill_amount ?? null,
     installment_due_day: data.installment_due_day ?? null,
     note: data.note,
@@ -85,6 +86,7 @@ export async function updateDebt(
       | 'installment_count'
       | 'installment_paid_count'
       | 'installment_amount'
+      | 'installment_schedule'
       | 'current_bill_amount'
       | 'installment_due_day'
       | 'note'

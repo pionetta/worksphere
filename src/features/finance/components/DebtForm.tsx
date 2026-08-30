@@ -5,7 +5,7 @@ import { createDebtSchema } from '@/features/finance/schemas/debtSchema'
 import { DurationPicker } from '@/features/finance/components/DurationPicker'
 import { calculateTargetBreakdown } from '@/features/finance/utils/paymentCalculator'
 import { formatCurrency } from '@/utils/currency'
-import { Calculator, CreditCard, Layers, RefreshCw, CheckCircle2 } from 'lucide-react'
+import { Calculator, CreditCard, Layers, RefreshCw, CheckCircle2, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DebtType } from '@/types'
 
@@ -33,6 +33,7 @@ interface DebtFormProps {
   initialInstallmentCount?: number | null
   initialInstallmentPaidCount?: number | null
   initialInstallmentAmount?: number | null
+  initialInstallmentSchedule?: number[] | null
   initialCurrentBillAmount?: number | null
   initialInstallmentDueDay?: number | null
   onSubmit: (data: {
@@ -46,6 +47,7 @@ interface DebtFormProps {
     installment_count?: number | null
     installment_paid_count?: number | null
     installment_amount?: number | null
+    installment_schedule?: number[] | null
     current_bill_amount?: number | null
     installment_due_day?: number | null
     note?: string
@@ -66,6 +68,7 @@ export function DebtForm({
   initialInstallmentCount = null,
   initialInstallmentPaidCount = null,
   initialInstallmentAmount = null,
+  initialInstallmentSchedule = null,
   initialCurrentBillAmount = null,
   initialInstallmentDueDay = null,
   onSubmit,
@@ -100,6 +103,19 @@ export function DebtForm({
     initialInstallmentDueDay ? String(initialInstallmentDueDay) : '10'
   )
 
+  // Custom Monthly Installment Schedule (e.g. Bulan 1: 100k, Bulan 2: 150k, ...)
+  const [isCustomSchedule, setIsCustomSchedule] = useState(
+    Boolean(initialInstallmentSchedule && initialInstallmentSchedule.length > 0)
+  )
+  const [schedules, setSchedules] = useState<string[]>(() => {
+    if (initialInstallmentSchedule && initialInstallmentSchedule.length > 0) {
+      return initialInstallmentSchedule.map(String)
+    }
+    const count = initialInstallmentCount || 6
+    const defAmount = initialInstallmentAmount ? String(initialInstallmentAmount) : ''
+    return Array(count).fill(defAmount)
+  })
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
@@ -113,6 +129,18 @@ export function DebtForm({
     return isNaN(val) || val <= 0 ? 1 : val
   }, [installmentCount])
 
+  // Synchronize schedules array size with parsedCount
+  useEffect(() => {
+    setSchedules(prev => {
+      if (prev.length === parsedCount) return prev
+      if (prev.length < parsedCount) {
+        const added = Array(parsedCount - prev.length).fill('')
+        return [...prev, ...added]
+      }
+      return prev.slice(0, parsedCount)
+    })
+  }, [parsedCount])
+
   const parsedPaidCount = useMemo(() => {
     const val = parseInt(installmentPaidCount, 10)
     return isNaN(val) || val < 0 ? 0 : Math.min(parsedCount, val)
@@ -122,13 +150,38 @@ export function DebtForm({
     return Math.max(0, parsedCount - parsedPaidCount)
   }, [parsedCount, parsedPaidCount])
 
-  // Auto-fill installment amount if empty and total amount is provided (for fixed installment)
+  // Calculate sum of custom schedules
+  const scheduleSum = useMemo(() => {
+    return schedules.reduce((acc, s) => {
+      const v = parseInt(s, 10)
+      return acc + (isNaN(v) ? 0 : v)
+    }, 0)
+  }, [schedules])
+
+  // Auto-fill total amount if custom schedule sum is valid and user modifies schedule
+  const handleScheduleChange = (index: number, val: string) => {
+    setSchedules(prev => {
+      const next = [...prev]
+      next[index] = val
+      return next
+    })
+  }
+
+  // Quick action: Distribute total amount equally across all months
+  const handleDistributeEqually = () => {
+    if (parsedAmount <= 0) return
+    const perMonth = Math.round(parsedAmount / parsedCount)
+    setSchedules(Array(parsedCount).fill(String(perMonth)))
+    setInstallmentAmount(String(perMonth))
+  }
+
+  // Auto-fill installment amount if empty and total amount is provided (for fixed flat installment)
   useEffect(() => {
-    if (isInstallment && parsedAmount > 0 && !installmentAmount && !isFlexible) {
+    if (isInstallment && parsedAmount > 0 && !installmentAmount && !isFlexible && !isCustomSchedule) {
       const perMonth = Math.ceil(parsedAmount / parsedCount)
       setInstallmentAmount(String(perMonth))
     }
-  }, [isInstallment, isFlexible, parsedAmount, parsedCount, installmentAmount])
+  }, [isInstallment, isFlexible, isCustomSchedule, parsedAmount, parsedCount, installmentAmount])
 
   const breakdown = useMemo(() => {
     return calculateTargetBreakdown(parsedAmount, dueDate)
@@ -141,17 +194,28 @@ export function DebtForm({
     const parsedInstAmount = parseInt(installmentAmount, 10)
     const parsedBillAmount = parseInt(currentBillAmount, 10)
 
+    // Final total amount: if custom schedule is active and has sum > 0, use scheduleSum unless amount is explicitly higher
+    const finalAmount = isInstallment && isCustomSchedule && scheduleSum > 0 ? scheduleSum : parsedAmount
+
+    const parsedScheduleNumbers = isInstallment && isCustomSchedule
+      ? schedules.map(s => {
+          const v = parseInt(s, 10)
+          return isNaN(v) ? 0 : v
+        })
+      : null
+
     const result = createDebtSchema.safeParse({
       type,
       person_name: personName,
       group_name: groupName.trim() || null,
-      amount: parsedAmount,
+      amount: finalAmount,
       due_date: dueDate || null,
       is_installment: isInstallment,
       is_flexible_installment: isInstallment ? isFlexible : false,
       installment_count: isInstallment ? parsedCount : null,
       installment_paid_count: isInstallment ? parsedPaidCount : null,
       installment_amount: isInstallment && !isNaN(parsedInstAmount) ? parsedInstAmount : null,
+      installment_schedule: parsedScheduleNumbers,
       current_bill_amount: isInstallment && !isNaN(parsedBillAmount) ? parsedBillAmount : null,
       installment_due_day:
         isInstallment && !isNaN(parsedDueDay) && parsedDueDay >= 1 && parsedDueDay <= 31
@@ -184,6 +248,7 @@ export function DebtForm({
         installment_count: result.data.installment_count,
         installment_paid_count: result.data.installment_paid_count,
         installment_amount: result.data.installment_amount,
+        installment_schedule: result.data.installment_schedule,
         current_bill_amount: result.data.current_bill_amount,
         installment_due_day: result.data.installment_due_day,
         note: result.data.note ?? undefined,
@@ -272,9 +337,13 @@ export function DebtForm({
       </div>
 
       <Input
-        label="Nominal Total Tagihan / Limit Terpakai"
+        label={
+          isInstallment && isCustomSchedule && scheduleSum > 0
+            ? `Nominal Total Tagihan (Otomatis: ${formatCurrency(scheduleSum)})`
+            : 'Nominal Total Tagihan / Limit Terpakai'
+        }
         type="number"
-        value={amount}
+        value={isInstallment && isCustomSchedule && scheduleSum > 0 ? String(scheduleSum) : amount}
         onChange={e => {
           setAmount(e.target.value)
           if (errors.amount) setErrors(prev => ({ ...prev, amount: '' }))
@@ -295,7 +364,7 @@ export function DebtForm({
                 Skema Cicilan / Paylater
               </label>
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                Fitur angsuran, jatuh tempo bulanan, dan tagihan Paylater dinamis
+                Fitur angsuran, cicilan per bulan kustom, dan jatuh tempo
               </p>
             </div>
           </div>
@@ -371,7 +440,7 @@ export function DebtForm({
               </div>
             </div>
 
-            {/* Sudah Dibayar Berapa Angsuran */}
+            {/* Angsuran Selesai */}
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
@@ -390,7 +459,7 @@ export function DebtForm({
 
               <div>
                 <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
-                  {isFlexible ? 'Tagihan Bulan Ini (Rp)' : 'Angsuran per Bulan (Rp)'}
+                  {isFlexible ? 'Tagihan Bulan Ini (Rp)' : 'Angsuran Standar / Bln'}
                 </label>
                 <input
                   type="number"
@@ -408,19 +477,126 @@ export function DebtForm({
               </div>
             </div>
 
+            {/* Pilihan Rincian Cicilan: Bagi Rata vs Kustom per Bulan */}
+            <div className="pt-2 border-t border-gray-200/60 dark:border-gray-700/60 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500" />
+                  Rincian Nominal Angsuran per Bulan:
+                </span>
+                <div className="flex items-center p-0.5 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomSchedule(false)}
+                    className={cn(
+                      'py-1 px-2 rounded-md font-semibold cursor-pointer transition-all',
+                      !isCustomSchedule
+                        ? 'bg-indigo-500 text-white shadow-2xs'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    )}
+                  >
+                    Bagi Rata
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomSchedule(true)
+                      if (schedules.every(s => !s) && parsedAmount > 0) {
+                        handleDistributeEqually()
+                      }
+                    }}
+                    className={cn(
+                      'py-1 px-2 rounded-md font-semibold cursor-pointer transition-all',
+                      isCustomSchedule
+                        ? 'bg-indigo-500 text-white shadow-2xs'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    )}
+                  >
+                    Kustom Tiap Bulan
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom Per-Month Schedule Inputs */}
+              {isCustomSchedule ? (
+                <div className="p-3 rounded-xl bg-white dark:bg-gray-900/90 border border-indigo-200 dark:border-indigo-800 space-y-2.5 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Masukkan nominal berbeda untuk tiap bulan:
+                    </p>
+                    {parsedAmount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleDistributeEqually}
+                        className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        Bagi Rata Otomatis
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {Array.from({ length: parsedCount }).map((_, idx) => {
+                      const monthNum = idx + 1
+                      const isCompleted = monthNum <= parsedPaidCount
+                      return (
+                        <div
+                          key={monthNum}
+                          className={cn(
+                            'p-2 rounded-lg border text-xs space-y-1',
+                            isCompleted
+                              ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
+                              : 'bg-gray-50/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700'
+                          )}
+                        >
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-gray-700 dark:text-gray-300">
+                              Bulan {monthNum}
+                            </span>
+                            {isCompleted && (
+                              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                                ✓ Lunas
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            type="number"
+                            value={schedules[idx] ?? ''}
+                            onChange={e => handleScheduleChange(idx, e.target.value)}
+                            placeholder="0"
+                            className="w-full px-2 py-1 text-xs rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-1 focus:ring-indigo-500 font-semibold"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100 dark:border-gray-800">
+                    <span className="text-gray-500 dark:text-gray-400">Total Akumulasi:</span>
+                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                      {formatCurrency(scheduleSum)}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             {/* Live Installment Status Card */}
             <div className="p-3 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-900/60 space-y-1.5 text-xs text-indigo-900 dark:text-indigo-200">
               <div className="flex items-center justify-between font-bold">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                  Status Angsuran: {parsedPaidCount} / {parsedCount} Selesai
+                  Status: {parsedPaidCount} / {parsedCount} Angsuran Selesai
                 </span>
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
                   Sisa {remainingTenor}x lagi
                 </span>
               </div>
               <p className="text-[11px] text-indigo-700 dark:text-indigo-300">
-                {isFlexible
+                {isCustomSchedule
+                  ? `Jatuh tempo setiap tgl ${installmentDueDay || 10} • Nominal mengikuti rincian kustom tiap bulan.`
+                  : isFlexible
                   ? `Tagihan bulan ini: ${formatCurrency(parseInt(currentBillAmount, 10) || 0)} (Jatuh tempo setiap tgl ${installmentDueDay || 10})`
                   : `Angsuran tetap: ${formatCurrency(parseInt(installmentAmount, 10) || 0)}/bulan (Jatuh tempo setiap tgl ${installmentDueDay || 10})`}
               </p>

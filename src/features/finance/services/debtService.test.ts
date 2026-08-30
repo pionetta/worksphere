@@ -305,5 +305,38 @@ describe('debtService', () => {
       expect(debt?.paid_amount).toBe(1000000)
       expect(debt?.installment_paid_count).toBe(2)
     })
+
+    it('should correctly select active monthly nominal from installment_schedule', async () => {
+      const schedule = [100000, 150000, 200000, 250000, 300000, 350000]
+      const debtId = await debtService.createDebt(userId, {
+        type: 'debt',
+        person_name: 'Cicilan Laptop Custom',
+        amount: 1350000,
+        is_installment: true,
+        installment_count: 6,
+        installment_paid_count: 0,
+        installment_schedule: schedule,
+      })
+
+      let debt = await db.debts.get(debtId)
+      expect(debt).toBeDefined()
+      expect(debt?.installment_schedule).toEqual(schedule)
+
+      // 1st month (paidCount = 0 -> active is Month 1: 100.000)
+      let progress = debtService.getInstallmentProgress(debt!)
+      expect(progress?.currentInstallmentIndex).toBe(1)
+      expect(progress?.currentBillAmount).toBe(100000)
+
+      // Pay 1st month
+      await debtService.payDebt(debtId, 100000, true)
+      debt = await db.debts.get(debtId)
+
+      // 2nd month (paidCount = 1 -> active is Month 2: 150.000)
+      progress = debtService.getInstallmentProgress(debt!)
+      expect(progress?.currentInstallmentIndex).toBe(2)
+      expect(progress?.currentBillAmount).toBe(150000)
+      expect(progress?.paidCount).toBe(1)
+      expect(progress?.remainingCount).toBe(5)
+    })
   })
 })

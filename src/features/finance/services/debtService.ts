@@ -40,6 +40,7 @@ export interface InstallmentProgress {
   progressPercent: number
   isFullyPaid: boolean
   currentBillAmount: number
+  schedule?: number[] | null
 }
 
 export function getInstallmentProgress(debt: Debt): InstallmentProgress | null {
@@ -60,7 +61,17 @@ export function getInstallmentProgress(debt: Debt): InstallmentProgress | null {
   const progressPercent = Math.min(100, Math.round((paidCount / totalCount) * 100))
 
   const remainingDebt = Math.max(0, debt.amount - debt.paid_amount)
-  const currentBillAmount = debt.current_bill_amount || debt.installment_amount || remainingDebt
+  
+  // If debt has a custom monthly schedule, pick the active month's nominal
+  let scheduledBill: number | undefined
+  if (debt.installment_schedule && debt.installment_schedule.length > 0) {
+    const activeIdx = Math.max(0, currentInstallmentIndex - 1)
+    if (activeIdx < debt.installment_schedule.length) {
+      scheduledBill = debt.installment_schedule[activeIdx]
+    }
+  }
+
+  const currentBillAmount = scheduledBill || debt.current_bill_amount || debt.installment_amount || remainingDebt
 
   return {
     isInstallment: true,
@@ -72,6 +83,7 @@ export function getInstallmentProgress(debt: Debt): InstallmentProgress | null {
     progressPercent,
     isFullyPaid,
     currentBillAmount,
+    schedule: debt.installment_schedule ?? null,
   }
 }
 
@@ -106,6 +118,7 @@ export async function createDebt(userId: string, input: CreateDebtInput): Promis
     installment_count: data.installment_count ?? null,
     installment_paid_count: data.installment_paid_count ?? 0,
     installment_amount: data.installment_amount ?? null,
+    installment_schedule: data.installment_schedule ?? null,
     current_bill_amount: data.current_bill_amount ?? null,
     installment_due_day: data.installment_due_day ?? null,
     note: data.note ?? null,
@@ -147,6 +160,9 @@ export async function updateDebt(id: string, input: UpdateDebtInput): Promise<vo
     }),
     ...(data.installment_amount !== undefined && {
       installment_amount: data.installment_amount ?? null,
+    }),
+    ...(data.installment_schedule !== undefined && {
+      installment_schedule: data.installment_schedule ?? null,
     }),
     ...(data.current_bill_amount !== undefined && {
       current_bill_amount: data.current_bill_amount ?? null,

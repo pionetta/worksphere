@@ -218,7 +218,21 @@ export function FinancePage() {
   }, [debtsHook.debts, debtFilterType, debtFilterStatus])
 
   const [debtViewMode, setDebtViewMode] = useState<'grouped' | 'flat'>('grouped')
+  const [selectedDebtGroup, setSelectedDebtGroup] = useState<string | null>(null)
   const debtGroups = useMemo(() => groupDebts(filteredDebts), [filteredDebts])
+
+  const displayedDebtGroups = useMemo(() => {
+    if (!selectedDebtGroup) return debtGroups
+    return debtGroups.filter(g => g.groupName.toLowerCase() === selectedDebtGroup.toLowerCase())
+  }, [debtGroups, selectedDebtGroup])
+
+  const displayedDebts = useMemo(() => {
+    if (!selectedDebtGroup) return filteredDebts
+    return filteredDebts.filter(d => {
+      const grpName = d.group_name?.trim() || d.person_name.trim() || 'Lainnya'
+      return grpName.toLowerCase() === selectedDebtGroup.toLowerCase()
+    })
+  }, [filteredDebts, selectedDebtGroup])
 
   const [exportLoading, setExportLoading] = useState(false)
 
@@ -1295,29 +1309,60 @@ export function FinancePage() {
           {/* Overview Ringkasan per Kelompok / Tempat */}
           {debtGroups.length > 1 && (
             <div className="space-y-2 pt-1">
-              <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-primary-500" />
-                Ringkasan Total per Tempat / Kelompok:
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-primary-500" />
+                  Ringkasan Total per Tempat / Kelompok:
+                  <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400 hidden sm:inline">
+                    (Klik untuk melihat tagihan kelompok)
+                  </span>
+                </h3>
+                {selectedDebtGroup && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDebtGroup(null)}
+                    className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    ✕ Tampilkan Semua ({debtGroups.length})
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {debtGroups.map(grp => {
+                  const isSelected = selectedDebtGroup?.toLowerCase() === grp.groupName.toLowerCase()
                   const pct = grp.totalAmount > 0 ? Math.min(100, Math.round((grp.totalPaid / grp.totalAmount) * 100)) : 0
                   return (
-                    <div
+                    <button
                       key={grp.groupName}
-                      className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200/90 dark:border-gray-700/80 shadow-2xs space-y-1.5 hover:border-primary-300 dark:hover:border-primary-700 transition-all"
+                      type="button"
+                      onClick={() => setSelectedDebtGroup(prev => prev?.toLowerCase() === grp.groupName.toLowerCase() ? null : grp.groupName)}
+                      className={`w-full text-left p-3.5 rounded-2xl transition-all cursor-pointer space-y-2 relative border ${
+                        isSelected
+                          ? 'bg-primary-50/90 dark:bg-primary-950/60 border-primary-500 dark:border-primary-600 shadow-md ring-2 ring-primary-500/40'
+                          : 'bg-white dark:bg-gray-800 border-gray-200/90 dark:border-gray-700/80 shadow-2xs hover:border-primary-400 dark:hover:border-primary-600 hover:shadow-sm'
+                      }`}
                     >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">
-                          {grp.groupName}
-                        </span>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 shrink-0">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`text-xs font-bold truncate ${isSelected ? 'text-primary-700 dark:text-primary-300 font-extrabold' : 'text-gray-900 dark:text-gray-100'}`}>
+                            {grp.groupName}
+                          </span>
+                          {isSelected && (
+                            <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0 animate-pulse" />
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                          isSelected
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300'
+                        }`}>
                           {grp.totalCount} item
                         </span>
                       </div>
                       <div className="flex items-baseline justify-between text-xs">
                         <span className="text-gray-500 dark:text-gray-400 text-[11px]">Sisa Tagihan:</span>
-                        <span className="font-bold text-gray-900 dark:text-gray-100">
+                        <span className={`font-extrabold ${isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-gray-100'}`}>
                           {formatCurrency(grp.totalRemaining)}
                         </span>
                       </div>
@@ -1331,10 +1376,27 @@ export function FinancePage() {
                         <span>Total: {formatCurrency(grp.totalAmount)}</span>
                         <span>{pct}% lunas</span>
                       </div>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
+
+              {/* Active Filter Indicator */}
+              {selectedDebtGroup && (
+                <div className="p-2.5 rounded-xl bg-primary-50/70 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-800 flex items-center justify-between text-xs text-primary-900 dark:text-primary-200 animate-fade-in">
+                  <span className="font-semibold flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                    Menampilkan tagihan untuk kelompok: <strong>{selectedDebtGroup}</strong> ({displayedDebts.length} item)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDebtGroup(null)}
+                    className="text-[11px] font-bold text-primary-700 dark:text-primary-300 hover:underline px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-700 cursor-pointer shadow-2xs"
+                  >
+                    ✕ Tampilkan Semua
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1342,25 +1404,35 @@ export function FinancePage() {
             <LoadingState text="Memuat utang & piutang..." />
           ) : debtsHook.error ? (
             <ErrorState message={debtsHook.error} onRetry={debtsHook.refresh} />
-          ) : filteredDebts.length === 0 && !showDebtForm ? (
+          ) : displayedDebts.length === 0 && !showDebtForm ? (
             <EmptyState
               icon={<HandCoins className="w-6 h-6 text-gray-400" />}
-              title="Belum ada catatan utang / piutang"
-              description="Catat utang atau pinjaman uang untuk memudahkan pemantauan pelunasan."
+              title={selectedDebtGroup ? `Tidak ada tagihan di kelompok "${selectedDebtGroup}"` : "Belum ada catatan utang / piutang"}
+              description={selectedDebtGroup ? "Pilih kelompok lain atau klik Tampilkan Semua untuk melihat semua tagihan." : "Catat utang atau pinjaman uang untuk memudahkan pemantauan pelunasan."}
               action={
-                <Button
-                  size="sm"
-                  onClick={() => setShowDebtForm(true)}
-                  icon={<Plus className="w-4 h-4" />}
-                >
-                  Catat Utang / Piutang
-                </Button>
+                selectedDebtGroup ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setSelectedDebtGroup(null)}
+                  >
+                    Tampilkan Semua Tagihan
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowDebtForm(true)}
+                    icon={<Plus className="w-4 h-4" />}
+                  >
+                    Catat Utang / Piutang
+                  </Button>
+                )
               }
             />
           ) : debtViewMode === 'grouped' ? (
             /* Grouped View */
             <div className="space-y-5">
-              {debtGroups.map(group => {
+              {displayedDebtGroups.map(group => {
                 const groupPct =
                   group.totalAmount > 0
                     ? Math.min(100, Math.round((group.totalPaid / group.totalAmount) * 100))
@@ -1438,7 +1510,7 @@ export function FinancePage() {
             </div>
           ) : (
             /* Flat List View */
-            filteredDebts.map(debt => (
+            displayedDebts.map(debt => (
               <DebtCard
                 key={debt.id}
                 debt={debt}
@@ -2268,6 +2340,11 @@ export function FinancePage() {
             initialInstallmentAmount={
               editingDebtId
                 ? debtsHook.debts.find(d => d.id === editingDebtId)?.installment_amount
+                : null
+            }
+            initialInstallmentSchedule={
+              editingDebtId
+                ? debtsHook.debts.find(d => d.id === editingDebtId)?.installment_schedule
                 : null
             }
             initialCurrentBillAmount={

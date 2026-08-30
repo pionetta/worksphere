@@ -162,6 +162,7 @@ export interface Debt {
   installment_count?: number | null // total tenor in months
   installment_paid_count?: number | null // number of completed installments
   installment_amount?: number | null // standard monthly installment
+  installment_schedule?: number[] | null // custom installment amount per month [month1, month2, ...]
   current_bill_amount?: number | null // custom/variable bill amount for current month
   installment_due_day?: number | null // day of month (1..31)
   note: string | null
