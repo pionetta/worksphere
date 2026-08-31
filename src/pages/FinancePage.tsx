@@ -166,6 +166,7 @@ export function FinancePage() {
   const [showTransferForm, setShowTransferForm] = useState(false)
   const [selectedTransferSourceId, setSelectedTransferSourceId] = useState<string | null>(null)
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false)
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
 
   const [showBudgetForm, setShowBudgetForm] = useState(false)
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null)
@@ -988,6 +989,14 @@ export function FinancePage() {
             </div>
 
             <div className="flex items-center gap-1.5">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowCategoryModal(true)}
+                icon={<Tag className="w-3.5 h-3.5" />}
+              >
+                Kategori
+              </Button>
               <TransactionFilter
                 filters={transactionFilters}
                 onFiltersChange={setTransactionFilters}
@@ -1036,6 +1045,7 @@ export function FinancePage() {
                 type={transactionType}
                 initialData={editingTransaction ?? undefined}
                 onTypeChange={setTransactionType}
+                onManageCategories={() => setShowCategoryModal(true)}
                 onSubmit={async (walletId, amount, categoryId, date, note, effectiveType) => {
                   const finalType = effectiveType ?? transactionType
                   try {
@@ -2150,6 +2160,7 @@ export function FinancePage() {
             type={transactionType}
             initialData={editingTransaction ?? undefined}
             onTypeChange={setTransactionType}
+            onManageCategories={() => setShowCategoryModal(true)}
             onSubmit={async (walletId, amount, categoryId, date, note, effectiveType) => {
               const finalType = effectiveType ?? transactionType
               try {
@@ -2259,6 +2270,48 @@ export function FinancePage() {
               }
             }}
             onCancel={() => setShowAdjustmentForm(false)}
+          />
+        </div>
+      </BottomSheet>
+
+      {/* ─── Popup: Kelola Kategori Transaksi ─── */}
+      <BottomSheet
+        open={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        title="Kelola Kategori Transaksi"
+      >
+        <div className="pb-4">
+          <CategoryList
+            categories={categories}
+            loading={categoriesLoading}
+            onAdd={async (name, type, icon) => {
+              if (!userId) return
+              try {
+                await categoryService.createCategory(userId, name, type, icon ?? undefined)
+                toast.success(`Kategori "${name}" berhasil ditambahkan`)
+                await refreshCategories()
+              } catch {
+                toast.error('Gagal menambahkan kategori')
+              }
+            }}
+            onEdit={async (id, data) => {
+              try {
+                await categoryService.updateCategory(id, data)
+                toast.success('Kategori berhasil diperbarui')
+                await refreshCategories()
+              } catch {
+                toast.error('Gagal memperbarui kategori')
+              }
+            }}
+            onRemove={async id => {
+              try {
+                await categoryService.removeCategory(id)
+                toast.success('Kategori berhasil dihapus')
+                await refreshCategories()
+              } catch {
+                toast.error('Gagal menghapus kategori')
+              }
+            }}
           />
         </div>
       </BottomSheet>

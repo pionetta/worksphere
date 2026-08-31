@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
-import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Tag } from 'lucide-react'
 import type { WalletWithBalance, Category, Transaction } from '@/types'
 
 interface TransactionFormProps {
@@ -11,6 +11,7 @@ interface TransactionFormProps {
   type: 'income' | 'expense'
   initialData?: Transaction
   onTypeChange?: (type: 'income' | 'expense') => void
+  onManageCategories?: () => void
   onSubmit: (
     walletId: string,
     amount: number,
@@ -28,6 +29,7 @@ export function TransactionForm({
   type,
   initialData,
   onTypeChange,
+  onManageCategories,
   onSubmit,
   onCancel,
 }: TransactionFormProps) {
@@ -143,25 +145,35 @@ export function TransactionForm({
         error={error}
       />
 
-      {filteredCategories.length > 0 && (
-        <div>
-          <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">
             Kategori {currentType === 'income' ? 'Pemasukan' : 'Pengeluaran'} (opsional)
           </label>
-          <select
-            value={categoryId}
-            onChange={e => setCategoryId(e.target.value)}
-            className="block w-full px-3 py-2.5 text-xs sm:text-sm rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent transition-colors font-medium"
-          >
-            <option value="">Tanpa kategori</option>
-            {filteredCategories.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          {onManageCategories && (
+            <button
+              type="button"
+              onClick={onManageCategories}
+              className="text-xs font-bold text-[#2563EB] dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
+            >
+              <Tag className="w-3 h-3" />
+              <span>Kelola Kategori</span>
+            </button>
+          )}
         </div>
-      )}
+        <select
+          value={categoryId}
+          onChange={e => setCategoryId(e.target.value)}
+          className="block w-full px-3 py-2.5 text-xs sm:text-sm rounded-xl bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent transition-colors font-medium"
+        >
+          <option value="">Tanpa kategori</option>
+          {filteredCategories.map(c => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <Input label="Tanggal Transaksi" type="date" value={date} onChange={e => setDate(e.target.value)} />
 
