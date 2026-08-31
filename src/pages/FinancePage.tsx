@@ -114,7 +114,6 @@ export function FinancePage() {
     if (!userId) return
     setCategoriesLoading(true)
     try {
-      await categoryService.initializeDefaultCategories(userId)
       const data = await categoryService.getAllCategories(userId)
       setCategories(data)
     } finally {
@@ -123,8 +122,13 @@ export function FinancePage() {
   }, [userId])
 
   useEffect(() => {
-    refreshCategories()
-  }, [refreshCategories])
+    async function init() {
+      if (!userId) return
+      await categoryService.initializeDefaultCategories(userId)
+      await refreshCategories()
+    }
+    init()
+  }, [userId, refreshCategories])
 
   const categoryMap = useMemo(() => {
     const map: Record<string, string> = {}

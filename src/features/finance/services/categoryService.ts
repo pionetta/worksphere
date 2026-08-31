@@ -23,27 +23,25 @@ const DEFAULT_EXPENSE_CATEGORIES = [
 
 export async function initializeDefaultCategories(userId: string): Promise<void> {
   const existing = await categoryRepo.listCategories(userId)
-  const existingNames = new Set(existing.map(c => c.name.toLowerCase()))
-
-  const toCreate: Array<{ name: string; type: CategoryType }> = []
+  if (existing.length > 0) {
+    return
+  }
 
   for (const name of DEFAULT_INCOME_CATEGORIES) {
-    if (!existingNames.has(name.toLowerCase())) {
-      toCreate.push({ name, type: 'income' })
-    }
+    await categoryRepo.createCategory({
+      user_id: userId,
+      name,
+      type: 'income',
+      icon: null,
+      is_active: true,
+    })
   }
 
   for (const name of DEFAULT_EXPENSE_CATEGORIES) {
-    if (!existingNames.has(name.toLowerCase())) {
-      toCreate.push({ name, type: 'expense' })
-    }
-  }
-
-  for (const cat of toCreate) {
     await categoryRepo.createCategory({
       user_id: userId,
-      name: cat.name,
-      type: cat.type,
+      name,
+      type: 'expense',
       icon: null,
       is_active: true,
     })
