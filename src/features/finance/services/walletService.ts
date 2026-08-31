@@ -69,12 +69,20 @@ export async function updateWallet(
     note: data.note ?? undefined,
   })
 
+  const existing = await walletRepo.getWalletById(id)
+  if (!existing) throw new Error('Dompet tidak ditemukan.')
+
   const updateData: Partial<
     Pick<Wallet, 'name' | 'type' | 'initial_balance' | 'note' | 'is_active'>
   > = {}
   if (parsed.name !== undefined) updateData.name = parsed.name
   if (parsed.type !== undefined) updateData.type = parsed.type
-  if (parsed.initial_balance !== undefined) updateData.initial_balance = parsed.initial_balance
+  if (parsed.initial_balance !== undefined) {
+    const currentComputedBalance = await calculateBalance(existing)
+    const txNet = currentComputedBalance - existing.initial_balance
+    const adjustedInitialBalance = Math.max(0, parsed.initial_balance - txNet)
+    updateData.initial_balance = adjustedInitialBalance
+  }
   if (data.note !== undefined) updateData.note = parsed.note ?? null
   if (data.is_active !== undefined) updateData.is_active = data.is_active
 

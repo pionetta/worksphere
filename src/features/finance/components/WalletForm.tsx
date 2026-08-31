@@ -11,7 +11,7 @@ interface WalletFormProps {
   onSubmit: (
     name: string,
     type: WalletType,
-    initialBalance: number,
+    balance: number,
     note: string | null
   ) => Promise<void>
   onCancel: () => void
@@ -41,6 +41,8 @@ export function WalletForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const isEditing = submitLabel.toLowerCase().includes('update') || submitLabel.toLowerCase().includes('edit')
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -50,32 +52,32 @@ export function WalletForm({
     }
     const parsedBalance = parseInt(balance.replace(/[^\d]/g, ''), 10) || 0
     if (parsedBalance < 0) {
-      setError('Saldo awal tidak boleh negatif.')
+      setError('Saldo dompet tidak boleh negatif.')
       return
     }
     setLoading(true)
     try {
       await onSubmit(name.trim(), type, parsedBalance, note.trim() || null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal menyimpan.')
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan dompet.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-3.5">
       <Input
         label="Nama Dompet"
         value={name}
         onChange={e => setName(e.target.value)}
-        placeholder="Contoh: BCA, GoPay, Tunai"
+        placeholder="Contoh: BCA, GoPay, Dompet Tunai"
         error={error}
         autoFocus
       />
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-          Tipe
+          Tipe Dompet
         </label>
         <div className="grid grid-cols-4 gap-2">
           {walletTypes.map(wt => (
@@ -83,10 +85,10 @@ export function WalletForm({
               key={wt.value}
               type="button"
               onClick={() => setType(wt.value)}
-              className={`px-3 py-2 text-sm rounded-xl border transition-colors ${
+              className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-xl border transition-colors cursor-pointer ${
                 type === wt.value
-                  ? 'bg-primary-50 border-primary-500 text-primary-700 dark:bg-primary-900/30 dark:border-primary-500 dark:text-primary-300'
-                  : 'bg-white border-gray-300 text-gray-700 dark:bg-gray-900/50 dark:border-gray-600 dark:text-gray-300'
+                  ? 'bg-primary-50 border-primary-500 text-primary-700 dark:bg-primary-900/30 dark:border-primary-500 dark:text-primary-300 shadow-2xs'
+                  : 'bg-white border-gray-300 text-gray-700 dark:bg-gray-900/50 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-50'
               }`}
             >
               {wt.label}
@@ -95,7 +97,7 @@ export function WalletForm({
         </div>
       </div>
       <Input
-        label="Saldo Awal"
+        label={isEditing ? 'Saldo Dompet (Rp)' : 'Saldo Awal (Rp)'}
         type="number"
         value={balance}
         onChange={e => setBalance(e.target.value)}

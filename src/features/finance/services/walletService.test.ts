@@ -59,6 +59,43 @@ describe('walletService', () => {
       await expect(walletService.updateWallet(id, { name: '' })).rejects.toThrow()
     })
 
+    it('should update wallet balance correctly', async () => {
+      const id = await walletService.createWallet(userId, 'BCA', 'bank', 1000000)
+      await walletService.updateWallet(id, { initial_balance: 2500000 })
+      const wallet = await db.wallets.get(id)
+      expect(wallet!.initial_balance).toBe(2500000)
+
+      const withBalance = await walletService.getWalletsWithBalance(userId)
+      expect(withBalance[0].balance).toBe(2500000)
+    })
+
+    it('should adjust initial_balance when updating balance on wallet with transactions', async () => {
+      const id = await walletService.createWallet(userId, 'GoPay', 'e_wallet', 500000)
+      await db.transactions.add({
+        id: 'tx-adj-1',
+        user_id: userId,
+        wallet_id: id,
+        type: 'income',
+        amount: 200000,
+        category_id: null,
+        transaction_date: '2026-08-20',
+        note: null,
+        transfer_group_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted_at: null,
+      })
+
+      // Current balance is 500k + 200k = 700k.
+      // User updates balance to 1.000.000 -> initial_balance adjusted to 800.000
+      await walletService.updateWallet(id, { initial_balance: 1000000 })
+      const updatedWallet = await db.wallets.get(id)
+      expect(updatedWallet!.initial_balance).toBe(800000)
+
+      const withBalance = await walletService.getWalletsWithBalance(userId)
+      expect(withBalance[0].balance).toBe(1000000)
+    })
+
     it('should reject negative initial balance on update', async () => {
       const id = await walletService.createWallet(userId, 'BCA', 'bank', 1000000)
       await expect(walletService.updateWallet(id, { initial_balance: -100 })).rejects.toThrow()

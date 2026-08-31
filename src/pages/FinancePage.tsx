@@ -164,6 +164,7 @@ export function FinancePage() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
 
   const [showTransferForm, setShowTransferForm] = useState(false)
+  const [selectedTransferSourceId, setSelectedTransferSourceId] = useState<string | null>(null)
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false)
 
   const [showBudgetForm, setShowBudgetForm] = useState(false)
@@ -508,18 +509,29 @@ export function FinancePage() {
             netIncome={summaryHook.summary.netIncome}
           />
 
-          {/* Tombol Aksi di Bawah Card Total Saldo: Tambah Dompet & Catat Transaksi */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Tombol Aksi di Bawah Card Total Saldo: Tambah Dompet, Transfer Dana & Catat Transaksi */}
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => {
                 setEditingWalletId(null)
                 setShowWalletForm(true)
               }}
-              className="py-2.5 px-3 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+              className="py-2.5 px-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer truncate"
             >
               <Plus className="w-4 h-4 shrink-0" />
-              <span>Tambah Dompet</span>
+              <span className="truncate">Tambah Dompet</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedTransferSourceId(null)
+                setShowTransferForm(true)
+              }}
+              className="py-2.5 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer truncate"
+            >
+              <ArrowLeftRight className="w-4 h-4 shrink-0" />
+              <span className="truncate">Transfer Dana</span>
             </button>
             <button
               type="button"
@@ -528,10 +540,10 @@ export function FinancePage() {
                 setTransactionType('expense')
                 setShowTransactionForm(true)
               }}
-              className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
+              className="py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer truncate"
             >
               <Plus className="w-4 h-4 shrink-0" />
-              <span>Catat Transaksi</span>
+              <span className="truncate">Catat Transaksi</span>
             </button>
           </div>
 
@@ -545,13 +557,26 @@ export function FinancePage() {
                 </h3>
               </div>
               <div className="flex items-center gap-2">
+                {walletsHook.wallets.length >= 2 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTransferSourceId(null)
+                      setShowTransferForm(true)
+                    }}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <ArrowLeftRight className="w-3 h-3" />
+                    <span>Transfer</span>
+                  </button>
+                )}
                 {walletsHook.wallets.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setTab('wallets')}
                     className="text-xs text-[#2563EB] dark:text-blue-400 font-bold hover:underline cursor-pointer"
                   >
-                    Lihat Semua Dompet &rarr;
+                    Lihat Semua &rarr;
                   </button>
                 )}
               </div>
@@ -585,6 +610,10 @@ export function FinancePage() {
                     onSelect={() => {
                       setEditingWalletId(wallet.id)
                       setShowWalletForm(true)
+                    }}
+                    onTransfer={id => {
+                      setSelectedTransferSourceId(id)
+                      setShowTransferForm(true)
                     }}
                     onDeactivate={id => {
                       setPendingWalletDelete({ id, name: wallet.name })
@@ -904,6 +933,10 @@ export function FinancePage() {
                 onSelect={() => {
                   setEditingWalletId(wallet.id)
                   setShowWalletForm(true)
+                }}
+                onTransfer={id => {
+                  setSelectedTransferSourceId(id)
+                  setShowTransferForm(true)
                 }}
                 onDeactivate={id => {
                   setPendingWalletDelete({ id, name: wallet.name })
@@ -2070,6 +2103,7 @@ export function FinancePage() {
                   await walletsHook.editWallet(editingWalletId, {
                     name,
                     type,
+                    initial_balance: balance,
                     note: note ?? null,
                   })
                   toast.success(`Dompet "${name}" berhasil diperbarui`)
@@ -2168,12 +2202,16 @@ export function FinancePage() {
       {/* ─── Popup: Form Transfer Antar Dompet ─── */}
       <BottomSheet
         open={showTransferForm}
-        onClose={() => setShowTransferForm(false)}
+        onClose={() => {
+          setShowTransferForm(false)
+          setSelectedTransferSourceId(null)
+        }}
         title="Transfer Antar Dompet"
       >
         <div className="pb-4">
           <TransferForm
             wallets={walletsHook.wallets}
+            initialSourceWalletId={selectedTransferSourceId || undefined}
             onSubmit={async (sourceId, targetId, amount, date, note) => {
               try {
                 await transactionsHook.addTransfer(
@@ -2185,13 +2223,17 @@ export function FinancePage() {
                 )
                 toast.success('Transfer antar dompet berhasil!')
                 setShowTransferForm(false)
+                setSelectedTransferSourceId(null)
                 await walletsHook.refresh()
                 await summaryHook.refresh()
               } catch {
                 toast.error('Gagal melakukan transfer')
               }
             }}
-            onCancel={() => setShowTransferForm(false)}
+            onCancel={() => {
+              setShowTransferForm(false)
+              setSelectedTransferSourceId(null)
+            }}
           />
         </div>
       </BottomSheet>

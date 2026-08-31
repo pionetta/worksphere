@@ -95,4 +95,16 @@ describe('WalletCard', () => {
 
     expect(screen.queryByText('Tabungan')).not.toBeInTheDocument()
   })
+
+  it('should trigger onTransfer when transfer button is clicked', async () => {
+    const onTransfer = vi.fn()
+    const onSelect = vi.fn()
+    render(<WalletCard wallet={mockWallet} onTransfer={onTransfer} onSelect={onSelect} />)
+
+    const transferButton = screen.getByLabelText('Transfer dana dari Dompet Utama')
+    await userEvent.click(transferButton)
+
+    expect(onTransfer).toHaveBeenCalledWith('wallet-1')
+    expect(onSelect).not.toHaveBeenCalled()
+  })
 })
