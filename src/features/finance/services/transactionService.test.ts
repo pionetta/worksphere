@@ -50,10 +50,16 @@ describe('transactionService', () => {
       ).rejects.toThrow()
     })
 
-    it('should reject expense category for income', async () => {
-      await expect(
-        transactionService.createIncome(userId, walletId, 100000, expenseCategoryId, '2026-08-20')
-      ).rejects.toThrow()
+    it('should allow any category for income', async () => {
+      const id = await transactionService.createIncome(
+        userId,
+        walletId,
+        100000,
+        expenseCategoryId,
+        '2026-08-20'
+      )
+      const tx = await db.transactions.get(id)
+      expect(tx?.category_id).toBe(expenseCategoryId)
     })
 
     it('should reject non-existent category', async () => {
@@ -77,10 +83,16 @@ describe('transactionService', () => {
       expect(tx!.amount).toBe(50000)
     })
 
-    it('should reject income category for expense', async () => {
-      await expect(
-        transactionService.createExpense(userId, walletId, 50000, incomeCategoryId, '2026-08-20')
-      ).rejects.toThrow()
+    it('should allow any category for expense', async () => {
+      const id = await transactionService.createExpense(
+        userId,
+        walletId,
+        50000,
+        incomeCategoryId,
+        '2026-08-20'
+      )
+      const tx = await db.transactions.get(id)
+      expect(tx?.category_id).toBe(incomeCategoryId)
     })
   })
 
@@ -196,11 +208,11 @@ describe('transactionService', () => {
       ).rejects.toThrow('Transaksi ini bukan pemasukan.')
     })
 
-    it('should reject expense category for income update', async () => {
+    it('should allow updating income with any category', async () => {
       const id = await transactionService.createIncome(userId, walletId, 500000, null, '2026-08-20')
-      await expect(
-        transactionService.updateIncome(id, walletId, 500000, expenseCategoryId, '2026-08-20')
-      ).rejects.toThrow('Kategori ini bukan untuk pemasukan.')
+      await transactionService.updateIncome(id, walletId, 500000, expenseCategoryId, '2026-08-20')
+      const tx = await db.transactions.get(id)
+      expect(tx?.category_id).toBe(expenseCategoryId)
     })
 
     it('should reject amount <= 0', async () => {
@@ -250,11 +262,11 @@ describe('transactionService', () => {
       ).rejects.toThrow('Transaksi ini bukan pengeluaran.')
     })
 
-    it('should reject income category for expense update', async () => {
+    it('should allow updating expense with any category', async () => {
       const id = await transactionService.createExpense(userId, walletId, 50000, null, '2026-08-20')
-      await expect(
-        transactionService.updateExpense(id, walletId, 50000, incomeCategoryId, '2026-08-20')
-      ).rejects.toThrow('Kategori ini bukan untuk pengeluaran.')
+      await transactionService.updateExpense(id, walletId, 50000, incomeCategoryId, '2026-08-20')
+      const tx = await db.transactions.get(id)
+      expect(tx?.category_id).toBe(incomeCategoryId)
     })
 
     it('should update balance correctly after edit', async () => {

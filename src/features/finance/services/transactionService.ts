@@ -53,7 +53,6 @@ export async function createIncome(
   if (data.category_id) {
     const category = await categoryRepo.getCategoryById(data.category_id)
     if (!category) throw new Error('Kategori tidak ditemukan.')
-    if (category.type !== 'income') throw new Error('Kategori ini bukan untuk pemasukan.')
   }
 
   return transactionRepo.createTransaction({
@@ -88,7 +87,6 @@ export async function createExpense(
   if (data.category_id) {
     const category = await categoryRepo.getCategoryById(data.category_id)
     if (!category) throw new Error('Kategori tidak ditemukan.')
-    if (category.type !== 'expense') throw new Error('Kategori ini bukan untuk pengeluaran.')
   }
 
   return transactionRepo.createTransaction({
@@ -163,7 +161,6 @@ export async function updateIncome(
   if (data.category_id) {
     const category = await categoryRepo.getCategoryById(data.category_id)
     if (!category) throw new Error('Kategori tidak ditemukan.')
-    if (category.type !== 'income') throw new Error('Kategori ini bukan untuk pemasukan.')
   }
 
   await transactionRepo.updateTransaction(id, {
@@ -198,7 +195,6 @@ export async function updateExpense(
   if (data.category_id) {
     const category = await categoryRepo.getCategoryById(data.category_id)
     if (!category) throw new Error('Kategori tidak ditemukan.')
-    if (category.type !== 'expense') throw new Error('Kategori ini bukan untuk pengeluaran.')
   }
 
   await transactionRepo.updateTransaction(id, {

@@ -24,6 +24,8 @@ function makeTx(overrides: Partial<Transaction> = {}): Transaction {
   }
 }
 
+const currentMonth = new Date().toISOString().slice(0, 7)
+
 const transactions: Transaction[] = [
   makeTx({
     id: '1',
@@ -31,7 +33,7 @@ const transactions: Transaction[] = [
     amount: 50000,
     category_id: 'cat-food',
     wallet_id: 'w1',
-    transaction_date: '2026-08-20',
+    transaction_date: `${currentMonth}-20`,
     note: 'Makan siang',
   }),
   makeTx({
@@ -40,7 +42,7 @@ const transactions: Transaction[] = [
     amount: 5000000,
     category_id: 'cat-salary',
     wallet_id: 'w1',
-    transaction_date: '2026-08-01',
+    transaction_date: `${currentMonth}-01`,
     note: 'Gaji bulanan',
   }),
   makeTx({
@@ -49,7 +51,7 @@ const transactions: Transaction[] = [
     amount: 200000,
     category_id: 'cat-transport',
     wallet_id: 'w2',
-    transaction_date: '2026-08-15',
+    transaction_date: `${currentMonth}-15`,
     note: 'Bensin motor',
   }),
   makeTx({
@@ -76,15 +78,14 @@ describe('Transaction Filters', () => {
   describe('Default filters', () => {
     it('should return all transactions with default filters', () => {
       const result = filterTransactions(transactions, DEFAULT_FILTERS)
-      expect(result).toHaveLength(5)
+      expect(result).toHaveLength(transactions.length)
     })
   })
 
   describe('Date filter', () => {
     it('should filter by today', () => {
-      const today = new Date()
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-      const tx = [makeTx({ id: 'today', transaction_date: dateStr })]
+      const today = new Date().toISOString().slice(0, 10)
+      const tx = [makeTx({ transaction_date: today }), makeTx({ transaction_date: '2026-01-01' })]
       const result = filterTransactions(tx, { ...DEFAULT_FILTERS, dateRange: 'today' })
       expect(result).toHaveLength(1)
     })
@@ -94,16 +95,15 @@ describe('Transaction Filters', () => {
         ...DEFAULT_FILTERS,
         dateRange: 'month',
       })
-      // August 2026 transactions: ids 1, 2, 3
-      expect(result.every(t => t.transaction_date.startsWith('2026-08'))).toBe(true)
+      expect(result.every(t => t.transaction_date.startsWith(currentMonth))).toBe(true)
     })
 
     it('should filter by custom date range', () => {
       const result = filterTransactions(transactions, {
         ...DEFAULT_FILTERS,
         dateRange: 'custom',
-        startDate: '2026-08-15',
-        endDate: '2026-08-20',
+        startDate: `${currentMonth}-15`,
+        endDate: `${currentMonth}-20`,
       })
       expect(result).toHaveLength(2)
       expect(result.map(t => t.id).sort()).toEqual(['1', '3'])

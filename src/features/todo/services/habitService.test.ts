@@ -31,6 +31,7 @@ describe('habitService', () => {
   })
 
   it('creates habit and toggles completion', async () => {
+    const today = new Date().toISOString().slice(0, 10)
     const habitId = await habitService.createHabit(userId, {
       title: 'Membaca Buku',
       icon: '📚',
@@ -40,13 +41,13 @@ describe('habitService', () => {
 
     expect(habitId).toBeDefined()
 
-    // 1. Toggle ON for today (2026-08-30)
-    const toggle1 = await habitService.toggleHabitCompletion(userId, habitId, '2026-08-30')
+    // 1. Toggle ON for today
+    const toggle1 = await habitService.toggleHabitCompletion(userId, habitId, today)
     expect(toggle1.completed).toBe(true)
     expect(toggle1.currentStreak).toBe(1)
 
     // 2. Toggle OFF for today
-    const toggle2 = await habitService.toggleHabitCompletion(userId, habitId, '2026-08-30')
+    const toggle2 = await habitService.toggleHabitCompletion(userId, habitId, today)
     expect(toggle2.completed).toBe(false)
     expect(toggle2.currentStreak).toBe(0)
   })
