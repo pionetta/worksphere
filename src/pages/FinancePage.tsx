@@ -46,6 +46,7 @@ import { SharedWalletModal } from '@/features/finance/components/SharedWalletMod
 import { WalletInvitationsBanner } from '@/features/finance/components/WalletInvitationsBanner'
 import {
   Plus,
+  PlusCircle,
   ArrowLeft,
   ArrowLeftRight,
   Settings2,
@@ -438,55 +439,57 @@ export function FinancePage() {
         onRespond={sharedWalletsHook.respondToInvitation}
       />
 
-      {/* ─── Modern Minimalist Tab Bar (4 Menu: Ringkasan, Anggaran, Tabungan, Utang) ─── */}
+      {/* ─── Modern Minimalist Tab Bar (Horizontal Scrollable Pills) ─── */}
       <div className="w-full">
         <Tabs value={tab} onValueChange={val => setTab(val as Tab)}>
-          <TabsList className="w-full h-11 p-1 rounded-xl bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 shadow-xs grid grid-cols-5 gap-1">
-            <TabsTrigger
-              value="summary"
-              onClick={() => setTab('summary')}
-              role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
-            >
-              Ringkasan
-            </TabsTrigger>
+          <div className="w-full overflow-x-auto no-scrollbar py-0.5">
+            <TabsList className="h-auto p-1 rounded-2xl bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 shadow-xs flex items-center space-x-1.5 min-w-max">
+              <TabsTrigger
+                value="summary"
+                onClick={() => setTab('summary')}
+                role="button"
+                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
+              >
+                Ringkasan
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="recurring"
-              onClick={() => setTab('recurring')}
-              role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
-            >
-              Rutin
-            </TabsTrigger>
+              <TabsTrigger
+                value="recurring"
+                onClick={() => setTab('recurring')}
+                role="button"
+                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
+              >
+                Rutin
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="budgets"
-              onClick={() => setTab('budgets')}
-              role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
-            >
-              Anggaran
-            </TabsTrigger>
+              <TabsTrigger
+                value="budgets"
+                onClick={() => setTab('budgets')}
+                role="button"
+                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
+              >
+                Anggaran
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="savings"
-              onClick={() => setTab('savings')}
-              role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
-            >
-              Tabungan
-            </TabsTrigger>
+              <TabsTrigger
+                value="savings"
+                onClick={() => setTab('savings')}
+                role="button"
+                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
+              >
+                Tabungan
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="debts"
-              onClick={() => setTab('debts')}
-              role="button"
-              className="rounded-lg text-xs font-bold transition-all text-center justify-center cursor-pointer data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95 px-0.5 truncate"
-            >
-              Utang
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger
+                value="debts"
+                onClick={() => setTab('debts')}
+                role="button"
+                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
+              >
+                Utang
+              </TabsTrigger>
+            </TabsList>
+          </div>
         </Tabs>
 
         {/* Accessible fallback buttons for test compatibility and screen readers */}
@@ -514,30 +517,40 @@ export function FinancePage() {
             netIncome={summaryHook.summary.netIncome}
           />
 
-          {/* Tombol Aksi di Bawah Card Total Saldo: Tambah Dompet, Transfer Dana & Catat Transaksi */}
-          <div className="grid grid-cols-3 gap-2">
+          {/* Quick Action Grid: Tambah Dompet, Transfer, Catat */}
+          <div className="grid grid-cols-3 gap-2.5">
             <button
               type="button"
               onClick={() => {
                 setEditingWalletId(null)
                 setShowWalletForm(true)
               }}
-              className="py-2.5 px-2 rounded-xl bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer truncate"
+              className="group flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/60 shadow-xs hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 active:scale-95 transition-all cursor-pointer text-center"
             >
-              <Plus className="w-4 h-4 shrink-0" />
-              <span className="truncate">Tambah Dompet</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#2563EB] dark:text-blue-400 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 leading-tight">
+                Tambah Dompet
+              </span>
             </button>
+
             <button
               type="button"
               onClick={() => {
                 setSelectedTransferSourceId(null)
                 setShowTransferForm(true)
               }}
-              className="py-2.5 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer truncate"
+              className="group flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/60 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 active:scale-95 transition-all cursor-pointer text-center"
             >
-              <ArrowLeftRight className="w-4 h-4 shrink-0" />
-              <span className="truncate">Transfer Dana</span>
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                <ArrowLeftRight className="w-4 h-4" />
+              </div>
+              <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 leading-tight">
+                Transfer
+              </span>
             </button>
+
             <button
               type="button"
               onClick={() => {
@@ -545,10 +558,14 @@ export function FinancePage() {
                 setTransactionType('expense')
                 setShowTransactionForm(true)
               }}
-              className="py-2.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer truncate"
+              className="group flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl bg-gradient-to-tr from-[#2563EB] to-blue-500 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 hover:brightness-105 active:scale-95 transition-all cursor-pointer text-center"
             >
-              <Plus className="w-4 h-4 shrink-0" />
-              <span className="truncate">Catat Transaksi</span>
+              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform text-white">
+                <PlusCircle className="w-4 h-4 stroke-[2.5]" />
+              </div>
+              <span className="text-[11px] font-extrabold text-white leading-tight">
+                Catat
+              </span>
             </button>
           </div>
 
@@ -593,9 +610,10 @@ export function FinancePage() {
               <ErrorState message={walletsHook.error} onRetry={walletsHook.refresh} />
             ) : walletsHook.wallets.length === 0 ? (
               <EmptyState
-                icon={<Wallet className="w-6 h-6 text-gray-400" />}
+                icon={<Wallet className="w-5 h-5 text-gray-400" />}
                 title="Belum ada dompet"
                 description="Buat dompet pertama Anda untuk mulai mencatat keuangan."
+                className="py-4"
                 action={
                   <Button
                     size="sm"
@@ -627,33 +645,6 @@ export function FinancePage() {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Export Action Bar */}
-          <div className="flex items-center justify-between p-3 rounded-[22px] bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-              Ekspor Buku Kas:
-            </span>
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleExportPdf}
-                loading={exportLoading}
-                icon={<FileDown className="w-3.5 h-3.5" />}
-              >
-                PDF
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleExportExcel}
-                loading={exportLoading}
-                icon={<FileDown className="w-3.5 h-3.5" />}
-              >
-                Excel
-              </Button>
-            </div>
           </div>
 
           {/* Ringkasan Anggaran, Tabungan & Tagihan Rutin */}
@@ -732,19 +723,43 @@ export function FinancePage() {
             categoryMap={categoryMap}
           />
 
-          {/* Transaksi Terakhir with new page trigger */}
+          {/* Transaksi Terakhir with new page trigger & export actions */}
           <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
-              <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800 gap-2">
+              <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 truncate">
                 Transaksi Terakhir
               </h3>
-              <button
-                type="button"
-                onClick={() => setTab('transactions')}
-                className="text-xs text-[#2563EB] dark:text-blue-400 font-bold hover:underline cursor-pointer"
-              >
-                Lihat Semua Transaksi &rarr;
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleExportPdf}
+                  loading={exportLoading}
+                  icon={<FileDown className="w-3 h-3" />}
+                  className="h-6 px-2 text-[10px] font-bold"
+                  title="Ekspor PDF"
+                >
+                  PDF
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleExportExcel}
+                  loading={exportLoading}
+                  icon={<FileDown className="w-3 h-3" />}
+                  className="h-6 px-2 text-[10px] font-bold"
+                  title="Ekspor Excel"
+                >
+                  Excel
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setTab('transactions')}
+                  className="text-xs text-[#2563EB] dark:text-blue-400 font-bold hover:underline cursor-pointer ml-1"
+                >
+                  Lihat Semua &rarr;
+                </button>
+              </div>
             </div>
             <TransactionList
               transactions={transactionsHook.transactions.slice(0, 5)}

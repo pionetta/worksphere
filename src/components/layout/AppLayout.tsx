@@ -83,7 +83,8 @@ export function AppLayout({
         {/* Main content area — renders child route via Outlet with page fade-in animation */}
         <main
           key={location.pathname}
-          className="flex-1 overflow-y-auto px-4 py-4 pb-24 md:pb-4 animate-fade-in-up"
+          className="flex-1 overflow-y-auto px-4 py-4 animate-fade-in-up"
+          style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 16px))' }}
         >
           <Outlet />
         </main>

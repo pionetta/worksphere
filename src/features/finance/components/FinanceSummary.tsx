@@ -39,26 +39,26 @@ export function FinanceSummary({
       </div>
 
       {/* 2-Column Split */}
-      <div className="mt-5 grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-emerald-300">
-            <ArrowDownLeft className="w-4 h-4" />
+      <div className="mt-5 grid grid-cols-2 gap-2.5 pt-4 border-t border-white/20">
+        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/15 backdrop-blur-xs border border-white/10">
+          <div className="w-7 h-7 rounded-lg bg-emerald-400/25 flex items-center justify-center text-emerald-200 shrink-0">
+            <ArrowDownLeft className="w-4 h-4 stroke-[2.5]" />
           </div>
-          <div>
-            <div className="text-[10px] text-white/75 font-semibold uppercase">Pemasukan</div>
-            <div className="text-xs sm:text-sm font-bold text-[#86EFAC] tracking-tight">
+          <div className="min-w-0">
+            <div className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Pemasukan</div>
+            <div className="text-xs sm:text-sm font-extrabold text-white tracking-tight drop-shadow-xs truncate">
               +{formatCurrency(totalIncome)}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-rose-300">
-            <ArrowUpRight className="w-4 h-4" />
+        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/15 backdrop-blur-xs border border-white/10">
+          <div className="w-7 h-7 rounded-lg bg-rose-400/25 flex items-center justify-center text-rose-200 shrink-0">
+            <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
           </div>
-          <div>
-            <div className="text-[10px] text-white/75 font-semibold uppercase">Pengeluaran</div>
-            <div className="text-xs sm:text-sm font-bold text-[#FCA5A5] tracking-tight">
+          <div className="min-w-0">
+            <div className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Pengeluaran</div>
+            <div className="text-xs sm:text-sm font-extrabold text-white tracking-tight drop-shadow-xs truncate">
               -{formatCurrency(totalExpense)}
             </div>
           </div>

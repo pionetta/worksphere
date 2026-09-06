@@ -45,7 +45,8 @@ export function BottomNavigation() {
 
   return (
     <nav
-      className="fixed bottom-3 inset-x-3 z-30 max-w-md mx-auto h-16 rounded-[26px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/80 dark:border-gray-700/60 shadow-xl shadow-blue-500/10 flex items-center justify-around px-2 safe-area-bottom md:hidden transition-all duration-200"
+      className="fixed inset-x-3 z-30 max-w-md mx-auto rounded-[26px] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/80 dark:border-gray-700/60 shadow-xl shadow-blue-500/10 flex items-center justify-around px-2 safe-area-bottom md:hidden transition-all duration-200"
+      style={{ bottom: 'max(12px, env(safe-area-inset-bottom, 12px))', height: '64px' }}
       aria-label="Navigasi utama"
     >
       <div className="flex items-center justify-around w-full h-full">
@@ -76,7 +77,7 @@ export function BottomNavigation() {
                 </span>
                 <span
                   className={cn(
-                    'text-[11px] transition-all duration-200',
+                    'text-[11px] leading-tight transition-all duration-200',
                     isActive ? 'font-bold' : 'font-medium'
                   )}
                 >
