@@ -96,6 +96,29 @@ describe('walletService', () => {
       expect(withBalance[0].balance).toBe(1000000)
     })
 
+    it('should adjust balance accurately when new balance is lower than transaction net', async () => {
+      const id = await walletService.createWallet(userId, 'Dana', 'e_wallet', 0)
+      await db.transactions.add({
+        id: 'tx-adj-2',
+        user_id: userId,
+        wallet_id: id,
+        type: 'income',
+        amount: 500000,
+        category_id: null,
+        transaction_date: '2026-08-20',
+        note: null,
+        transfer_group_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted_at: null,
+      })
+
+      // Current balance is 500k. User updates balance to 200k.
+      await walletService.updateWallet(id, { initial_balance: 200000 })
+      const withBalance = await walletService.getWalletsWithBalance(userId)
+      expect(withBalance.find(w => w.id === id)!.balance).toBe(200000)
+    })
+
     it('should reject negative initial balance on update', async () => {
       const id = await walletService.createWallet(userId, 'BCA', 'bank', 1000000)
       await expect(walletService.updateWallet(id, { initial_balance: -100 })).rejects.toThrow()

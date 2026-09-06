@@ -80,8 +80,24 @@ export async function updateWallet(
   if (parsed.initial_balance !== undefined) {
     const currentComputedBalance = await calculateBalance(existing)
     const txNet = currentComputedBalance - existing.initial_balance
-    const adjustedInitialBalance = Math.max(0, parsed.initial_balance - txNet)
-    updateData.initial_balance = adjustedInitialBalance
+    const neededInitial = parsed.initial_balance - txNet
+    if (neededInitial >= 0) {
+      updateData.initial_balance = neededInitial
+    } else {
+      updateData.initial_balance = 0
+      const diff = neededInitial // negative amount
+      await transactionRepo.createTransaction({
+        user_id: existing.user_id,
+        wallet_id: id,
+        type: 'adjustment',
+        amount: diff,
+        category_id: null,
+        transaction_date: new Date().toISOString().slice(0, 10),
+        note: 'Penyesuaian saldo dompet',
+        transfer_group_id: null,
+        deleted_at: null,
+      })
+    }
   }
   if (data.note !== undefined) updateData.note = parsed.note ?? null
   if (data.is_active !== undefined) updateData.is_active = data.is_active
