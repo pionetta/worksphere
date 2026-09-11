@@ -73,7 +73,7 @@ export function AttendanceTrendChart({ recap, attendance }: AttendanceTrendChart
   const attendanceRate = totalRecorded > 0 ? Math.round((recap.totalPresent / totalRecorded) * 100) : 100
 
   return (
-    <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-4">
+    <div className="rounded-[26px] bg-[#F0F3F8] dark:bg-slate-800 border border-white/80 dark:border-white/10 p-4 sm:p-5 shadow-[-5px_-5px_10px_rgba(255,255,255,0.85),5px_5px_10px_rgba(163,177,198,0.22)] space-y-4">
       {/* Header with Rate Badge */}
       <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2">

@@ -17,6 +17,9 @@ interface WorkspaceSwitcherProps {
   onSelectWorkspace: (id: string | null) => void
   onOpenManager: () => void
   onCreateNew: () => void
+  compact?: boolean
+  align?: 'left' | 'right'
+  className?: string
 }
 
 export function WorkspaceSwitcher({
@@ -25,27 +28,47 @@ export function WorkspaceSwitcher({
   onSelectWorkspace,
   onOpenManager,
   onCreateNew,
+  compact = false,
+  align,
+  className,
 }: WorkspaceSwitcherProps) {
   const [open, setOpen] = useState(false)
+  const menuAlign = align || (compact ? 'right' : 'left')
 
   return (
     <div className="relative inline-block text-left">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-gray-200/80 dark:border-gray-700/60 shadow-2xs hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-all cursor-pointer text-xs font-bold"
+        className={cn(
+          compact
+            ? "flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/70 dark:border-white/10 shadow-sm text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 active:scale-95 transition-all"
+            : "flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-gray-200/80 dark:border-gray-700/60 shadow-2xs hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-all cursor-pointer text-xs font-bold",
+          className
+        )}
       >
-        <div className="w-5 h-5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+        <div
+          className={cn(
+            compact
+              ? "w-4 h-4 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"
+              : "w-5 h-5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"
+          )}
+        >
           {activeWorkspace ? (
-            <Users className="w-3.5 h-3.5" />
+            <Users className={compact ? "w-2.5 h-2.5" : "w-3.5 h-3.5"} />
           ) : (
-            <User className="w-3.5 h-3.5" />
+            <User className={compact ? "w-2.5 h-2.5" : "w-3.5 h-3.5"} />
           )}
         </div>
-        <span className="text-gray-800 dark:text-gray-200 max-w-[120px] truncate">
+        <span
+          className={cn(
+            "text-slate-800 dark:text-slate-200 truncate",
+            compact ? "max-w-[90px] text-xs font-medium" : "max-w-[120px]"
+          )}
+        >
           {activeWorkspace ? activeWorkspace.name : 'Personal'}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+        <ChevronDown className={cn(compact ? "w-3 h-3" : "w-3.5 h-3.5", "text-slate-400")} />
       </button>
 
       {open && (
@@ -54,7 +77,10 @@ export function WorkspaceSwitcher({
             className="fixed inset-0 z-40"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute left-0 mt-1.5 w-60 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl z-50 p-1.5 space-y-1 animate-scale-in">
+          <div className={cn(
+            "absolute mt-1.5 w-60 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl z-50 p-1.5 space-y-1 animate-scale-in",
+            menuAlign === 'right' ? "right-0" : "left-0"
+          )}>
             <div className="px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
               Pilih Ruang Kerja
             </div>

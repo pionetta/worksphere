@@ -27,12 +27,11 @@ if (typeof window !== 'undefined') {
 
 // Apply initial theme before render to prevent flash
 const stored = localStorage.getItem('worksphere-theme')
-const theme = stored === 'dark' || stored === 'light' ? stored : 'system'
-const isDark =
-  theme === 'dark' ||
-  (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+const isDark = stored === 'dark'
 if (isDark) {
   document.documentElement.classList.add('dark')
+} else {
+  document.documentElement.classList.remove('dark')
 }
 
 createRoot(document.getElementById('root')!).render(

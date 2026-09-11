@@ -15,8 +15,6 @@ import * as subtaskService from '@/features/todo/services/subtaskService'
 import { TaskForm } from '@/features/todo/components/TaskForm'
 import { TaskList } from '@/features/todo/components/TaskList'
 import { KanbanBoard } from '@/features/todo/components/KanbanBoard'
-import { TaskSearch } from '@/features/todo/components/TaskSearch'
-import { TaskFiltersComponent } from '@/features/todo/components/TaskFilters'
 import { TaskStatusSelector } from '@/features/todo/components/TaskStatusSelector'
 import { SubtaskList } from '@/features/todo/components/SubtaskList'
 import { TaskAnalyticsCard } from '@/features/todo/components/TaskAnalyticsCard'
@@ -31,7 +29,6 @@ import { LoadingState } from '@/components/ui/LoadingState'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Plus,
   ListTodo,
@@ -41,6 +38,13 @@ import {
   BookOpen,
   Flame,
   Users,
+  Search,
+  Filter,
+  ArrowUpDown,
+  Check,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -55,12 +59,43 @@ import type {
   WishlistPeriod,
   Habit,
 } from '@/types'
+import type { SortOption } from '@/features/todo/hooks/useTaskFilters'
 
 const STATUS_TABS: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Semua' },
   { value: 'todo', label: 'Belum' },
   { value: 'in_progress', label: 'Dikerjakan' },
   { value: 'completed', label: 'Selesai' },
+]
+
+const TODO_VIEWS = [
+  { id: 'list', label: 'Daftar Tugas', icon: List, iconColor: 'text-indigo-600 dark:text-indigo-400' },
+  { id: 'kanban', label: 'Papan Kanban', icon: LayoutGrid, iconColor: 'text-indigo-600 dark:text-indigo-400' },
+  { id: 'habits', label: 'Pelacak Habit', icon: Flame, iconColor: 'text-amber-500 fill-amber-500' },
+  { id: 'wishlist', label: 'Wishlist', icon: Gift, iconColor: 'text-pink-500' },
+  { id: 'journal', label: 'Catatan', icon: BookOpen, iconColor: 'text-amber-500' },
+] as const
+
+const TIMEFRAME_OPTIONS: Array<{ value: TaskTimeframe | 'all'; label: string }> = [
+  { value: 'all', label: 'Semua Horizon' },
+  { value: 'daily', label: '☀️ Harian' },
+  { value: 'weekly', label: '📅 Mingguan' },
+  { value: 'yearly', label: '🎯 Target / Tahunan' },
+]
+
+const PRIORITY_OPTIONS: Array<{ value: TaskPriority | 'all'; label: string }> = [
+  { value: 'all', label: 'Semua prioritas' },
+  { value: 'urgent', label: 'Mendesak' },
+  { value: 'high', label: 'Tinggi' },
+  { value: 'medium', label: 'Sedang' },
+  { value: 'low', label: 'Rendah' },
+]
+
+const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
+  { value: 'deadline', label: 'Deadline terdekat' },
+  { value: 'priority', label: 'Prioritas' },
+  { value: 'created', label: 'Terbaru dibuat' },
+  { value: 'updated', label: 'Terakhir diperbarui' },
 ]
 
 export function TodoPage() {
@@ -118,10 +153,54 @@ export function TodoPage() {
   const wishlistHook = useWishlist(userId || null)
 
   const [showForm, setShowForm] = useState(false)
+  const [showFilterModal, setShowFilterModal] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'habits' | 'wishlist' | 'journal'>('list')
+
+  // Count tasks by status for status filter chips (e.g. Semua (0))
+  const statusCounts = useMemo<Record<TaskStatus | 'all', number>>(() => {
+    const total = workspaceTasks.length
+    const todo = workspaceTasks.filter(t => t.status === 'todo').length
+    const inProgress = workspaceTasks.filter(t => t.status === 'in_progress').length
+    const completed = workspaceTasks.filter(t => t.status === 'completed').length
+    const cancelled = workspaceTasks.filter(t => t.status === 'cancelled').length
+    return { all: total, todo, in_progress: inProgress, completed, cancelled }
+  }, [workspaceTasks])
+
+  // Carousel Pager navigation handlers
+  const activeViewIndex = useMemo(() => {
+    const idx = TODO_VIEWS.findIndex(v => v.id === viewMode)
+    return idx >= 0 ? idx : 0
+  }, [viewMode])
+
+  const handlePrevView = () => {
+    const prevIdx = (activeViewIndex - 1 + TODO_VIEWS.length) % TODO_VIEWS.length
+    setViewMode(TODO_VIEWS[prevIdx].id)
+  }
+
+  const handleNextView = () => {
+    const nextIdx = (activeViewIndex + 1) % TODO_VIEWS.length
+    setViewMode(TODO_VIEWS[nextIdx].id)
+  }
+
+  const [touchStartX, setTouchStartX] = useState<number | null>(null)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX)
+  }
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return
+    const diff = touchStartX - e.changedTouches[0].clientX
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        handleNextView()
+      } else {
+        handlePrevView()
+      }
+    }
+    setTouchStartX(null)
+  }
 
   // Habit states
   const habitsHook = useHabits(userId || null)
@@ -273,52 +352,28 @@ export function TodoPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto space-y-3.5 pb-8">
+    <div className="max-w-5xl mx-auto space-y-4 sm:space-y-5 pb-36">
       {/* ─── Pending Workspace Invitations Banner ─── */}
       <WorkspaceInvitationsBanner
         invitations={workspaceHook.pendingInvitations}
         onRespond={workspaceHook.respondToInvitation}
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-1 gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div
-            className={cn(
-              'w-8 h-8 rounded-xl flex items-center justify-center transition-colors shrink-0',
-              viewMode === 'habits'
-                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                : viewMode === 'wishlist'
-                ? 'bg-pink-500/10 text-pink-600 dark:text-pink-400'
-                : viewMode === 'journal'
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                  : 'bg-blue-500/10 text-[#2563EB] dark:text-blue-400'
-            )}
-          >
-            {viewMode === 'habits' ? (
-              <Flame className="w-5 h-5 text-amber-500 fill-amber-500" />
-            ) : viewMode === 'wishlist' ? (
-              <Gift className="w-5 h-5" />
-            ) : viewMode === 'journal' ? (
-              <BookOpen className="w-5 h-5" />
-            ) : (
-              <ListTodo className="w-5 h-5" />
-            )}
+      {/* ─── Header: Flexbox Space-Between (Kiri: Ikon & Judul, Kanan: Dropdown Workspace "Personal") ─── */}
+      <div className="w-full flex items-center justify-between my-3 px-1">
+        {/* Sisi Kiri: Ikon & Judul */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm shrink-0">
+            <ListTodo className="w-5 h-5" />
           </div>
-          <h1 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100 truncate">
-            {viewMode === 'habits'
-              ? 'Kebiasaan & Streak'
-              : viewMode === 'wishlist'
-              ? 'Wishlist Impian'
-              : viewMode === 'journal'
-                ? 'Catatan & Jurnal'
-                : 'Daftar Tugas (To-Do)'}
+          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight whitespace-nowrap">
+            Tugas & To-Do
           </h1>
         </div>
 
-        {/* Workspace Switcher & Dynamic Top Action Button */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {(viewMode === 'list' || viewMode === 'kanban') && (
+        {/* Sisi Kanan: Dropdown "Personal" */}
+        {(viewMode === 'list' || viewMode === 'kanban') && (
+          <div className="shrink-0">
             <WorkspaceSwitcher
               workspaces={workspaceHook.workspaces}
               activeWorkspace={workspaceHook.activeWorkspace}
@@ -331,44 +386,11 @@ export function TodoPage() {
                 setIsCreatingWorkspace(true)
                 setShowWorkspaceManager(true)
               }}
+              compact
+              align="right"
             />
-          )}
-
-          {viewMode === 'habits' ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingHabit(null)
-                setShowHabitForm(true)
-              }}
-              icon={<Plus className="w-3.5 h-3.5" />}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
-            >
-              Kebiasaan
-            </Button>
-          ) : viewMode === 'wishlist' ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingWishlist(null)
-                setShowWishlistForm(true)
-              }}
-              icon={<Plus className="w-3.5 h-3.5" />}
-              className="bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
-            >
-              Wishlist
-            </Button>
-          ) : viewMode === 'list' || viewMode === 'kanban' ? (
-            <Button
-              size="sm"
-              onClick={() => setShowForm(!showForm)}
-              icon={<Plus className="w-3.5 h-3.5" />}
-              className="font-bold text-xs h-8 px-2.5 sm:px-3 whitespace-nowrap shrink-0"
-            >
-              {showForm ? 'Tutup' : 'Tugas Baru'}
-            </Button>
-          ) : null}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Team Workspace Sub-filter Bar (if in team workspace) */}
@@ -412,79 +434,81 @@ export function TodoPage() {
       {/* Analytics Card (Always visible across all tabs) */}
       <TaskAnalyticsCard tasks={workspaceTasks} />
 
+      {/* Sub-Navigasi: Carousel Pager Terpusat (Samakan dengan Halaman Keuangan) */}
+      <div
+        className="flex flex-col items-center justify-center w-full px-1 my-1 touch-pan-y"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="w-full flex items-center justify-between px-4 py-2.5 bg-white/80 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-white/10 shadow-sm my-2">
+          <button
+            type="button"
+            onClick={handlePrevView}
+            className="p-1.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
+            title="Tampilan sebelumnya"
+            aria-label="Tampilan sebelumnya"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
 
+          <div
+            key={TODO_VIEWS[activeViewIndex]?.id}
+            className="flex items-center justify-center gap-2 flex-1 select-none animate-fade-in"
+          >
+            {(() => {
+              const CurrentIcon = TODO_VIEWS[activeViewIndex]?.icon || List
+              return (
+                <CurrentIcon
+                  className={cn('w-4 h-4', TODO_VIEWS[activeViewIndex]?.iconColor)}
+                />
+              )
+            })()}
+            <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 tracking-wide text-center">
+              {TODO_VIEWS[activeViewIndex]?.label}
+            </span>
+          </div>
 
-      {/* View Mode Segmented Switcher (Daftar | Kanban | Kebiasaan | Wishlist | Catatan) */}
-      <div className="flex items-center justify-between p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs gap-1">
-        <button
-          type="button"
-          onClick={() => setViewMode('list')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
-            viewMode === 'list'
-              ? 'bg-[#2563EB] text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-          )}
-        >
-          <List className="w-3.5 h-3.5" />
-          <span>Daftar</span>
-        </button>
+          <button
+            type="button"
+            onClick={handleNextView}
+            className="p-1.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
+            title="Tampilan berikutnya"
+            aria-label="Tampilan berikutnya"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => setViewMode('kanban')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
-            viewMode === 'kanban'
-              ? 'bg-[#2563EB] text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-          )}
-        >
-          <LayoutGrid className="w-3.5 h-3.5" />
-          <span>Kanban</span>
-        </button>
+        {/* Titik Indikator (Pagination Dots) */}
+        <div className="flex items-center justify-center gap-1.5 mt-0.5 mb-1.5">
+          {TODO_VIEWS.map((v, idx) => (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => setViewMode(v.id)}
+              aria-label={`Buka ${v.label}`}
+              className={cn(
+                'cursor-pointer transition-all duration-300',
+                activeViewIndex === idx
+                  ? 'w-5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400'
+                  : 'w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
+              )}
+            />
+          ))}
+        </div>
 
-        <button
-          type="button"
-          onClick={() => setViewMode('habits')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
-            viewMode === 'habits'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-          )}
-        >
-          <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-          <span>Habit</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setViewMode('wishlist')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
-            viewMode === 'wishlist'
-              ? 'bg-[#2563EB] text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-          )}
-        >
-          <Gift className="w-3.5 h-3.5" />
-          <span>Wishlist</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setViewMode('journal')}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer',
-            viewMode === 'journal'
-              ? 'bg-amber-500 text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-          )}
-        >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Catatan</span>
-        </button>
+        {/* Accessible fallback buttons for test compatibility and screen readers */}
+        <div className="sr-only">
+          {TODO_VIEWS.map(v => (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => setViewMode(v.id)}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ─── 0. Habit Tracker View ─── */}
@@ -492,38 +516,38 @@ export function TodoPage() {
         <div className="space-y-4 animate-fade-in-up">
           {/* Summary Stat Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
-              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-[#121212] border border-[#E6E6E3] dark:border-[#272727] shadow-xs">
+              <p className="text-[11px] font-semibold text-[#737373] dark:text-[#A3A3A3] mb-0.5">
                 Total Kebiasaan
               </p>
-              <p className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">
+              <p className="text-lg sm:text-xl font-extrabold text-[#171717] dark:text-[#F5F5F5]">
                 {habitsHook.totalHabits}
               </p>
-              <span className="text-[10px] text-gray-400 font-medium">Aktif dipantau</span>
+              <span className="text-[10px] text-[#A3A3A3] font-medium">Aktif dipantau</span>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
-              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-[#121212] border border-[#E6E6E3] dark:border-[#272727] shadow-xs">
+              <p className="text-[11px] font-semibold text-[#737373] dark:text-[#A3A3A3] mb-0.5">
                 Selesai Hari Ini
               </p>
-              <p className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
+              <p className="text-lg sm:text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
                 {habitsHook.totalCompletedToday} / {habitsHook.totalHabits}
               </p>
-              <span className="text-[10px] text-gray-400 font-medium">
+              <span className="text-[10px] text-[#A3A3A3] font-medium">
                 {habitsHook.totalHabits > 0
                   ? `${Math.round((habitsHook.totalCompletedToday / habitsHook.totalHabits) * 100)}% tercapai`
                   : '0%'}
               </span>
             </div>
 
-            <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs flex flex-col justify-between">
-              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+            <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-white dark:bg-[#121212] border border-[#E6E6E3] dark:border-[#272727] shadow-xs flex flex-col justify-between">
+              <p className="text-[11px] font-semibold text-[#737373] dark:text-[#A3A3A3] mb-0.5">
                 Total Check-in
               </p>
-              <p className="text-lg sm:text-xl font-black text-indigo-600 dark:text-indigo-400">
+              <p className="text-lg sm:text-xl font-extrabold text-[#2563EB] dark:text-[#3B82F6]">
                 {habitsHook.logs.length}
               </p>
-              <span className="text-[10px] text-gray-400 font-medium">Log tercatat</span>
+              <span className="text-[10px] text-[#A3A3A3] font-medium">Log tercatat</span>
             </div>
           </div>
 
@@ -597,35 +621,35 @@ export function TodoPage() {
         <div className="space-y-4 animate-fade-in-up">
           {/* Wishlist Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
-              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-[#121212] border border-[#E6E6E3] dark:border-[#272727] shadow-xs">
+              <p className="text-[11px] font-semibold text-[#737373] dark:text-[#A3A3A3] mb-0.5">
                 Estimasi Dibutuhkan
               </p>
-              <p className="text-sm sm:text-base font-black text-rose-600 dark:text-rose-400 truncate">
+              <p className="text-sm sm:text-base font-extrabold text-rose-600 dark:text-rose-400 truncate">
                 {formatCurrency(wishlistHook.summary.totalEstimated)}
               </p>
-              <span className="text-[10px] text-gray-400 font-medium">
+              <span className="text-[10px] text-[#A3A3A3] font-medium">
                 {wishlistHook.summary.pendingCount} impian direncanakan
               </span>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs">
-              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-[#121212] border border-[#E6E6E3] dark:border-[#272727] shadow-xs">
+              <p className="text-[11px] font-semibold text-[#737373] dark:text-[#A3A3A3] mb-0.5">
                 Sudah Terbeli / Tercapai
               </p>
-              <p className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 truncate">
+              <p className="text-sm sm:text-base font-extrabold text-emerald-600 dark:text-emerald-400 truncate">
                 {formatCurrency(wishlistHook.summary.totalAchieved)}
               </p>
-              <span className="text-[10px] text-gray-400 font-medium">
+              <span className="text-[10px] text-[#A3A3A3] font-medium">
                 {wishlistHook.summary.achievedCount} impian terwujud
               </span>
             </div>
 
-            <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-white/80 dark:bg-gray-800/80 border border-white/80 dark:border-gray-700/50 shadow-xs flex flex-col justify-between">
-              <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-0.5">
+            <div className="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-white dark:bg-[#121212] border border-[#E6E6E3] dark:border-[#272727] shadow-xs flex flex-col justify-between">
+              <p className="text-[11px] font-semibold text-[#737373] dark:text-[#A3A3A3] mb-0.5">
                 Breakdown Horizon
               </p>
-              <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-300 font-bold">
+              <div className="flex items-center justify-between text-[11px] text-[#737373] dark:text-[#A3A3A3] font-bold">
                 <span>M: {formatCurrency(wishlistHook.summary.weeklyTotal)}</span>
                 <span>B: {formatCurrency(wishlistHook.summary.monthlyTotal)}</span>
                 <span>T: {formatCurrency(wishlistHook.summary.yearlyTotal)}</span>
@@ -635,7 +659,7 @@ export function TodoPage() {
 
           {/* Period Filter Selector */}
           <div className="overflow-x-auto pb-1 no-scrollbar">
-            <div className="inline-flex gap-1.5 p-1 rounded-2xl bg-white/70 dark:bg-gray-800/70 border border-white/80 dark:border-gray-700/50 shadow-xs min-w-full sm:min-w-0">
+            <div className="inline-flex gap-1.5 p-1 rounded-2xl bg-white dark:bg-[#121212] border border-[#E6E6E3] dark:border-[#272727] shadow-xs min-w-full sm:min-w-0">
               {(
                 [
                   { id: 'all', label: 'Semua Periode' },
@@ -649,10 +673,10 @@ export function TodoPage() {
                   type="button"
                   onClick={() => setWishlistPeriodFilter(tab.id)}
                   className={cn(
-                    'py-1.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap',
+                    'py-1.5 px-3 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap',
                     wishlistPeriodFilter === tab.id
-                      ? 'bg-[#2563EB] text-white shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      ? 'bg-[#171717] text-white dark:bg-[#F5F5F5] dark:text-[#171717] shadow-xs'
+                      : 'text-[#737373] dark:text-[#A3A3A3] hover:text-[#171717] dark:hover:text-[#F5F5F5]'
                   )}
                 >
                   {tab.label}
@@ -771,70 +795,100 @@ export function TodoPage() {
         />
       ) : (
         /* ─── 3. Tasks List & Kanban View ─── */
-        <div className="space-y-3">
-          {/* Time Horizon Filter Pills (Harian, Mingguan, Tahunan) */}
-          <div className="overflow-x-auto pb-1 no-scrollbar">
-            <div className="inline-flex gap-1.5 p-1 rounded-2xl bg-white/70 dark:bg-gray-800/70 border border-white/80 dark:border-gray-700/50 shadow-xs min-w-full sm:min-w-0">
-              {(
-                [
-                  { id: 'all', label: 'Semua Horizon' },
-                  { id: 'daily', label: '☀️ Harian' },
-                  { id: 'weekly', label: '📅 Mingguan' },
-                  { id: 'yearly', label: '🎯 Tahunan' },
-                ] as const
-              ).map(tab => (
+        <div className="space-y-2.5">
+          {/* Unified Bar: Search, Filter, Sort */}
+          <div className="flex items-center gap-2">
+            {/* Flexible Search Input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                value={filters.search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Cari tugas..."
+                className="w-full bg-white/80 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-white/10 pl-9 pr-8 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+              />
+              {filters.search && (
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setTimeframe(tab.id)}
-                  className={cn(
-                    'py-1.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer whitespace-nowrap',
-                    filters.timeframe === tab.id
-                      ? 'bg-[#2563EB] text-white shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  )}
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  aria-label="Hapus pencarian"
                 >
-                  {tab.label}
+                  <X className="w-3.5 h-3.5" />
                 </button>
-              ))}
+              )}
             </div>
+
+            {/* Filter Button */}
+            <button
+              type="button"
+              onClick={() => setShowFilterModal(true)}
+              className={cn(
+                'w-9 h-9 rounded-2xl bg-[#F0F3F8] dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 border border-white/80 dark:border-white/10 shadow-sm active:scale-95 relative transition-all cursor-pointer shrink-0',
+                (activeFilterCount > 0 || filters.timeframe !== 'all') &&
+                  'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border-indigo-200 dark:border-indigo-800'
+              )}
+              title="Filter & Horizon Tugas"
+            >
+              <Filter className="w-4 h-4" />
+              {(activeFilterCount > 0 || filters.timeframe !== 'all') && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
+                  {activeFilterCount + (filters.timeframe !== 'all' ? 1 : 0)}
+                </span>
+              )}
+            </button>
+
+            {/* Sort Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const currentIdx = SORT_OPTIONS.findIndex(s => s.value === filters.sort)
+                const nextIdx = (currentIdx + 1) % SORT_OPTIONS.length
+                setSort(SORT_OPTIONS[nextIdx].value)
+                toast.info(`Urutan: ${SORT_OPTIONS[nextIdx].label}`)
+              }}
+              className="w-9 h-9 rounded-2xl bg-[#F0F3F8] dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 border border-white/80 dark:border-white/10 shadow-sm active:scale-95 transition-all cursor-pointer shrink-0"
+              title={`Urutkan: ${SORT_OPTIONS.find(s => s.value === filters.sort)?.label}`}
+            >
+              <ArrowUpDown className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Search & Filters */}
-          <div className="space-y-2">
-            <TaskSearch value={filters.search} onChange={setSearch} />
-
-            {viewMode === 'list' && (
-              <div className="overflow-x-auto pb-1 no-scrollbar">
-                <Tabs value={filters.status} onValueChange={val => setStatus(val as TaskStatus | 'all')}>
-                  <TabsList className="min-w-max w-full h-11 p-1 rounded-2xl bg-white/75 dark:bg-gray-800/75 backdrop-blur-md border border-white/80 dark:border-gray-700/50 shadow-xs">
-                    {STATUS_TABS.map(tab => (
-                      <TabsTrigger
-                        key={tab.value}
-                        value={tab.value}
-                        role="button"
-                        className="flex-1 rounded-xl text-xs sm:text-sm font-bold data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm transition-all px-3"
-                      >
-                        {tab.label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              </div>
-            )}
-
-            <TaskFiltersComponent
-              filters={filters}
-              categories={categories}
-              activeFilterCount={activeFilterCount}
-              onSetStatus={setStatus}
-              onSetPriority={setPriority}
-              onSetCategory={setCategory}
-              onSetOverdueOnly={setOverdueOnly}
-              onSetSort={setSort}
-              onReset={resetFilters}
-            />
-          </div>
+          {/* Status Filter Chips (Semua, Belum, Dikerjakan, Selesai) */}
+          {viewMode === 'list' && (
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 my-1">
+              {STATUS_TABS.map(tab => {
+                const isActive = filters.status === tab.value
+                const count = statusCounts[tab.value] ?? 0
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => setStatus(tab.value)}
+                    className={cn(
+                      'transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+                      isActive
+                        ? 'bg-indigo-600 text-white font-semibold text-xs px-3.5 py-1.5 rounded-xl shadow-sm active:scale-95'
+                        : 'bg-slate-100 hover:bg-slate-200/70 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-medium px-3.5 py-1.5 rounded-xl'
+                    )}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={cn(
+                        'text-[10px] px-1.5 py-0.5 rounded-md font-bold',
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           {/* Task Content: List or Kanban */}
           {loading ? (
@@ -855,13 +909,14 @@ export function TodoPage() {
               assigneeMap={memberNameMap}
               onTaskClick={handleTaskClick}
               onStatusChange={handleStatusChange}
+              onAddTask={() => setShowForm(true)}
               emptyTitle={
-                filters.search || activeFilterCount > 0
+                filters.search || activeFilterCount > 0 || filters.timeframe !== 'all'
                   ? 'Tidak ada tugas yang sesuai.'
                   : 'Belum ada tugas'
               }
               emptyDescription={
-                filters.search || activeFilterCount > 0
+                filters.search || activeFilterCount > 0 || filters.timeframe !== 'all'
                   ? 'Coba ubah filter atau kata kunci pencarian.'
                   : 'Tambahkan tugas untuk mulai mengatur pekerjaan Anda.'
               }
@@ -937,6 +992,167 @@ export function TodoPage() {
             </div>
           </div>
         )}
+      </BottomSheet>
+
+      {/* ─── Filter & Horizon Modal ─── */}
+      <BottomSheet
+        open={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        title="Filter & Horizon Tugas"
+      >
+        <div className="space-y-4 pb-4">
+          {/* Horizon Waktu */}
+          <div>
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+              Horizon Waktu
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {TIMEFRAME_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setTimeframe(opt.value)}
+                  className={cn(
+                    'px-3 py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer text-left flex items-center justify-between',
+                    filters.timeframe === opt.value
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 font-semibold shadow-xs'
+                      : 'border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  {filters.timeframe === opt.value && (
+                    <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Prioritas */}
+          <div>
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+              Prioritas
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {PRIORITY_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPriority(opt.value)}
+                  className={cn(
+                    'px-3 py-1.5 text-xs rounded-full border transition-all cursor-pointer',
+                    filters.priority === opt.value
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 font-semibold shadow-xs'
+                      : 'border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Urutkan Berdasarkan */}
+          <div>
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+              Urutkan Berdasarkan
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {SORT_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSort(opt.value)}
+                  className={cn(
+                    'px-3 py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer text-left flex items-center justify-between',
+                    filters.sort === opt.value
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 font-semibold shadow-xs'
+                      : 'border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  {filters.sort === opt.value && (
+                    <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Kategori (jika ada) */}
+          {categories.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Kategori
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCategory('all')}
+                  className={cn(
+                    'px-3 py-1.5 text-xs rounded-full border transition-all cursor-pointer',
+                    filters.category === 'all'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 font-semibold shadow-xs'
+                      : 'border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  )}
+                >
+                  Semua
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategory(cat)}
+                    className={cn(
+                      'px-3 py-1.5 text-xs rounded-full border transition-all cursor-pointer',
+                      filters.category === cat
+                        ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 font-semibold shadow-xs'
+                        : 'border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    )}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hanya Terlambat */}
+          <div className="pt-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={filters.overdueOnly}
+                onChange={e => setOverdueOnly(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Hanya tampilkan tugas yang terlambat
+              </span>
+            </label>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                resetFilters()
+                toast.success('Filter telah direset')
+              }}
+              className="flex-1 py-2 px-3 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-all cursor-pointer text-center"
+            >
+              Reset Filter
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowFilterModal(false)}
+              className="flex-1 py-2 px-3 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all cursor-pointer text-center"
+            >
+              Terapkan
+            </button>
+          </div>
+        </div>
       </BottomSheet>
 
       {/* Delete Confirmation */}

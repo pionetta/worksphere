@@ -13,9 +13,9 @@ describe('useTheme', () => {
     document.documentElement.classList.remove('dark')
   })
 
-  it('should default to system theme when nothing stored', () => {
+  it('should default to light theme when nothing stored', () => {
     const { result } = renderHook(() => useTheme())
-    expect(result.current.theme).toBe('system')
+    expect(result.current.theme).toBe('light')
   })
 
   it('should read stored theme from localStorage', () => {
@@ -56,7 +56,7 @@ describe('useTheme', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
 
-  it('should cycle themes: light -> dark -> system', () => {
+  it('should toggle themes between light and dark', () => {
     const { result } = renderHook(() => useTheme())
 
     act(() => {
@@ -68,11 +68,6 @@ describe('useTheme', () => {
       result.current.setTheme('dark')
     })
     expect(result.current.theme).toBe('dark')
-
-    act(() => {
-      result.current.setTheme('system')
-    })
-    expect(result.current.theme).toBe('system')
   })
 
   it('should return resolved value matching actual appearance', () => {
@@ -123,11 +118,11 @@ describe('Theme persistence across refresh', () => {
     expect(result.current.resolved).toBe('dark')
   })
 
-  it('should default to system when no stored value', () => {
+  it('should default to light when no stored value', () => {
     const stored = localStorage.getItem('worksphere-theme')
     expect(stored).toBeNull()
 
     const { result } = renderHook(() => useTheme())
-    expect(result.current.theme).toBe('system')
+    expect(result.current.theme).toBe('light')
   })
 })

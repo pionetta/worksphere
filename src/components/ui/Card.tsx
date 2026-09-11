@@ -18,8 +18,10 @@ export function Card({ children, glass = false, padding = 'md', className, ...pr
   return (
     <div
       className={cn(
-        'rounded-xl border transition-all duration-200',
-        glass ? 'glass' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700',
+        'rounded-[28px] transition-all duration-200',
+        glass
+          ? 'glass bg-white/70 dark:bg-[#1E232D] shadow-[-8px_-8px_16px_rgba(255,255,255,0.9),8px_8px_16px_rgba(163,177,198,0.35)] dark:shadow-[-6px_-6px_14px_rgba(255,255,255,0.03),6px_6px_14px_rgba(0,0,0,0.5)] border border-white/70 dark:border-white/5'
+          : 'bg-white dark:bg-[#1E232D] border border-white/70 dark:border-white/5 shadow-[-8px_-8px_16px_rgba(255,255,255,0.9),8px_8px_16px_rgba(163,177,198,0.35)] dark:shadow-[-6px_-6px_14px_rgba(255,255,255,0.03),6px_6px_14px_rgba(0,0,0,0.5)]',
         paddingStyles[padding],
         className
       )}

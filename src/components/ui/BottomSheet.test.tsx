@@ -48,7 +48,7 @@ describe('BottomSheet', () => {
         <div>Content</div>
       </BottomSheet>
     )
-    const overlay = container.querySelector('[role="dialog"]')
+    const overlay = document.body.querySelector('[role="dialog"]') || container.querySelector('[role="dialog"]')
     if (overlay) {
       fireEvent.click(overlay)
     }

@@ -76,7 +76,7 @@ export function TaskCard({
       role="button"
       tabIndex={0}
       className={cn(
-        'rounded-[22px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 shadow-sm backdrop-blur-md cursor-pointer transition-all duration-200 hover:shadow-md active:scale-[0.99]',
+        'rounded-2xl bg-white dark:bg-[#121212] border border-[#E6E6E3] dark:border-[#272727] p-4 shadow-2xs cursor-pointer transition-all duration-200 hover:border-[#D1D1CD] dark:hover:border-[#383838] active:scale-[0.99]',
         overdue && 'border-l-4 border-l-rose-500',
         task.status === 'completed' && 'opacity-60'
       )}
@@ -91,7 +91,7 @@ export function TaskCard({
       <div className="flex items-start gap-3">
         <button
           onClick={handleStatusToggle}
-          className="mt-0.5 shrink-0 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded p-0.5 cursor-pointer"
+          className="mt-0.5 shrink-0 focus:outline-none focus:ring-2 focus:ring-[#2563EB] rounded p-0.5 cursor-pointer"
           aria-label={`Ubah status: ${statusLabels[task.status]}`}
         >
           <StatusIcon
@@ -100,7 +100,7 @@ export function TaskCard({
               task.status === 'completed'
                 ? 'text-emerald-500 fill-emerald-100 dark:fill-emerald-950'
                 : task.status === 'in_progress'
-                  ? 'text-blue-500 fill-blue-100 dark:fill-blue-950'
+                  ? 'text-[#2563EB] fill-blue-100 dark:fill-blue-950'
                   : 'text-gray-400 dark:text-gray-500'
             )}
           />
@@ -110,8 +110,8 @@ export function TaskCard({
           <div className="flex items-center gap-2 flex-wrap">
             <h3
               className={cn(
-                'text-sm font-semibold text-gray-900 dark:text-gray-100',
-                task.status === 'completed' && 'line-through text-gray-500 dark:text-gray-400'
+                'text-sm font-semibold text-[#171717] dark:text-[#F5F5F5]',
+                task.status === 'completed' && 'line-through text-[#737373] dark:text-[#A3A3A3]'
               )}
             >
               {task.title}
@@ -157,14 +157,14 @@ export function TaskCard({
 
           <div className="mt-2.5 flex items-center gap-2.5 flex-wrap">
             {assigneeName && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md">
-                <User className="w-3 h-3" />
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#171717] dark:text-[#F5F5F5] bg-[#F1F1EF] dark:bg-[#1C1C1C] border border-[#E6E6E3] dark:border-[#272727] px-2 py-0.5 rounded-md">
+                <User className="w-3 h-3 text-[#737373] dark:text-[#A3A3A3]" />
                 <span className="truncate max-w-[120px]">{assigneeName}</span>
               </span>
             )}
 
             {task.category && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/80 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs text-[#737373] dark:text-[#A3A3A3] bg-[#F1F1EF] dark:bg-[#1C1C1C] border border-[#E6E6E3] dark:border-[#272727] px-2 py-0.5 rounded-md font-medium">
                 {task.category}
               </span>
             )}

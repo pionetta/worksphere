@@ -13,7 +13,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       manifestFilename: 'manifest.json',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png', 'bg-mesh.jpg', 'assets/bg-mesh.jpg', 'app-bg.png'],
       manifest: {
         name: 'WorkSphere - Absensi, Keuangan & To-Do',
         short_name: 'WorkSphere',

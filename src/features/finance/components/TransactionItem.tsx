@@ -90,9 +90,9 @@ export function TransactionItem({
 
   return (
     <div
-      className={`group flex items-center justify-between gap-3 p-3.5 rounded-xl bg-white dark:bg-gray-800/90 border border-gray-100 dark:border-gray-700/60 shadow-xs hover:shadow-sm transition-all duration-200 ${
+      className={`group flex items-center justify-between gap-3 p-3 rounded-2xl bg-[#F0F3F8] dark:bg-slate-800 border border-white/90 dark:border-white/10 shadow-[-3px_-3px_7px_rgba(255,255,255,0.9),3px_3px_7px_rgba(163,177,198,0.25)] mb-2.5 active:scale-[0.99] transition-all ${
         onClick
-          ? ' cursor-pointer hover:border-primary-200 dark:hover:border-primary-800/80 hover:bg-gray-50/80 dark:hover:bg-gray-750/70'
+          ? ' cursor-pointer hover:bg-white/90 dark:hover:bg-slate-750'
           : ''
       }`}
       onClick={onClick ? () => onClick(transaction) : undefined}
@@ -109,29 +109,29 @@ export function TransactionItem({
           : undefined
       }
     >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
         <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${config.bg}`}
+          className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner shrink-0 transition-transform group-hover:scale-105"
         >
           <Icon className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
               {categoryName || config.label}
             </p>
-            <Badge variant={config.variant} className="text-[10px] px-1.5 py-0">
+            <Badge variant={config.variant} className="text-[9px] px-1.5 py-0">
               {config.label}
             </Badge>
           </div>
           {transaction.note && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+            <p className="text-[11px] sm:text-xs text-[#737373] dark:text-[#A3A3A3] truncate mt-0.5">
               {transaction.note}
             </p>
           )}
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+          <p className="text-[10px] sm:text-[11px] text-[#A3A3A3] dark:text-[#737373] mt-0.5">
             {walletName && (
-              <span className="font-medium text-gray-600 dark:text-gray-300">{walletName} · </span>
+              <span className="font-semibold text-[#737373] dark:text-[#A3A3A3]">{walletName} · </span>
             )}
             {formatDate(transaction.transaction_date)}
           </p>
@@ -140,7 +140,7 @@ export function TransactionItem({
 
       <div className="flex items-center gap-2 shrink-0">
         <p
-          className={`text-sm font-bold tracking-tight text-right ${
+          className={`text-xs sm:text-sm font-black tracking-tight text-right ${
             transaction.type === 'income' || transaction.type === 'transfer_in'
               ? 'text-emerald-600 dark:text-emerald-400'
               : 'text-rose-600 dark:text-rose-400'
@@ -151,14 +151,15 @@ export function TransactionItem({
         </p>
 
         {/* Direct Action Buttons for Fast Access & Accessibility */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {onEdit && isEditable && (
             <button
+              type="button"
               onClick={e => {
                 e.stopPropagation()
                 onEdit(transaction)
               }}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+              className="p-1.5 rounded-lg text-[#737373] hover:text-[#171717] dark:hover:text-[#F5F5F5] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
               aria-label="Edit transaksi"
               title="Edit transaksi"
             >
@@ -167,11 +168,12 @@ export function TransactionItem({
           )}
           {onDelete && (
             <button
+              type="button"
               onClick={e => {
                 e.stopPropagation()
                 onDelete(transaction.id)
               }}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-danger hover:bg-danger-light dark:hover:bg-red-900/30 transition-colors"
+              className="p-1.5 rounded-lg text-[#737373] hover:text-rose-600 hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors cursor-pointer"
               aria-label="Hapus transaksi"
               title="Hapus transaksi"
             >
@@ -183,8 +185,9 @@ export function TransactionItem({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                type="button"
                 onClick={e => e.stopPropagation()}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-1.5 rounded-lg text-[#737373] hover:text-[#171717] dark:hover:text-[#F5F5F5] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
                 aria-label="Menu transaksi"
               >
                 <MoreVertical className="w-3.5 h-3.5" />
@@ -213,7 +216,7 @@ export function TransactionItem({
                     onEdit(transaction)
                   }}
                 >
-                  <Pencil className="w-4 h-4 mr-2 text-primary-500" />
+                  <Pencil className="w-4 h-4 mr-2 text-[#2563EB]" />
                   Edit Transaksi
                 </DropdownMenuItem>
               )}

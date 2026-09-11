@@ -8,10 +8,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { Card } from '@/components/ui/Card'
 import { formatCurrency } from '@/utils/currency'
 import { aggregateIncomeExpenseByDay } from '@/features/finance/services/chartAggregationService'
 import type { Transaction } from '@/types'
+import { BarChart3 } from 'lucide-react'
 
 interface IncomeExpenseChartProps {
   transactions: Transaction[]
@@ -53,16 +53,68 @@ export function IncomeExpenseChart({ transactions, year, month }: IncomeExpenseC
   const hasData = data.some(d => d.income > 0 || d.expense > 0)
 
   return (
-    <Card>
-      <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-        Pemasukan vs Pengeluaran
-      </h3>
+    <div className="rounded-3xl bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-lg shadow-indigo-500/5 p-4 sm:p-5 transition-colors space-y-3">
+      <div className="flex items-center justify-between pb-2 border-b border-white/60 dark:border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <BarChart3 className="w-3.5 h-3.5" />
+          </div>
+          <h3 className="text-xs sm:text-sm font-bold text-[#1E1B4B] dark:text-slate-100">
+            Arus Keuangan
+          </h3>
+        </div>
+      </div>
+
       {!hasData ? (
-        <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">
-          Belum ada data transaksi bulan ini
-        </p>
+        <div className="py-5 px-3 flex flex-col items-center justify-center text-center">
+          {/* Ghost Comparison Bar Illustration */}
+          <div className="relative w-48 h-28 flex items-end justify-between px-4 pb-2 border-b border-dashed border-gray-300 dark:border-gray-700 mb-3">
+            {/* Pair 1 */}
+            <div className="flex items-end gap-1">
+              <div className="w-2.5 h-10 rounded-t-sm bg-emerald-500/35 dark:bg-emerald-500/45" />
+              <div className="w-2.5 h-6 rounded-t-sm bg-rose-500/35 dark:bg-rose-500/45" />
+            </div>
+            {/* Pair 2 */}
+            <div className="flex items-end gap-1">
+              <div className="w-2.5 h-14 rounded-t-sm bg-emerald-500/40 dark:bg-emerald-500/50" />
+              <div className="w-2.5 h-12 rounded-t-sm bg-rose-500/40 dark:bg-rose-500/50" />
+            </div>
+            {/* Pair 3 */}
+            <div className="flex items-end gap-1">
+              <div className="w-2.5 h-8 rounded-t-sm bg-emerald-500/35 dark:bg-emerald-500/45" />
+              <div className="w-2.5 h-16 rounded-t-sm bg-rose-500/40 dark:bg-rose-500/50" />
+            </div>
+            {/* Pair 4 */}
+            <div className="flex items-end gap-1">
+              <div className="w-2.5 h-20 rounded-t-sm bg-emerald-500/45 dark:bg-emerald-500/55" />
+              <div className="w-2.5 h-9 rounded-t-sm bg-rose-500/35 dark:bg-rose-500/45" />
+            </div>
+            {/* Pair 5 */}
+            <div className="flex items-end gap-1">
+              <div className="w-2.5 h-11 rounded-t-sm bg-emerald-500/35 dark:bg-emerald-500/45" />
+              <div className="w-2.5 h-15 rounded-t-sm bg-rose-500/40 dark:bg-rose-500/50" />
+            </div>
+          </div>
+
+          <h4 className="text-xs sm:text-sm font-extrabold text-gray-800 dark:text-gray-200 mb-1">
+            Belum Ada Aktivitas Transaksi
+          </h4>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 max-w-xs leading-relaxed mb-3">
+            Grafik arus pemasukan dan pengeluaran harian akan muncul secara otomatis saat ada transaksi di bulan ini.
+          </p>
+
+          {/* Ghost Legend */}
+          <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400 dark:text-gray-500">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500/50" /> Pemasukan
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-rose-500/50" /> Pengeluaran
+            </span>
+          </div>
+        </div>
       ) : (
-        <div className="h-56">
+        <div className="h-48 sm:h-52">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -88,6 +140,7 @@ export function IncomeExpenseChart({ transactions, year, month }: IncomeExpenseC
           </ResponsiveContainer>
         </div>
       )}
-    </Card>
+    </div>
   )
 }
+

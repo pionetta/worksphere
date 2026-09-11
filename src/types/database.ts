@@ -93,6 +93,9 @@ export interface Wallet {
   initial_balance: number // BIGINT
   note: string | null
   is_active: boolean
+  cardTheme?: string
+  cardPattern?: string
+  chipStyle?: 'gold' | 'silver' | 'none'
   created_at: string
   updated_at: string
 }

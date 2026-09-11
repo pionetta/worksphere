@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
-import { formatWeekRange } from '@/utils/date'
-import { startOfWeek, endOfWeek } from 'date-fns'
+import { startOfWeek, endOfWeek, format } from 'date-fns'
+import { id } from 'date-fns/locale'
 
 interface WeekNavigationProps {
   currentDate: Date
@@ -8,6 +8,18 @@ interface WeekNavigationProps {
   onPrev: () => void
   onToday: () => void
   isToday?: boolean
+}
+
+export function formatWeekDisplay(start: Date, end: Date): string {
+  const sameYear = start.getFullYear() === end.getFullYear()
+  const sameMonth = sameYear && start.getMonth() === end.getMonth()
+  if (sameMonth) {
+    return `${format(start, 'd', { locale: id })} - ${format(end, 'd MMM yyyy', { locale: id })}`
+  }
+  if (sameYear) {
+    return `${format(start, 'd MMM', { locale: id })} - ${format(end, 'd MMM yyyy', { locale: id })}`
+  }
+  return `${format(start, 'd MMM yyyy', { locale: id })} - ${format(end, 'd MMM yyyy', { locale: id })}`
 }
 
 export function WeekNavigation({
@@ -19,38 +31,43 @@ export function WeekNavigation({
 }: WeekNavigationProps) {
   const start = startOfWeek(currentDate, { weekStartsOn: 1 })
   const end = endOfWeek(currentDate, { weekStartsOn: 1 })
-  const label = formatWeekRange(start, end)
+  const label = formatWeekDisplay(start, end)
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between p-2 my-2.5 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 text-xs font-semibold text-slate-700 dark:text-slate-200">
       <button
+        type="button"
         onClick={onPrev}
-        className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
+        className="p-1 rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 active:scale-90 transition-transform cursor-pointer"
         aria-label="Minggu sebelumnya"
       >
-        <ChevronLeft className="w-5 h-5" />
+        <ChevronLeft className="w-4 h-4" />
       </button>
 
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</span>
+        <span>{label}</span>
         {!isToday && (
           <button
+            type="button"
             onClick={onToday}
-            className="p-1.5 rounded-lg text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 active:scale-95 transition-all cursor-pointer"
             aria-label="Kembali ke minggu ini"
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-3 h-3" />
+            <span>Minggu Ini</span>
           </button>
         )}
       </div>
 
       <button
+        type="button"
         onClick={onNext}
-        className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
+        className="p-1 rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 active:scale-90 transition-transform cursor-pointer"
         aria-label="Minggu berikutnya"
       >
-        <ChevronRight className="w-5 h-5" />
+        <ChevronRight className="w-4 h-4" />
       </button>
     </div>
   )
 }
+

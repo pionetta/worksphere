@@ -73,7 +73,7 @@ export type SyncOperation = 'create' | 'update' | 'delete'
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
-export type Theme = 'light' | 'dark' | 'system'
+export type Theme = 'light' | 'dark'
 
 // ─── Common entity fields ─────────────────────────────────────────────────────
 

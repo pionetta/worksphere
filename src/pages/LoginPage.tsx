@@ -160,8 +160,21 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-gradient-to-b from-[#E2EFFC] via-[#EDF5FD] to-[#DCEBFA] dark:from-[#0b1329] dark:via-[#0f172a] dark:to-[#0b1329] px-4 py-8">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="relative min-h-dvh flex items-center justify-center px-4 py-8 overflow-hidden bg-[#F7F7F5] dark:bg-[#090909]">
+      {/* Ambient Application Wallpaper Background */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none"
+      >
+        <img
+          src="/app-bg.png"
+          alt=""
+          className="w-full h-full object-cover object-center transition-all duration-300 dark:brightness-[0.25] dark:contrast-[1.2] opacity-85 dark:opacity-75"
+        />
+        <div className="absolute inset-0 bg-[#F7F7F5]/70 dark:bg-[#090909]/80 backdrop-blur-[2px] transition-colors duration-200" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm space-y-6">
         {/* Logo / Header */}
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#3B82F6] via-[#2563EB] to-[#1D4ED8] flex items-center justify-center shadow-lg shadow-blue-500/25 text-white font-black text-xl mx-auto">

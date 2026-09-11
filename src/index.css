@@ -30,14 +30,14 @@
   --color-info: #3b82f6;
   --color-info-light: #dbeafe;
 
-  /* Surface tokens — light mode */
-  --color-background: #f5f5f7;
-  --color-surface: #ffffff;
-  --color-surface-2: rgba(255, 255, 255, 0.7);
-  --color-border: rgba(0, 0, 0, 0.08);
-  --color-text: #1a1a2e;
-  --color-text-secondary: #6b7280;
-  --color-text-muted: #9ca3af;
+  /* Surface tokens — light mode (Soft Neumorphic Canvas #F0F3F8) */
+  --color-background: #F0F3F8;
+  --color-surface: #F0F3F8;
+  --color-surface-2: #E2E8F0;
+  --color-border: #E2E8F0;
+  --color-text: #1E293B;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
 
   /* Spacing base unit: 4px */
   --spacing-1: 4px;
@@ -50,17 +50,18 @@
   --spacing-10: 40px;
   --spacing-12: 48px;
 
-  /* Border radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
+  /* Border radius (10px, 14px, 18px, 24px) */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
+  /* Subtle, calm shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 /* Base styles */
@@ -105,15 +106,15 @@ aside,
   flex-direction: column;
 }
 
-/* Dark mode surface tokens */
+/* Dark mode surface tokens (Soft Neumorphic Dark #1E232D) */
 .dark {
-  --color-background: #0f0f13;
-  --color-surface: #1a1a24;
-  --color-surface-2: rgba(255, 255, 255, 0.05);
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-text: #f1f1f5;
-  --color-text-secondary: #9ca3af;
-  --color-text-muted: #6b7280;
+  --color-background: #1E232D;
+  --color-surface: #1E232D;
+  --color-surface-2: #282F3D;
+  --color-border: #2D3748;
+  --color-text: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
 }
 
 /* Safe area support for PWA */
@@ -123,6 +124,26 @@ aside,
 
 .safe-area-top {
   padding-top: env(safe-area-inset-top);
+}
+
+/* Neumorphism / Claymorphism Utilities */
+.neumorphic-card {
+  background-color: #F0F3F8;
+  box-shadow: -8px -8px 16px rgba(255, 255, 255, 0.9), 8px 8px 16px rgba(163, 177, 198, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 28px;
+}
+.dark .neumorphic-card {
+  background-color: #1E232D;
+  box-shadow: -6px -6px 14px rgba(255, 255, 255, 0.03), 6px 6px 14px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.neumorphic-inset {
+  box-shadow: inset -4px -4px 8px rgba(255, 255, 255, 0.9), inset 4px 4px 8px rgba(163, 177, 198, 0.35);
+}
+.dark .neumorphic-inset {
+  box-shadow: inset -4px -4px 8px rgba(255, 255, 255, 0.03), inset 4px 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 /* Glassmorphism utility */
@@ -146,6 +167,17 @@ aside,
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 999px;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Keyframe Animations */

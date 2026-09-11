@@ -20,6 +20,10 @@ import { BudgetForm } from '@/features/finance/components/BudgetForm'
 import { SavingsGoalCard } from '@/features/finance/components/SavingsGoalCard'
 import { SavingsGoalForm } from '@/features/finance/components/SavingsGoalForm'
 import { FinanceSummary } from '@/features/finance/components/FinanceSummary'
+import {
+  getWalletCustomization,
+  CUSTOMIZATION_EVENT,
+} from '@/features/finance/services/cardCustomizationService'
 import { BudgetSummary } from '@/features/finance/components/BudgetSummary'
 import { SavingsSummary } from '@/features/finance/components/SavingsSummary'
 import { DebtSummary } from '@/features/finance/components/DebtSummary'
@@ -30,14 +34,13 @@ import { useDebts } from '@/features/finance/hooks/useDebts'
 import { groupDebts } from '@/features/finance/services/debtService'
 import { IncomeExpenseChart } from '@/features/finance/components/IncomeExpenseChart'
 import { ExpenseByCategoryChart } from '@/features/finance/components/ExpenseByCategoryChart'
-import { Card } from '@/components/ui/Card'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { LoadingState } from '@/components/ui/LoadingState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useRecurringTransactions } from '@/features/finance/hooks/useRecurringTransactions'
 import { RecurringCard } from '@/features/finance/components/RecurringCard'
 import { RecurringFormModal } from '@/features/finance/components/RecurringFormModal'
@@ -46,7 +49,6 @@ import { SharedWalletModal } from '@/features/finance/components/SharedWalletMod
 import { WalletInvitationsBanner } from '@/features/finance/components/WalletInvitationsBanner'
 import {
   Plus,
-  PlusCircle,
   ArrowLeft,
   ArrowLeftRight,
   Settings2,
@@ -66,6 +68,8 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/utils/currency'
@@ -86,14 +90,80 @@ type Tab =
   | 'debts'
   | 'recurring'
 
+const SUB_TABS: { id: Tab; label: string }[] = [
+  { id: 'summary', label: 'Ringkasan' },
+  { id: 'recurring', label: 'Rutin' },
+  { id: 'budgets', label: 'Anggaran' },
+  { id: 'savings', label: 'Tabungan' },
+  { id: 'debts', label: 'Utang' },
+]
+
 export function FinancePage() {
   const { user } = useAuth()
   const userId = user?.id
   const [tab, setTab] = useState<Tab>('summary')
+  const [activeTabIndex, setActiveTabIndex] = useState(0)
+
+  // Keep activeTabIndex in sync if tab is changed externally
+  useEffect(() => {
+    const idx = SUB_TABS.findIndex(t => t.id === tab)
+    if (idx !== -1 && idx !== activeTabIndex) {
+      setActiveTabIndex(idx)
+    }
+  }, [tab, activeTabIndex])
+
+  const handlePrevTab = () => {
+    setActiveTabIndex(prev => {
+      const nextIndex = prev > 0 ? prev - 1 : SUB_TABS.length - 1
+      setTab(SUB_TABS[nextIndex].id)
+      return nextIndex
+    })
+  }
+
+  const handleNextTab = () => {
+    setActiveTabIndex(prev => {
+      const nextIndex = prev < SUB_TABS.length - 1 ? prev + 1 : 0
+      setTab(SUB_TABS[nextIndex].id)
+      return nextIndex
+    })
+  }
+
+  const handleSelectTab = (index: number) => {
+    setActiveTabIndex(index)
+    setTab(SUB_TABS[index].id)
+  }
+
+  // Touch swipe gesture handlers for horizontal tab switching
+  const [touchStartX, setTouchStartX] = useState<number | null>(null)
+  const [touchStartY, setTouchStartY] = useState<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX)
+    setTouchStartY(e.touches[0].clientY)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null || touchStartY === null) return
+    const touchEndX = e.changedTouches[0].clientX
+    const touchEndY = e.changedTouches[0].clientY
+    const diffX = touchStartX - touchEndX
+    const diffY = touchStartY - touchEndY
+
+    // Only trigger swipe if horizontal movement is dominant and > 50px
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+      if (diffX > 0) {
+        handleNextTab()
+      } else {
+        handlePrevTab()
+      }
+    }
+    setTouchStartX(null)
+    setTouchStartY(null)
+  }
 
   const now = new Date()
-  const [currentMonth] = useState(now.getMonth() + 1)
-  const [currentYear] = useState(now.getFullYear())
+  const [currentMonth, setCurrentMonth] = useState(now.getMonth() + 1)
+  const [currentYear, setCurrentYear] = useState(now.getFullYear())
 
   const walletsHook = useWallets(userId || null)
   const transactionsHook = useTransactions(userId || null)
@@ -107,6 +177,15 @@ export function FinancePage() {
   const [showRecurringModal, setShowRecurringModal] = useState(false)
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null)
   const [managingSharedWallet, setManagingSharedWallet] = useState<WalletWithBalance | null>(null)
+  const [recentSectionTab, setRecentSectionTab] = useState<'transactions' | 'wallets'>('transactions')
+
+  const totalBudgetAmount = useMemo(() => {
+    return budgetsHook.budgets.reduce((sum, b) => sum + (b.amount || 0), 0)
+  }, [budgetsHook.budgets])
+
+  const totalSavingsCollected = useMemo(() => {
+    return savingsHook.goals.reduce((sum, g) => sum + (g.current_amount || 0), 0)
+  }, [savingsHook.goals])
 
   const [categories, setCategories] = useState<Category[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(true)
@@ -173,6 +252,11 @@ export function FinancePage() {
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
 
+  // In-place expand/collapse states for summary cards (default max 2 items)
+  const [expandWallets, setExpandWallets] = useState(false)
+  const [expandRecurring, setExpandRecurring] = useState(false)
+  const [expandTransactions, setExpandTransactions] = useState(false)
+
   const [showBudgetForm, setShowBudgetForm] = useState(false)
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null)
 
@@ -199,6 +283,71 @@ export function FinancePage() {
     id: string
     name: string
   } | null>(null)
+
+  // Interactive filter triggered by clicking Pemasukan/Pengeluaran pills on FinanceSummary
+  const [summaryTypeFilter, setSummaryTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
+
+  // Card customization version to trigger re-renders on customization save
+  const [cardCustomizationVersion, setCardCustomizationVersion] = useState(0)
+
+  useEffect(() => {
+    const handleCardCustomizationChange = () => {
+      setCardCustomizationVersion(v => v + 1)
+    }
+    window.addEventListener(CUSTOMIZATION_EVENT, handleCardCustomizationChange)
+    return () => window.removeEventListener(CUSTOMIZATION_EVENT, handleCardCustomizationChange)
+  }, [])
+
+  // Transactions filtered by currently selected month & year in header, and optional summary income/expense filter
+  const monthlyTransactions = useMemo(() => {
+    const monthStr = String(currentMonth).padStart(2, '0')
+    const prefix = `${currentYear}-${monthStr}`
+    const list = transactionsHook.transactions.filter(
+      t => t.deleted_at === null && t.transaction_date.startsWith(prefix)
+    )
+    if (summaryTypeFilter === 'income') {
+      return list.filter(t => t.type === 'income')
+    }
+    if (summaryTypeFilter === 'expense') {
+      return list.filter(t => t.type === 'expense')
+    }
+    return list
+  }, [transactionsHook.transactions, currentMonth, currentYear, summaryTypeFilter])
+
+  // Compile wallet summary list with current month income & expense for swipeable hero cards
+  const walletSummaryList = useMemo(() => {
+    const monthStr = String(currentMonth).padStart(2, '0')
+    const prefix = `${currentYear}-${monthStr}`
+
+    const statsMap: Record<string, { income: number; expense: number }> = {}
+    for (const t of transactionsHook.transactions) {
+      if (t.deleted_at === null && t.transaction_date.startsWith(prefix)) {
+        if (!statsMap[t.wallet_id]) {
+          statsMap[t.wallet_id] = { income: 0, expense: 0 }
+        }
+        if (t.type === 'income') {
+          statsMap[t.wallet_id].income += t.amount
+        } else if (t.type === 'expense') {
+          statsMap[t.wallet_id].expense += t.amount
+        }
+      }
+    }
+
+    return walletsHook.wallets.map((w, idx) => {
+      const custom = getWalletCustomization(w.id, w.type, idx + 1)
+      return {
+        id: w.id,
+        name: w.name,
+        type: w.type,
+        balance: w.balance ?? 0,
+        income: statsMap[w.id]?.income ?? 0,
+        expense: statsMap[w.id]?.expense ?? 0,
+        cardTheme: custom.cardTheme,
+        cardPattern: custom.cardPattern,
+        chipStyle: custom.chipStyle,
+      }
+    })
+  }, [walletsHook.wallets, transactionsHook.transactions, currentMonth, currentYear, cardCustomizationVersion])
 
   // Calculate spent amount per category for current month (budget warnings)
   const spentByCategory = useMemo(() => {
@@ -432,68 +581,68 @@ export function FinancePage() {
   }
 
   return (
-    <div className="max-w-md mx-auto space-y-3.5 pb-8">
+    <div className="max-w-6xl mx-auto space-y-4 sm:space-y-5 pb-36">
       {/* ─── Pending Shared Wallet Invitations Banner ─── */}
       <WalletInvitationsBanner
         invitations={sharedWalletsHook.pendingInvitations}
         onRespond={sharedWalletsHook.respondToInvitation}
       />
 
-      {/* ─── Modern Minimalist Tab Bar (Horizontal Scrollable Pills) ─── */}
-      <div className="w-full">
-        <Tabs value={tab} onValueChange={val => setTab(val as Tab)}>
-          <div className="w-full overflow-x-auto no-scrollbar py-0.5">
-            <TabsList className="h-auto p-1 rounded-2xl bg-white/85 dark:bg-gray-800/85 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 shadow-xs flex items-center space-x-1.5 min-w-max">
-              <TabsTrigger
-                value="summary"
-                onClick={() => setTab('summary')}
-                role="button"
-                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
-              >
-                Ringkasan
-              </TabsTrigger>
+      {/* ─── Header Minimal Keuangan ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pt-1">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#1E1B4B] dark:text-slate-100">
+            Keuangan
+          </h1>
+          <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400">
+            Ringkasan finansial dan arus kas Anda
+          </p>
+        </div>
+      </div>
 
-              <TabsTrigger
-                value="recurring"
-                onClick={() => setTab('recurring')}
-                role="button"
-                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
-              >
-                Rutin
-              </TabsTrigger>
+      {/* ─── Carousel Pager Navigasi Tunggal & Swipe Container ─── */}
+      <div
+        className="flex flex-col items-center justify-center w-full px-1 my-3 touch-pan-y"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Baris Kapsul Utama Penuh */}
+        <div className="w-full flex items-center justify-between px-4 py-2.5 bg-white/80 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-white/10 shadow-sm">
+          <button
+            type="button"
+            onClick={handlePrevTab}
+            className="p-1.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
+            title="Tab sebelumnya"
+            aria-label="Tab sebelumnya"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
 
-              <TabsTrigger
-                value="budgets"
-                onClick={() => setTab('budgets')}
-                role="button"
-                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
-              >
-                Anggaran
-              </TabsTrigger>
+          <span
+            key={SUB_TABS[activeTabIndex]?.id || tab}
+            className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 tracking-wide text-center flex-1 select-none animate-fade-in"
+          >
+            {SUB_TABS[activeTabIndex]?.label || 'Ringkasan'}
+          </span>
 
-              <TabsTrigger
-                value="savings"
-                onClick={() => setTab('savings')}
-                role="button"
-                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
-              >
-                Tabungan
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="debts"
-                onClick={() => setTab('debts')}
-                role="button"
-                className="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-center justify-center cursor-pointer whitespace-nowrap data-[state=active]:bg-[#2563EB] data-[state=active]:text-white data-[state=active]:shadow-sm hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
-              >
-                Utang
-              </TabsTrigger>
-            </TabsList>
-          </div>
-        </Tabs>
+          <button
+            type="button"
+            onClick={handleNextTab}
+            className="p-1.5 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer"
+            title="Tab berikutnya"
+            aria-label="Tab berikutnya"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
 
         {/* Accessible fallback buttons for test compatibility and screen readers */}
         <div className="sr-only">
+          {SUB_TABS.map((t, idx) => (
+            <button key={t.id} type="button" onClick={() => handleSelectTab(idx)}>
+              {t.label}
+            </button>
+          ))}
           <button type="button" onClick={() => setTab('wallets')}>
             Dompet
           </button>
@@ -503,54 +652,63 @@ export function FinancePage() {
           <button type="button" onClick={() => setTab('categories')}>
             Kategori
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingTransaction(null)
+              setTransactionType('expense')
+              setShowTransactionForm(true)
+            }}
+          >
+            Catat Transaksi
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedTransferSourceId(null)
+              setShowTransferForm(true)
+            }}
+          >
+            Transfer Dana
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingWalletId(null)
+              setShowWalletForm(true)
+            }}
+          >
+            Tambah Dompet
+          </button>
+          <button type="button" onClick={() => setShowCategoryModal(true)}>
+            Kelola Kategori
+          </button>
         </div>
       </div>
 
       {/* Summary Tab (Halaman Utama Keuangan) */}
       {tab === 'summary' && (
-        <div className="space-y-4 animate-fade-in-up">
-          {/* Card Total Saldo Bersih */}
+        <div className="space-y-4 sm:space-y-5 animate-fade-in-up">
+          {/* Card Total Saldo Bersih & Period Selector with Swipeable Wallet Cards */}
           <FinanceSummary
             totalBalance={summaryHook.summary.totalBalance}
             totalIncome={summaryHook.summary.totalIncome}
             totalExpense={summaryHook.summary.totalExpense}
             netIncome={summaryHook.summary.netIncome}
+            month={currentMonth}
+            year={currentYear}
+            onMonthChange={(m, y) => {
+              setCurrentMonth(m)
+              setCurrentYear(y)
+            }}
+            activeTypeFilter={summaryTypeFilter}
+            onTypeFilterChange={setSummaryTypeFilter}
+            wallets={walletSummaryList}
           />
 
-          {/* Quick Action Grid: Tambah Dompet, Transfer, Catat */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <button
-              type="button"
-              onClick={() => {
-                setEditingWalletId(null)
-                setShowWalletForm(true)
-              }}
-              className="group flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/60 shadow-xs hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/30 dark:hover:bg-blue-950/20 active:scale-95 transition-all cursor-pointer text-center"
-            >
-              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#2563EB] dark:text-blue-400 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-                <Wallet className="w-4 h-4" />
-              </div>
-              <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 leading-tight">
-                Tambah Dompet
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedTransferSourceId(null)
-                setShowTransferForm(true)
-              }}
-              className="group flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/60 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 active:scale-95 transition-all cursor-pointer text-center"
-            >
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-                <ArrowLeftRight className="w-4 h-4" />
-              </div>
-              <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 leading-tight">
-                Transfer
-              </span>
-            </button>
-
+          {/* Hero CTA Bar Quick Actions */}
+          <div className="my-4 flex items-center gap-2 sm:gap-2.5">
+            {/* Tombol Utama: Catat Transaksi (Primary Action) */}
             <button
               type="button"
               onClick={() => {
@@ -558,215 +716,491 @@ export function FinancePage() {
                 setTransactionType('expense')
                 setShowTransactionForm(true)
               }}
-              className="group flex flex-col items-center justify-center py-2.5 px-1.5 rounded-2xl bg-gradient-to-tr from-[#2563EB] to-blue-500 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 hover:brightness-105 active:scale-95 transition-all cursor-pointer text-center"
+              className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-500/25 active:scale-95 transition-all cursor-pointer whitespace-nowrap min-w-0"
+              title="Catat Transaksi Baru"
+              aria-label="Catat Transaksi"
             >
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform text-white">
-                <PlusCircle className="w-4 h-4 stroke-[2.5]" />
-              </div>
-              <span className="text-[11px] font-extrabold text-white leading-tight">
-                Catat
-              </span>
+              <Plus className="w-4 h-4 stroke-[2.5] shrink-0" />
+              <span className="truncate">Catat Transaksi</span>
             </button>
-          </div>
 
-          {/* Daftar Dompet di Halaman Utama */}
-          <div className="rounded-[24px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-[#2563EB] dark:text-blue-400" />
-                <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100">
-                  Daftar Dompet ({walletsHook.wallets.length})
-                </h3>
-              </div>
-              <div className="flex items-center gap-2">
-                {walletsHook.wallets.length >= 2 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedTransferSourceId(null)
-                      setShowTransferForm(true)
-                    }}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <ArrowLeftRight className="w-3 h-3" />
-                    <span>Transfer</span>
-                  </button>
-                )}
-                {walletsHook.wallets.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setTab('wallets')}
-                    className="text-xs text-[#2563EB] dark:text-blue-400 font-bold hover:underline cursor-pointer"
-                  >
-                    Lihat Semua &rarr;
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {walletsHook.loading ? (
-              <LoadingState text="Memuat dompet..." />
-            ) : walletsHook.error ? (
-              <ErrorState message={walletsHook.error} onRetry={walletsHook.refresh} />
-            ) : walletsHook.wallets.length === 0 ? (
-              <EmptyState
-                icon={<Wallet className="w-5 h-5 text-gray-400" />}
-                title="Belum ada dompet"
-                description="Buat dompet pertama Anda untuk mulai mencatat keuangan."
-                className="py-4"
-                action={
-                  <Button
-                    size="sm"
-                    onClick={() => setShowWalletForm(true)}
-                    icon={<Plus className="w-4 h-4" />}
-                  >
-                    Tambah Dompet
-                  </Button>
-                }
-              />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {walletsHook.wallets.map(wallet => (
-                  <WalletCard
-                    key={wallet.id}
-                    wallet={wallet}
-                    onSelect={() => {
-                      setEditingWalletId(wallet.id)
-                      setShowWalletForm(true)
-                    }}
-                    onTransfer={id => {
-                      setSelectedTransferSourceId(id)
-                      setShowTransferForm(true)
-                    }}
-                    onDeactivate={id => {
-                      setPendingWalletDelete({ id, name: wallet.name })
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Ringkasan Anggaran, Tabungan & Tagihan Rutin */}
-          <BudgetSummary
-            budgets={budgetsHook.budgets}
-            spentByCategory={spentByCategory}
-            categoryMap={categoryMap}
-            onViewAll={() => setTab('budgets')}
-          />
-
-          <SavingsSummary savings={savingsHook.goals} onViewAll={() => setTab('savings')} />
-
-          {/* Ringkasan Transaksi Rutin / Langganan */}
-          <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 flex items-center justify-center">
-                  <RefreshCw className="w-4 h-4" />
-                </div>
-                <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100">
-                  Tagihan & Transaksi Rutin
-                </h3>
-              </div>
+            {/* Tombol Sekunder (Secondary Actions: Transfer, Tambah Dompet, Kelola Kategori) */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Transfer */}
               <button
                 type="button"
-                onClick={() => setTab('recurring')}
-                className="text-xs text-[#2563EB] dark:text-blue-400 font-bold hover:underline cursor-pointer"
+                onClick={() => {
+                  setSelectedTransferSourceId(null)
+                  setShowTransferForm(true)
+                }}
+                className="w-11 h-11 flex items-center justify-center rounded-2xl bg-[#F0F3F8] dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-white/80 dark:border-white/10 shadow-[-3px_-3px_6px_rgba(255,255,255,0.9),3px_3px_6px_rgba(163,177,198,0.3)] active:scale-95 transition-all cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400"
+                title="Transfer Dana Antar Dompet"
+                aria-label="Transfer Dana"
               >
-                Lihat Semua ({recurringHook.recurringList.filter(r => r.is_active).length}) &rarr;
+                <ArrowLeftRight className="w-4 h-4" />
+              </button>
+
+              {/* Tambah Dompet */}
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingWalletId(null)
+                  setShowWalletForm(true)
+                }}
+                className="w-11 h-11 flex items-center justify-center rounded-2xl bg-[#F0F3F8] dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-white/80 dark:border-white/10 shadow-[-3px_-3px_6px_rgba(255,255,255,0.9),3px_3px_6px_rgba(163,177,198,0.3)] active:scale-95 transition-all cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400"
+                title="Tambah Dompet Baru"
+                aria-label="Tambah Dompet"
+              >
+                <Wallet className="w-4 h-4" />
+              </button>
+
+              {/* Kelola Kategori */}
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(true)}
+                className="w-11 h-11 flex items-center justify-center rounded-2xl bg-[#F0F3F8] dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-white/80 dark:border-white/10 shadow-[-3px_-3px_6px_rgba(255,255,255,0.9),3px_3px_6px_rgba(163,177,198,0.3)] active:scale-95 transition-all cursor-pointer hover:text-amber-600 dark:hover:text-amber-400"
+                title="Kelola Kategori"
+                aria-label="Kelola Kategori"
+              >
+                <Tag className="w-4 h-4" />
               </button>
             </div>
-
-            {recurringHook.recurringList.length === 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400 py-1">
-                Belum ada tagihan atau pengeluaran rutin terdaftar.
-              </p>
-            ) : (
-              <div className="space-y-2.5">
-                {recurringHook.recurringList.slice(0, 3).map(item => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800/60 text-xs"
-                  >
-                    <div className="min-w-0 pr-2">
-                      <p className="font-bold text-gray-900 dark:text-white truncate">
-                        {item.note || (item.type === 'income' ? 'Pemasukan Rutin' : 'Pengeluaran Rutin')}
-                      </p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                        Jatuh tempo: {item.next_due_date}
-                      </p>
-                    </div>
-                    <span
-                      className={`font-black shrink-0 ${
-                        item.type === 'income'
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-rose-600 dark:text-rose-400'
-                      }`}
-                    >
-                      {item.type === 'income' ? '+' : '-'}
-                      {formatCurrency(item.amount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Grafik & Charts */}
-          <IncomeExpenseChart
-            transactions={transactionsHook.transactions}
-            year={currentYear}
-            month={currentMonth}
-          />
-          <ExpenseByCategoryChart
-            transactions={transactionsHook.transactions}
-            categoryMap={categoryMap}
-          />
+          {/* ─── Aktivitas & Transaksi Terbaru (Neumorphic Card dengan Tab Switch Mini) ─── */}
+          <div
+            data-testid="compact-wallets-section"
+            className="p-4 rounded-[26px] bg-[#F0F3F8] dark:bg-slate-800 border border-white/80 dark:border-white/10 shadow-[-5px_-5px_10px_rgba(255,255,255,0.85),5px_5px_10px_rgba(163,177,198,0.22)] my-3 space-y-3"
+          >
+            {/* Baris 1 (Judul & Switcher) - Posisi Terkunci Statis Tanpa Layout Shift */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Kiri: Ikon jam dan teks judul dinamis */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                  {recentSectionTab === 'transactions' ? 'Transaksi Terbaru' : 'Daftar Dompet'}
+                </h3>
+                {recentSectionTab === 'transactions' && summaryTypeFilter !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => setSummaryTypeFilter('all')}
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 transition-colors cursor-pointer shrink-0"
+                    title="Hapus filter jenis transaksi"
+                  >
+                    <span>{summaryTypeFilter === 'income' ? 'Pemasukan' : 'Pengeluaran'}</span>
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
 
-          {/* Transaksi Terakhir with new page trigger & export actions */}
-          <div className="rounded-[26px] bg-white/90 dark:bg-gray-800/90 border border-white/80 dark:border-gray-700/50 p-4 sm:p-5 shadow-sm backdrop-blur-md space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-800 gap-2">
-              <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 truncate">
-                Transaksi Terakhir
-              </h3>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleExportPdf}
-                  loading={exportLoading}
-                  icon={<FileDown className="w-3 h-3" />}
-                  className="h-6 px-2 text-[10px] font-bold"
-                  title="Ekspor PDF"
-                >
-                  PDF
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleExportExcel}
-                  loading={exportLoading}
-                  icon={<FileDown className="w-3 h-3" />}
-                  className="h-6 px-2 text-[10px] font-bold"
-                  title="Ekspor Excel"
-                >
-                  Excel
-                </Button>
+              {/* Kanan: Segmented Pill Switcher "Transaksi | Dompet" terkunci di sisi kanan atas */}
+              <div className="flex items-center p-1 bg-slate-200/70 dark:bg-slate-700/60 rounded-xl shrink-0">
                 <button
                   type="button"
-                  onClick={() => setTab('transactions')}
-                  className="text-xs text-[#2563EB] dark:text-blue-400 font-bold hover:underline cursor-pointer ml-1"
+                  onClick={() => setRecentSectionTab('transactions')}
+                  aria-label="Tampilkan Transaksi"
+                  className={cn(
+                    "rounded-lg transition-all cursor-pointer",
+                    recentSectionTab === 'transactions'
+                      ? "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-semibold px-3 py-1 text-xs shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 font-medium px-3 py-1 text-xs hover:text-slate-800 dark:hover:text-slate-200"
+                  )}
                 >
-                  Lihat Semua &rarr;
+                  Transaksi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRecentSectionTab('wallets')}
+                  aria-label="Tampilkan Dompet"
+                  className={cn(
+                    "rounded-lg transition-all cursor-pointer",
+                    recentSectionTab === 'wallets'
+                      ? "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-semibold px-3 py-1 text-xs shadow-sm"
+                      : "text-slate-500 dark:text-slate-400 font-medium px-3 py-1 text-xs hover:text-slate-800 dark:hover:text-slate-200"
+                  )}
+                >
+                  Dompet
                 </button>
               </div>
             </div>
-            <TransactionList
-              transactions={transactionsHook.transactions.slice(0, 5)}
-              categoryMap={categoryMap}
-              walletMap={walletMap}
-              onClick={(tx: Transaction) => setSelectedTransaction(tx)}
+
+            {/* Baris 2 (Toolbars / Aksi Tambahan) - Terpisah di bawah Baris 1 */}
+            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200/50 dark:border-white/5 gap-2">
+              {recentSectionTab === 'transactions' ? (
+                <>
+                  {/* Mode Transaksi: Kiri tombol export (PDF, Excel) */}
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleExportPdf}
+                      loading={exportLoading}
+                      icon={<FileDown className="w-3 h-3" />}
+                      className="h-7 px-2.5 text-[11px] font-semibold"
+                      title="Ekspor PDF"
+                    >
+                      PDF
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleExportExcel}
+                      loading={exportLoading}
+                      icon={<FileDown className="w-3 h-3" />}
+                      className="h-7 px-2.5 text-[11px] font-semibold"
+                      title="Ekspor Excel"
+                    >
+                      Excel
+                    </Button>
+                  </div>
+
+                  {/* Mode Transaksi: Kanan link "Lihat Semua →" */}
+                  <button
+                    type="button"
+                    onClick={() => setTab('transactions')}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                  >
+                    Lihat Semua &rarr;
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Mode Dompet: Kiri badge total dompet */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-slate-700/60 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      {walletsHook.wallets.length} Dompet Terdaftar
+                    </span>
+                  </div>
+
+                  {/* Mode Dompet: Kanan tombol "+ Tambah Dompet" dan link "Lihat Semua →" */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingWalletId(null)
+                        setShowWalletForm(true)
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 stroke-[2.5]" />
+                      + Tambah Dompet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTab('wallets')}
+                      className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                    >
+                      Lihat Semua &rarr;
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Content: Transaksi Terbaru */}
+            {recentSectionTab === 'transactions' && (
+              <div>
+                {monthlyTransactions.length === 0 ? (
+                  <div className="py-8 px-4 text-center flex flex-col items-center justify-center rounded-2xl bg-white/40 dark:bg-slate-900/30 border border-white/60 dark:border-white/5 shadow-inner">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner mb-3">
+                      <Receipt className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      Belum ada transaksi di dompet ini
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mt-1 mb-4">
+                      {summaryTypeFilter !== 'all'
+                        ? 'Ubah filter atau catat transaksi baru untuk mulai melihat aktivitas.'
+                        : 'Mulai catat transaksi untuk melihat ringkasan keuangan Anda.'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      {summaryTypeFilter !== 'all' && (
+                        <button
+                          type="button"
+                          onClick={() => setSummaryTypeFilter('all')}
+                          className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer"
+                        >
+                          Tampilkan Semua
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTransactionType(summaryTypeFilter === 'income' ? 'income' : 'expense')
+                          setEditingTransaction(null)
+                          setShowTransactionForm(true)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                        + Catat Sekarang
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <TransactionList
+                      transactions={
+                        expandTransactions
+                          ? monthlyTransactions
+                          : monthlyTransactions.slice(0, 3)
+                      }
+                      categoryMap={categoryMap}
+                      walletMap={walletMap}
+                      onClick={(tx: Transaction) => setSelectedTransaction(tx)}
+                      onEdit={(tx: Transaction) => {
+                        if (tx.type === 'income' || tx.type === 'expense') {
+                          setTransactionType(tx.type)
+                          setEditingTransaction(tx)
+                          setShowTransactionForm(true)
+                        }
+                      }}
+                      onDelete={id => {
+                        const targetTx = transactionsHook.transactions.find(t => t.id === id)
+                        const isTransfer = !!targetTx?.transfer_group_id
+                        setPendingDelete({
+                          message: isTransfer
+                            ? 'Apakah Anda yakin ingin menghapus transfer ini? Kedua sisi transaksi akan dibatalkan.'
+                            : 'Apakah Anda yakin ingin menghapus transaksi ini?',
+                          label: 'Hapus',
+                          onConfirm: async () => {
+                            try {
+                              if (targetTx?.transfer_group_id) {
+                                await transactionsHook.removeTransfer(targetTx.transfer_group_id)
+                                toast.success('Transfer berhasil dihapus')
+                              } else {
+                                await transactionsHook.removeTransaction(id)
+                                toast.success('Transaksi berhasil dihapus')
+                              }
+                              await walletsHook.refresh()
+                              await summaryHook.refresh()
+                            } catch {
+                              toast.error('Gagal menghapus transaksi')
+                            }
+                          },
+                        })
+                      }}
+                    />
+
+                    {monthlyTransactions.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandTransactions(prev => !prev)}
+                        className="w-full py-2 mt-1 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        {expandTransactions ? (
+                          <>
+                            <ChevronUp className="w-3.5 h-3.5" />
+                            <span>Sembunyikan</span>
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-3.5 h-3.5" />
+                            <span>Tampilkan Lebih Banyak ({monthlyTransactions.length - 3} lainnya)</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Content: Daftar Dompet */}
+            {recentSectionTab === 'wallets' && (
+              <div>
+                {walletsHook.loading ? (
+                  <LoadingState text="Memuat dompet..." />
+                ) : walletsHook.error ? (
+                  <ErrorState message={walletsHook.error} onRetry={walletsHook.refresh} />
+                ) : walletsHook.wallets.length === 0 ? (
+                  <div className="py-8 px-4 text-center flex flex-col items-center justify-center rounded-2xl bg-white/40 dark:bg-slate-900/30 border border-white/60 dark:border-white/5 shadow-inner">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner mb-3">
+                      <Wallet className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      Belum ada dompet
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mt-1 mb-4">
+                      Tambahkan dompet untuk mulai mencatat keuangan Anda.
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowWalletForm(true)}
+                      icon={<Plus className="w-3.5 h-3.5" />}
+                    >
+                      Tambah Dompet
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 transition-all">
+                      {(expandWallets ? walletsHook.wallets : walletsHook.wallets.slice(0, 2)).map(
+                        wallet => (
+                          <WalletCard
+                            key={wallet.id}
+                            wallet={wallet}
+                            onSelect={() => {
+                              setEditingWalletId(wallet.id)
+                              setShowWalletForm(true)
+                            }}
+                            onTransfer={id => {
+                              setSelectedTransferSourceId(id)
+                              setShowTransferForm(true)
+                            }}
+                            onDeactivate={id => {
+                              setPendingWalletDelete({ id, name: wallet.name })
+                            }}
+                          />
+                        )
+                      )}
+                    </div>
+
+                    {walletsHook.wallets.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => setExpandWallets(prev => !prev)}
+                        className="w-full py-2 mt-1 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        {expandWallets ? (
+                          <>
+                            <ChevronUp className="w-3.5 h-3.5" />
+                            <span>Sembunyikan</span>
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-3.5 h-3.5" />
+                            <span>Tampilkan Lebih Banyak ({walletsHook.wallets.length - 2} lainnya)</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Grafik & Arus Keuangan (Bento Grid 2 Kolom di Desktop) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <IncomeExpenseChart
+              transactions={transactionsHook.transactions}
+              year={currentYear}
+              month={currentMonth}
             />
+            <ExpenseByCategoryChart
+              transactions={transactionsHook.transactions}
+              categoryMap={categoryMap}
+              year={currentYear}
+              month={currentMonth}
+              onManageCategories={() => setShowCategoryModal(true)}
+            />
+          </div>
+
+          {/* Ringkasan Anggaran & Tabungan (Bento Grid 2 Kolom di Tablet/Desktop) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <BudgetSummary
+              budgets={budgetsHook.budgets}
+              spentByCategory={spentByCategory}
+              categoryMap={categoryMap}
+              onViewAll={() => setTab('budgets')}
+            />
+
+            <SavingsSummary savings={savingsHook.goals} onViewAll={() => setTab('savings')} />
+          </div>
+
+          {/* Ringkasan Transaksi Rutin / Langganan */}
+          <div className="rounded-3xl bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-lg shadow-indigo-500/5 p-4 sm:p-5 space-y-3 transition-colors">
+            <div className="flex items-center justify-between pb-2 border-b border-white/60 dark:border-white/10">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold text-[#1E1B4B] dark:text-slate-100">
+                  Tagihan & Transaksi Rutin
+                </h3>
+              </div>
+              {recurringHook.recurringList.length > 2 ? (
+                <button
+                  type="button"
+                  onClick={() => setExpandRecurring(prev => !prev)}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                >
+                  {expandRecurring
+                    ? 'Sembunyikan'
+                    : `Lihat Semua (${recurringHook.recurringList.length})`}
+                </button>
+              ) : recurringHook.recurringList.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setTab('recurring')}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                >
+                  Lihat Semua &rarr;
+                </button>
+              ) : null}
+            </div>
+
+            {recurringHook.recurringList.length === 0 ? (
+              <p className="text-xs text-[#737373] dark:text-[#A3A3A3] py-1">
+                Belum ada tagihan atau pengeluaran rutin terdaftar.
+              </p>
+            ) : (
+              <>
+                <div className="space-y-2 transition-all">
+                  {(expandRecurring
+                    ? recurringHook.recurringList
+                    : recurringHook.recurringList.slice(0, 2)
+                  ).map(item => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-3 rounded-2xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/60 dark:border-white/10 text-xs"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="font-semibold text-[#171717] dark:text-[#F5F5F5] truncate">
+                          {item.note || (item.type === 'income' ? 'Pemasukan Rutin' : 'Pengeluaran Rutin')}
+                        </p>
+                        <p className="text-[11px] text-[#737373] dark:text-[#A3A3A3] mt-0.5">
+                          Jatuh tempo: {item.next_due_date}
+                        </p>
+                      </div>
+                      <span
+                        className={`font-black shrink-0 ${
+                          item.type === 'income'
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-rose-600 dark:text-rose-400'
+                        }`}
+                      >
+                        {item.type === 'income' ? '+' : '-'}
+                        {formatCurrency(item.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {recurringHook.recurringList.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setExpandRecurring(prev => !prev)}
+                    className="w-full py-2 mt-1 rounded-xl text-xs font-semibold text-[#737373] dark:text-[#A3A3A3] hover:text-[#171717] dark:hover:text-[#F5F5F5] hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-transparent hover:border-[#E6E6E3] dark:hover:border-[#272727]"
+                  >
+                    {expandRecurring ? (
+                      <>
+                        <ChevronUp className="w-3.5 h-3.5" />
+                        <span>Sembunyikan</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-3.5 h-3.5" />
+                        <span>Tampilkan Lebih Banyak ({recurringHook.recurringList.length - 2} lainnya)</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -774,12 +1208,12 @@ export function FinancePage() {
       {/* ─── Recurring Tab (Transaksi Rutin & Tagihan) ─── */}
       {tab === 'recurring' && (
         <div className="space-y-4 animate-fade-in-up">
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/85 dark:bg-gray-800/85 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md">
+          <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-3xl bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-lg shadow-indigo-500/5 transition-colors">
             <div>
-              <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">
+              <h3 className="text-sm sm:text-base font-bold text-[#1E1B4B] dark:text-slate-100">
                 Transaksi Rutin & Tagihan
               </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className="text-xs text-[#737373] dark:text-[#A3A3A3] mt-0.5">
                 {recurringHook.recurringList.filter(r => r.is_active).length} Langganan Aktif
               </p>
             </div>
@@ -867,16 +1301,16 @@ export function FinancePage() {
       {tab === 'wallets' && (
         <div className="space-y-4 animate-fade-in-up">
           {/* Tombol Navigasi Kembali ke Halaman Utama Keuangan */}
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-white/85 dark:bg-gray-800/85 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md">
+          <div className="flex items-center justify-between p-3.5 rounded-3xl bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-lg shadow-indigo-500/5 transition-colors">
             <button
               type="button"
               onClick={() => setTab('summary')}
-              className="flex items-center gap-2 text-xs sm:text-sm font-bold text-[#2563EB] dark:text-blue-400 hover:underline active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline active:scale-95 transition-all cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Kembali ke Halaman Utama Keuangan</span>
             </button>
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+            <span className="text-xs font-semibold text-[#737373] dark:text-[#A3A3A3]">
               {walletsHook.wallets.length} Dompet
             </span>
           </div>
@@ -971,16 +1405,16 @@ export function FinancePage() {
       {tab === 'transactions' && (
         <div className="space-y-3.5 animate-fade-in-up">
           {/* Tombol Navigasi Kembali ke Halaman Utama Keuangan */}
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-white/85 dark:bg-gray-800/85 border border-gray-200/80 dark:border-gray-700/80 shadow-xs backdrop-blur-md">
+          <div className="flex items-center justify-between p-3.5 rounded-3xl bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-lg shadow-indigo-500/5 transition-colors">
             <button
               type="button"
               onClick={() => setTab('summary')}
-              className="flex items-center gap-2 text-xs sm:text-sm font-bold text-[#2563EB] dark:text-blue-400 hover:underline active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline active:scale-95 transition-all cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Kembali ke Halaman Utama Keuangan</span>
             </button>
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+            <span className="text-xs font-semibold text-[#737373] dark:text-[#A3A3A3]">
               {filteredTransactions.length} Transaksi
             </span>
           </div>
@@ -1048,83 +1482,17 @@ export function FinancePage() {
             </div>
           </div>
 
-          {showTransactionForm && (
-            <Card>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                {editingTransaction
-                  ? 'Edit Transaksi'
-                  : transactionType === 'income'
-                    ? 'Tambah Pemasukan'
-                    : 'Tambah Pengeluaran'}
-              </h3>
-              <TransactionForm
-                key={editingTransaction?.id ?? `new-${transactionType}`}
-                wallets={walletsHook.wallets}
-                categories={categories}
-                type={transactionType}
-                initialData={editingTransaction ?? undefined}
-                onTypeChange={setTransactionType}
-                onManageCategories={() => setShowCategoryModal(true)}
-                onSubmit={async (walletId, amount, categoryId, date, note, effectiveType) => {
-                  const finalType = effectiveType ?? transactionType
-                  try {
-                    if (editingTransaction) {
-                      await transactionsHook.editTransaction(
-                        editingTransaction.id,
-                        finalType,
-                        walletId,
-                        amount,
-                        categoryId,
-                        date,
-                        note ?? undefined
-                      )
-                      toast.success('Transaksi berhasil diperbarui!')
-                    } else if (finalType === 'income') {
-                      await transactionsHook.addIncome(
-                        walletId,
-                        amount,
-                        categoryId,
-                        date,
-                        note ?? undefined
-                      )
-                      toast.success('Pemasukan berhasil dicatat!')
-                    } else {
-                      await transactionsHook.addExpense(
-                        walletId,
-                        amount,
-                        categoryId,
-                        date,
-                        note ?? undefined
-                      )
-                      toast.success('Pengeluaran berhasil dicatat!')
-                    }
-                    setShowTransactionForm(false)
-                    setEditingTransaction(null)
-                    await walletsHook.refresh()
-                    await summaryHook.refresh()
-                  } catch {
-                    toast.error('Gagal menyimpan transaksi')
-                  }
-                }}
-                onCancel={() => {
-                  setShowTransactionForm(false)
-                  setEditingTransaction(null)
-                }}
-              />
-            </Card>
-          )}
-
           {transactionsHook.loading ? (
             <LoadingState text="Memuat transaksi..." />
           ) : transactionsHook.error ? (
             <ErrorState message={transactionsHook.error} onRetry={transactionsHook.refresh} />
           ) : (
-            <Card>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <div className="rounded-3xl bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-lg shadow-indigo-500/5 p-4 sm:p-5 space-y-3 transition-colors">
+              <div className="flex items-center justify-between pb-2 border-b border-white/60 dark:border-white/10">
+                <h3 className="text-xs sm:text-sm font-bold text-[#1E1B4B] dark:text-slate-100">
                   Riwayat Transaksi
                 </h3>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs font-semibold text-[#737373] dark:text-[#A3A3A3]">
                   {filteredTransactions.length} transaksi
                 </span>
               </div>
@@ -1145,7 +1513,7 @@ export function FinancePage() {
                   const isTransfer = !!targetTx?.transfer_group_id
                   setPendingDelete({
                     message: isTransfer
-                      ? 'Apakah Anda yakin ingin menghapus transfer ini? Kedua sisi transaksi (keluar dan masuk) akan dibatalkan.'
+                      ? 'Apakah Anda yakin ingin menghapus transfer ini? Kedua sisi transaksi akan dibatalkan.'
                       : 'Apakah Anda yakin ingin menghapus transaksi ini?',
                     label: 'Hapus',
                     onConfirm: async () => {
@@ -1168,14 +1536,14 @@ export function FinancePage() {
                 emptyTitle="Tidak ada transaksi yang sesuai"
                 emptyDescription="Ubah filter atau tambahkan transaksi baru."
               />
-            </Card>
+            </div>
           )}
         </div>
       )}
 
       {/* Categories Tab */}
       {tab === 'categories' && (
-        <Card>
+        <div className="rounded-3xl bg-white/75 dark:bg-slate-900/75 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-lg shadow-indigo-500/5 p-4 sm:p-5 shadow-xs transition-colors">
           <CategoryList
             categories={categories}
             loading={categoriesLoading}
@@ -1215,144 +1583,158 @@ export function FinancePage() {
               })
             }}
           />
-        </Card>
+        </div>
       )}
 
           {/* Budgets Tab */}
           {tab === 'budgets' && (
             <div className="space-y-4">
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/80 dark:border-white/5">
+                <div className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  Total Anggaran:{' '}
+                  <span className="font-extrabold text-slate-900 dark:text-slate-100">
+                    {formatCurrency(totalBudgetAmount)}
+                  </span>
+                </div>
+                <button
+                  type="button"
                   onClick={() => {
                     setEditingBudgetId(null)
                     setShowBudgetForm(true)
                   }}
-                  icon={<Plus className="w-4 h-4" />}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm active:scale-95 transition-all cursor-pointer"
                 >
-                  Tambah Anggaran
-                </Button>
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Tambah</span>
+                </button>
               </div>
 
-          {budgetsHook.loading ? (
-            <LoadingState text="Memuat anggaran..." />
-          ) : budgetsHook.error ? (
-            <ErrorState message={budgetsHook.error} onRetry={budgetsHook.refresh} />
-          ) : budgetsHook.budgets.length === 0 && !showBudgetForm ? (
-            <EmptyState
-              icon={<Receipt className="w-6 h-6 text-gray-400" />}
-              title="Belum ada anggaran"
-              description="Buat anggaran bulanan untuk mengontrol pengeluaran."
-              action={
-                <Button
-                  size="sm"
-                  onClick={() => setShowBudgetForm(true)}
-                  icon={<Plus className="w-4 h-4" />}
-                >
-                  Tambah Anggaran
-                </Button>
-              }
-            />
-          ) : (
-            budgetsHook.budgets.map(budget => (
-              <BudgetCard
-                key={budget.id}
-                budget={budget}
-                categoryName={categoryMap[budget.category_id]}
-                spent={spentByCategory[budget.category_id] || 0}
-                onEdit={() => {
-                  setEditingBudgetId(budget.id)
-                  setShowBudgetForm(true)
-                }}
-                onDelete={id => {
-                  const name = categoryMap[budget.category_id] ?? 'ini'
-                  setPendingDelete({
-                    message: `Apakah Anda yakin ingin menghapus anggaran "${name}"?`,
-                    label: 'Hapus',
-                    onConfirm: async () => {
-                      try {
-                        await budgetsHook.removeBudget(id)
-                        toast.success(`Anggaran "${name}" berhasil dihapus`)
-                      } catch {
-                        toast.error('Gagal menghapus anggaran')
-                      }
-                    },
-                  })
-                }}
-              />
-            ))
+              {budgetsHook.loading ? (
+                <LoadingState text="Memuat anggaran..." />
+              ) : budgetsHook.error ? (
+                <ErrorState message={budgetsHook.error} onRetry={budgetsHook.refresh} />
+              ) : budgetsHook.budgets.length === 0 && !showBudgetForm ? (
+                <EmptyState
+                  icon={<Receipt className="w-6 h-6 text-gray-400" />}
+                  title="Belum ada anggaran"
+                  description="Buat anggaran bulanan untuk mengontrol pengeluaran."
+                  action={
+                    <Button
+                      size="sm"
+                      onClick={() => setShowBudgetForm(true)}
+                      icon={<Plus className="w-4 h-4" />}
+                    >
+                      Tambah Anggaran
+                    </Button>
+                  }
+                />
+              ) : (
+                budgetsHook.budgets.map(budget => (
+                  <BudgetCard
+                    key={budget.id}
+                    budget={budget}
+                    categoryName={categoryMap[budget.category_id]}
+                    spent={spentByCategory[budget.category_id] || 0}
+                    onEdit={() => {
+                      setEditingBudgetId(budget.id)
+                      setShowBudgetForm(true)
+                    }}
+                    onDelete={id => {
+                      const name = categoryMap[budget.category_id] ?? 'ini'
+                      setPendingDelete({
+                        message: `Apakah Anda yakin ingin menghapus anggaran "${name}"?`,
+                        label: 'Hapus',
+                        onConfirm: async () => {
+                          try {
+                            await budgetsHook.removeBudget(id)
+                            toast.success(`Anggaran "${name}" berhasil dihapus`)
+                          } catch {
+                            toast.error('Gagal menghapus anggaran')
+                          }
+                        },
+                      })
+                    }}
+                  />
+                ))
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {/* Savings Tab */}
-      {tab === 'savings' && (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingSavingsId(null)
-                setShowSavingsForm(true)
-              }}
-              icon={<Plus className="w-4 h-4" />}
-            >
-              Tambah Tujuan
-            </Button>
-          </div>
-
-          {savingsHook.loading ? (
-            <LoadingState text="Memuat tabungan..." />
-          ) : savingsHook.error ? (
-            <ErrorState message={savingsHook.error} onRetry={savingsHook.refresh} />
-          ) : savingsHook.goals.length === 0 && !showSavingsForm ? (
-            <EmptyState
-              icon={<PiggyBank className="w-6 h-6 text-gray-400" />}
-              title="Belum ada target tabungan"
-              description="Buat target tabungan untuk mencapai tujuan keuangan Anda."
-              action={
-                <Button
-                  size="sm"
-                  onClick={() => setShowSavingsForm(true)}
-                  icon={<Plus className="w-4 h-4" />}
+          {/* Savings Tab */}
+          {tab === 'savings' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/80 dark:border-white/5">
+                <div className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  Total Terkumpul:{' '}
+                  <span className="font-extrabold text-slate-900 dark:text-slate-100">
+                    {formatCurrency(totalSavingsCollected)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingSavingsId(null)
+                    setShowSavingsForm(true)
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm active:scale-95 transition-all cursor-pointer"
                 >
-                  Tambah Tujuan
-                </Button>
-              }
-            />
-          ) : (
-            savingsHook.goals.map(goal => (
-              <SavingsGoalCard
-                key={goal.id}
-                goal={goal}
-                onEdit={() => {
-                  setEditingSavingsId(goal.id)
-                  setShowSavingsForm(true)
-                }}
-                onAdd={id => {
-                  setAddSavingsToId(id)
-                  setAddAmount('')
-                  setWithdrawSavingsFromId(null)
-                }}
-                onWithdraw={id => {
-                  setWithdrawSavingsFromId(id)
-                  setWithdrawAmount('')
-                  setAddSavingsToId(null)
-                }}
-                onDelete={id => {
-                  setPendingDelete({
-                    message: `Apakah Anda yakin ingin menghapus tabungan "${goal.name}"?`,
-                    label: 'Hapus',
-                    onConfirm: async () => {
-                      await savingsHook.removeGoal(id)
-                    },
-                  })
-                }}
-              />
-            ))
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Tambah</span>
+                </button>
+              </div>
+
+              {savingsHook.loading ? (
+                <LoadingState text="Memuat tabungan..." />
+              ) : savingsHook.error ? (
+                <ErrorState message={savingsHook.error} onRetry={savingsHook.refresh} />
+              ) : savingsHook.goals.length === 0 && !showSavingsForm ? (
+                <EmptyState
+                  icon={<PiggyBank className="w-6 h-6 text-gray-400" />}
+                  title="Belum ada target tabungan"
+                  description="Buat target tabungan untuk mencapai tujuan keuangan Anda."
+                  action={
+                    <Button
+                      size="sm"
+                      onClick={() => setShowSavingsForm(true)}
+                      icon={<Plus className="w-4 h-4" />}
+                    >
+                      Tambah Tujuan
+                    </Button>
+                  }
+                />
+              ) : (
+                savingsHook.goals.map(goal => (
+                  <SavingsGoalCard
+                    key={goal.id}
+                    goal={goal}
+                    onEdit={() => {
+                      setEditingSavingsId(goal.id)
+                      setShowSavingsForm(true)
+                    }}
+                    onAdd={id => {
+                      setAddSavingsToId(id)
+                      setAddAmount('')
+                      setWithdrawSavingsFromId(null)
+                    }}
+                    onWithdraw={id => {
+                      setWithdrawSavingsFromId(id)
+                      setWithdrawAmount('')
+                      setAddSavingsToId(null)
+                    }}
+                    onDelete={id => {
+                      setPendingDelete({
+                        message: `Apakah Anda yakin ingin menghapus tabungan "${goal.name}"?`,
+                        label: 'Hapus',
+                        onConfirm: async () => {
+                          await savingsHook.removeGoal(id)
+                        },
+                      })
+                    }}
+                  />
+                ))
+              )}
+            </div>
           )}
-        </div>
-      )}
 
       {/* Debts Tab */}
       {tab === 'debts' && (
@@ -2173,7 +2555,7 @@ export function FinancePage() {
       >
         <div className="pb-4">
           <TransactionForm
-            key={editingTransaction?.id ?? `new-${transactionType}`}
+            key={editingTransaction?.id ?? 'new-transaction'}
             wallets={walletsHook.wallets}
             categories={categories}
             type={transactionType}

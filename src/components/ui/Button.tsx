@@ -14,18 +14,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700 focus-visible:ring-primary-500',
+    'bg-primary-500 [background-image:linear-gradient(to_right,#6366F1,#8B5CF6)] text-white shadow-[0_8px_20px_rgba(99,102,241,0.35)] hover:brightness-105 active:scale-[0.98] focus-visible:ring-indigo-400',
   secondary:
-    'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 focus-visible:ring-gray-400',
+    'bg-gray-100 dark:bg-[#1E232D] text-slate-800 dark:text-slate-100 border border-white/70 dark:border-white/5 shadow-[-4px_-4px_10px_rgba(255,255,255,0.9),4px_4px_10px_rgba(163,177,198,0.35)] dark:shadow-[-3px_-3px_8px_rgba(255,255,255,0.03),3px_3px_8px_rgba(0,0,0,0.5)] active:shadow-[inset_-3px_-3px_6px_rgba(255,255,255,0.9),inset_3px_3px_6px_rgba(163,177,198,0.35)] dark:active:shadow-[inset_-3px_-3px_6px_rgba(255,255,255,0.03),inset_3px_3px_6px_rgba(0,0,0,0.5)] active:scale-[0.98] focus-visible:ring-indigo-400',
   ghost:
-    'bg-transparent text-gray-600 hover:bg-gray-100 active:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-800 focus-visible:ring-gray-400',
-  danger: 'bg-danger text-white hover:bg-danger/90 active:bg-danger/80 focus-visible:ring-danger',
+    'bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-white/40 dark:hover:bg-white/5 active:scale-[0.98] focus-visible:ring-indigo-400',
+  danger:
+    'bg-danger [background-image:linear-gradient(to_right,#F43F5E,#E11D48)] text-white shadow-[0_8px_20px_rgba(244,63,94,0.35)] hover:brightness-105 active:scale-[0.98] focus-visible:ring-rose-400',
 }
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-sm rounded-lg gap-1.5',
-  md: 'px-4 py-2.5 text-sm rounded-xl gap-2',
-  lg: 'px-6 py-3 text-base rounded-xl gap-2',
+  sm: 'px-3 py-1.5 text-xs font-semibold rounded-xl gap-1.5 min-h-[36px]',
+  md: 'px-4 py-2.5 text-sm font-semibold rounded-xl gap-2 min-h-[44px]',
+  lg: 'px-6 py-3 text-base font-semibold rounded-2xl gap-2.5 min-h-[48px]',
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(

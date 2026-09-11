@@ -181,4 +181,45 @@ describe('DashboardPage', () => {
     screen.getByText('Coba Lagi').click()
     expect(refreshFn).toHaveBeenCalled()
   })
+
+  it('normalizes container bottom padding to pb-28 to avoid excessive space and eliminate inner grid pb-36', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    )
+
+    // Outer container should have pb-28
+    const outerContainer = container.querySelector('.max-w-5xl')
+    expect(outerContainer).toHaveClass('pb-28')
+
+    // Inner grid should NOT have pb-36 or excessive padding
+    const innerGrid = container.querySelector('.grid.grid-cols-2')
+    expect(innerGrid?.className).not.toContain('pb-36')
+    expect(innerGrid?.className).not.toContain('pb-60')
+    expect(innerGrid?.className).not.toContain('pb-80')
+  })
+
+  it('renders Attendance card header with space-between layout without text collision', () => {
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    )
+
+    // "Presensi & Kehadiran" header and "Buka Rekap →" link
+    const attendanceTitle = screen.getByText('Presensi & Kehadiran')
+    expect(attendanceTitle).toBeInTheDocument()
+    expect(attendanceTitle).toHaveClass('truncate')
+
+    const rekapLink = screen.getByRole('link', { name: /buka rekap/i })
+    expect(rekapLink).toBeInTheDocument()
+    expect(rekapLink).toHaveClass('shrink-0')
+    expect(rekapLink).toHaveClass('text-emerald-600')
+
+    // Header wrapper should use flex items-center justify-between
+    const headerWrapper = attendanceTitle.closest('.w-full.flex.items-center.justify-between')
+    expect(headerWrapper).toBeInTheDocument()
+    expect(headerWrapper).toHaveClass('mb-3')
+  })
 })

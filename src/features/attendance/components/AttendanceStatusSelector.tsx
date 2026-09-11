@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { Check, X, Coffee, ChevronDown } from 'lucide-react'
+import { Check, X, Moon } from 'lucide-react'
 
 type Status = 'present' | 'absent' | 'holiday'
 
@@ -9,87 +9,66 @@ interface AttendanceStatusSelectorProps {
   disabled?: boolean
 }
 
-const statusConfig: Record<
-  Status,
-  {
-    label: string
-    icon: typeof Check
-    badgeClass: string
-    dotClass: string
-  }
-> = {
-  present: {
-    label: 'Hadir',
-    icon: Check,
-    badgeClass:
-      'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 dark:border-emerald-500/40 hover:bg-emerald-500/20',
-    dotClass: 'bg-emerald-500',
-  },
-  absent: {
-    label: 'Absen',
-    icon: X,
-    badgeClass:
-      'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30 dark:border-rose-500/40 hover:bg-rose-500/20',
-    dotClass: 'bg-rose-500',
-  },
-  holiday: {
-    label: 'Libur',
-    icon: Coffee,
-    badgeClass:
-      'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 dark:border-amber-500/40 hover:bg-amber-500/20',
-    dotClass: 'bg-amber-500',
-  },
-}
-
 export function AttendanceStatusSelector({
   value,
   onChange,
   disabled,
 }: AttendanceStatusSelectorProps) {
-  const currentConfig = value ? statusConfig[value] : null
-  const Icon = currentConfig?.icon
-
   return (
-    <div className="relative inline-flex items-center shrink-0">
-      {/* Visual Badge Display */}
-      <div
+    <div className="flex items-center gap-2 shrink-0" role="group" aria-label="Status Kehadiran">
+      {/* Tombol Hadir (Check) */}
+      <button
+        type="button"
+        onClick={() => onChange('present')}
+        disabled={disabled}
+        aria-label="Hadir"
+        title="Hadir"
         className={cn(
-          'flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-extrabold transition-all duration-200 select-none pointer-events-none min-w-[110px] sm:min-w-[120px] h-9 shadow-xs backdrop-blur-xs',
-          currentConfig
-            ? currentConfig.badgeClass
-            : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 border-gray-200/80 dark:border-gray-700/80',
-          disabled && 'opacity-50 cursor-not-allowed'
+          'w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+          value === 'present'
+            ? 'bg-[#F0F3F8] dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-[inset_-2px_-2px_4px_rgba(255,255,255,0.8),inset_2px_2px_4px_rgba(163,177,198,0.3)] dark:shadow-[inset_-2px_-2px_4px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(0,0,0,0.5)] font-bold'
+            : 'bg-[#F0F3F8] dark:bg-slate-800 text-slate-400 dark:text-slate-500 shadow-[-2px_-2px_4px_rgba(255,255,255,0.9),2px_2px_4px_rgba(163,177,198,0.2)] dark:shadow-[-2px_-2px_4px_rgba(255,255,255,0.05),2px_2px_4px_rgba(0,0,0,0.4)] hover:text-emerald-600 dark:hover:text-emerald-400'
         )}
       >
-        <div className="flex items-center gap-1.5 truncate">
-          {Icon ? (
-            <Icon className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
-          ) : (
-            <span className="w-2 h-2 rounded-full bg-gray-400 dark:bg-gray-500 shrink-0" />
-          )}
-          <span className="truncate">{currentConfig ? currentConfig.label : 'Pilih status'}</span>
-        </div>
-        <ChevronDown className="w-3.5 h-3.5 opacity-60 shrink-0" />
-      </div>
+        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+        <span className="sr-only">Hadir</span>
+      </button>
 
-      {/* Accessible Interactive Native Dropdown */}
-      <select
-        value={value ?? ''}
-        onChange={e => {
-          const val = e.target.value as Status
-          if (val) onChange(val)
-        }}
+      {/* Tombol Absen (X) */}
+      <button
+        type="button"
+        onClick={() => onChange('absent')}
         disabled={disabled}
-        aria-label="Pilih Status Kehadiran"
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+        aria-label="Absen"
+        title="Absen"
+        className={cn(
+          'w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+          value === 'absent'
+            ? 'bg-[#F0F3F8] dark:bg-slate-800 text-rose-600 dark:text-rose-400 shadow-[inset_-2px_-2px_4px_rgba(255,255,255,0.8),inset_2px_2px_4px_rgba(163,177,198,0.3)] dark:shadow-[inset_-2px_-2px_4px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(0,0,0,0.5)] font-bold'
+            : 'bg-[#F0F3F8] dark:bg-slate-800 text-slate-400 dark:text-slate-500 shadow-[-2px_-2px_4px_rgba(255,255,255,0.9),2px_2px_4px_rgba(163,177,198,0.2)] dark:shadow-[-2px_-2px_4px_rgba(255,255,255,0.05),2px_2px_4px_rgba(0,0,0,0.4)] hover:text-rose-600 dark:hover:text-rose-400'
+        )}
       >
-        <option value="" disabled>
-          -- Pilih Status --
-        </option>
-        <option value="present">✓ Hadir</option>
-        <option value="absent">✕ Absen</option>
-        <option value="holiday">☕ Libur</option>
-      </select>
+        <X className="w-3.5 h-3.5 stroke-[2.5]" />
+        <span className="sr-only">Absen</span>
+      </button>
+
+      {/* Tombol Libur (Moon) */}
+      <button
+        type="button"
+        onClick={() => onChange('holiday')}
+        disabled={disabled}
+        aria-label="Libur"
+        title="Libur"
+        className={cn(
+          'w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+          value === 'holiday'
+            ? 'bg-[#F0F3F8] dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-[inset_-2px_-2px_4px_rgba(255,255,255,0.8),inset_2px_2px_4px_rgba(163,177,198,0.3)] dark:shadow-[inset_-2px_-2px_4px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(0,0,0,0.5)] font-bold'
+            : 'bg-[#F0F3F8] dark:bg-slate-800 text-slate-400 dark:text-slate-500 shadow-[-2px_-2px_4px_rgba(255,255,255,0.9),2px_2px_4px_rgba(163,177,198,0.2)] dark:shadow-[-2px_-2px_4px_rgba(255,255,255,0.05),2px_2px_4px_rgba(0,0,0,0.4)] hover:text-amber-600 dark:hover:text-amber-400'
+        )}
+      >
+        <Moon className="w-3.5 h-3.5 stroke-[2]" />
+        <span className="sr-only">Libur</span>
+      </button>
     </div>
   )
 }

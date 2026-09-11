@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Trash2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -100,10 +101,10 @@ export function BottomSheet({
 
   if (!open) return null
 
-  return (
+  const modalNode = (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in p-0 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={title ?? 'Dialog'}
@@ -116,15 +117,18 @@ export function BottomSheet({
         ref={contentRef}
         tabIndex={-1}
         className={cn(
-          'relative w-full max-w-lg max-h-[88vh] flex flex-col',
-          'bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[28px]',
-          'shadow-2xl border border-gray-100 dark:border-gray-800/80 outline-none',
-          'animate-scale-in',
+          'relative w-full max-w-lg max-h-[92vh] sm:max-h-[88vh] flex flex-col',
+          'bg-white dark:bg-gray-900 rounded-t-[28px] sm:rounded-[28px]',
+          'shadow-2xl border-t sm:border border-gray-100 dark:border-gray-800/80 outline-none',
+          'animate-slide-up sm:animate-scale-in',
           className
         )}
       >
+        {/* Mobile Drag Handle */}
+        <div className="w-12 h-1.5 rounded-full bg-gray-300 dark:bg-gray-700 mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+
         {title && (
-          <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-t-[24px] sm:rounded-t-[28px] shrink-0 z-10">
+          <div className="flex items-center justify-between px-5 pt-2 sm:pt-4 pb-3 border-b border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-t-[28px] shrink-0 z-10">
             <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100 truncate pr-2">
               {title}
             </h2>
@@ -158,4 +162,10 @@ export function BottomSheet({
       </div>
     </div>
   )
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalNode, document.body)
+  }
+
+  return modalNode
 }
